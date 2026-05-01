@@ -1,3 +1,4 @@
 node_modules/
 portal/node_modules/
 *.db
+screenshots/
