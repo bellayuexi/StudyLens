@@ -208,41 +208,66 @@ async function buildQAMindMap(question, answer, cards, relatedEntries) {
   const context = [
     `Question: ${question}`,
     `Answer: ${answer}`,
-    cards.length > 0 ? `Cards: ${cards.map(c => c.title).join(', ')}` : '',
-    relatedEntries.length > 0 ? `Related: ${relatedEntries.map(e => e.title).join(', ')}` : '',
+    cards.length > 0 ? `Cards: ${JSON.stringify(cards.map(c => ({ title: c.title, content: c.content, subject: c.subject })))}` : '',
   ].filter(Boolean).join('\n');
 
-  const prompt = `Based on this Q&A exchange, create a mind map structure showing how concepts connect.
+  const prompt = `Based on this Q&A exchange, create a structured visualization to help a student understand the answer.
 
 ${context}
 
-Return a JSON object with:
+Detect the type of question and generate the appropriate visualization:
+
+1. If it's a COMPARISON question (对比, 区别, 异同, vs, 不同, 对应, 差别):
+Return:
 {
-  "nodes": [
-    { "id": "q", "label": "the question (short)", "type": "question" },
-    { "id": "a1", "label": "key point 1", "type": "answer" },
-    { "id": "c1", "label": "concept name", "type": "concept" },
-    ...more nodes for key concepts, comparisons, facts
+  "type": "comparison",
+  "title": "对比标题",
+  "columns": [
+    { "header": "左侧标题", "color": "#4285f4", "items": [
+      { "category": "维度1", "content": "内容" },
+      { "category": "维度2", "content": "内容" }
+    ]},
+    { "header": "右侧标题", "color": "#ea4335", "items": [
+      { "category": "维度1", "content": "内容" },
+      { "category": "维度2", "content": "内容" }
+    ]}
   ],
-  "links": [
-    { "source": "q", "target": "a1", "label": "relation" },
-    ...
+  "summary": "一句话总结核心区别"
+}
+
+2. If it's a TIMELINE/PROCESS question (过程, 经过, 发展, 变化, 顺序):
+Return:
+{
+  "type": "timeline",
+  "title": "标题",
+  "steps": [
+    { "label": "阶段名", "content": "描述", "date": "时间（可选）" }
+  ]
+}
+
+3. For other questions (concepts, explanations, analysis):
+Return:
+{
+  "type": "tree",
+  "title": "中心主题",
+  "branches": [
+    { "label": "分支1", "children": [
+      { "label": "要点", "detail": "说明" }
+    ]}
   ]
 }
 
 Rules:
-- The question node is the center
-- Answer key points branch from it
-- Related concepts/cards branch from answer points
-- Keep labels SHORT (under 15 chars in Chinese)
-- 8-15 nodes total, make it readable
+- All text in Chinese, concise and clear
+- For comparison: items MUST align by category across columns for easy side-by-side reading
+- For tree: max 4 branches, max 4 children each
 - Return ONLY valid JSON, no other text.`;
 
-  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 2048 });
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 3000 });
   const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '');
   const match = cleaned.match(/\{[\s\S]*\}/);
-  if (!match) return { nodes: [], links: [] };
-  try { return JSON.parse(match[0]); } catch { return { nodes: [], links: [] }; }
+  if (!match) return { type: 'tree', title: '', branches: [] };
+  try { return JSON.parse(match[0]); } catch { return { type: 'tree', title: '', branches: [] }; }
 }
 
 module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap };

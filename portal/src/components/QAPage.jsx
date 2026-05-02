@@ -1,14 +1,130 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import ForceGraph2D from 'react-force-graph-2d';
+import React, { useState, useRef, useEffect } from 'react';
 import { askQuestion, saveQACards, buildQAMindMap } from '../lib/api.js';
 
-const NODE_COLORS = {
-  question: '#ff6d00',
-  answer: '#4285f4',
-  concept: '#34a853',
-  card: '#9c27b0',
-  related: '#fbbc05',
-};
+function ComparisonView({ data }) {
+  const cols = data.columns || [];
+  const categories = [...new Set(cols.flatMap(c => (c.items || []).map(it => it.category)))];
+
+  return (
+    <div style={{ padding: 24 }}>
+      <div style={{ textAlign: 'center', fontSize: 18, fontWeight: 600, color: '#fff', marginBottom: 20 }}>
+        {data.title}
+      </div>
+      <div style={{ display: 'flex', gap: 16, justifyContent: 'center' }}>
+        {cols.map((col, ci) => (
+          <div key={ci} style={{ flex: 1, maxWidth: 360 }}>
+            <div style={{ padding: '12px 16px', borderRadius: '10px 10px 0 0', textAlign: 'center',
+              background: col.color || '#4285f4', color: '#fff', fontSize: 16, fontWeight: 600 }}>
+              {col.header}
+            </div>
+            <div style={{ border: `1px solid ${col.color || '#4285f4'}33`, borderTop: 'none', borderRadius: '0 0 10px 10px', overflow: 'hidden' }}>
+              {categories.map((cat, ri) => {
+                const item = (col.items || []).find(it => it.category === cat);
+                return (
+                  <div key={ri} style={{ display: 'flex', borderBottom: ri < categories.length - 1 ? '1px solid #2a2d35' : 'none' }}>
+                    <div style={{ width: 90, padding: '10px 12px', background: '#1a1d2a', fontSize: 12, color: '#888',
+                      display: 'flex', alignItems: 'center', borderRight: '1px solid #2a2d35', flexShrink: 0 }}>
+                      {cat}
+                    </div>
+                    <div style={{ flex: 1, padding: '10px 14px', fontSize: 13, color: '#ddd', lineHeight: 1.6, background: '#161822' }}>
+                      {item?.content || '—'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+      {data.summary && (
+        <div style={{ textAlign: 'center', marginTop: 16, padding: '10px 20px', borderRadius: 8,
+          background: '#1c1f2e', color: '#fbbc05', fontSize: 13, lineHeight: 1.6 }}>
+          {data.summary}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TimelineView({ data }) {
+  const steps = data.steps || [];
+  return (
+    <div style={{ padding: 24 }}>
+      <div style={{ textAlign: 'center', fontSize: 18, fontWeight: 600, color: '#fff', marginBottom: 24 }}>
+        {data.title}
+      </div>
+      <div style={{ position: 'relative', maxWidth: 500, margin: '0 auto' }}>
+        <div style={{ position: 'absolute', left: 16, top: 0, bottom: 0, width: 2, background: '#2a2d45' }} />
+        {steps.map((step, i) => (
+          <div key={i} style={{ display: 'flex', marginBottom: 20, position: 'relative' }}>
+            <div style={{ width: 34, flexShrink: 0, display: 'flex', justifyContent: 'center', zIndex: 1 }}>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#4285f4', marginTop: 4,
+                border: '2px solid #0f1117' }} />
+            </div>
+            <div style={{ flex: 1, background: '#1c1f2e', borderRadius: 8, padding: '12px 16px', marginLeft: 8,
+              borderLeft: '3px solid #4285f4' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{step.label}</span>
+                {step.date && <span style={{ fontSize: 11, color: '#888' }}>{step.date}</span>}
+              </div>
+              <div style={{ fontSize: 13, color: '#bbb', lineHeight: 1.6 }}>{step.content}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TreeView({ data }) {
+  const branches = data.branches || [];
+  const colors = ['#4285f4', '#ea4335', '#34a853', '#fbbc05', '#9c27b0', '#ff6d00'];
+
+  return (
+    <div style={{ padding: 24 }}>
+      <div style={{ textAlign: 'center', marginBottom: 24 }}>
+        <span style={{ display: 'inline-block', padding: '10px 24px', borderRadius: 20, fontSize: 16,
+          fontWeight: 600, color: '#fff', background: 'linear-gradient(135deg, #4285f4, #9c27b0)' }}>
+          {data.title}
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: 16, justifyContent: 'center', flexWrap: 'wrap' }}>
+        {branches.map((branch, bi) => {
+          const color = colors[bi % colors.length];
+          return (
+            <div key={bi} style={{ minWidth: 200, maxWidth: 280, flex: '1 1 200px' }}>
+              <div style={{ padding: '10px 14px', borderRadius: '8px 8px 0 0', textAlign: 'center',
+                background: color, color: '#fff', fontSize: 14, fontWeight: 600 }}>
+                {branch.label}
+              </div>
+              <div style={{ borderRadius: '0 0 8px 8px', border: `1px solid ${color}44`, borderTop: 'none', overflow: 'hidden' }}>
+                {(branch.children || []).map((child, ci) => (
+                  <div key={ci} style={{ padding: '10px 14px', borderBottom: ci < branch.children.length - 1 ? '1px solid #2a2d35' : 'none',
+                    background: '#161822' }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: '#ddd', marginBottom: 2 }}>{child.label}</div>
+                    {child.detail && (
+                      <div style={{ fontSize: 12, color: '#999', lineHeight: 1.5 }}>{child.detail}</div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function StructuredViz({ data }) {
+  if (!data || !data.type) return null;
+  switch (data.type) {
+    case 'comparison': return <ComparisonView data={data} />;
+    case 'timeline': return <TimelineView data={data} />;
+    case 'tree': return <TreeView data={data} />;
+    default: return null;
+  }
+}
 
 export default function QAPage({ onSaved }) {
   const [input, setInput] = useState('');
@@ -17,10 +133,9 @@ export default function QAPage({ onSaved }) {
   const [messages, setMessages] = useState([]);
   const [latestCards, setLatestCards] = useState([]);
   const [selectedCards, setSelectedCards] = useState(new Set());
-  const [mindMapData, setMindMapData] = useState({ nodes: [], links: [] });
-  const [buildingMap, setBuildingMap] = useState(false);
+  const [vizData, setVizData] = useState(null);
+  const [buildingViz, setBuildingViz] = useState(false);
   const chatRef = useRef(null);
-  const graphRef = useRef(null);
 
   useEffect(() => {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
@@ -49,15 +164,12 @@ export default function QAPage({ onSaved }) {
       setLatestCards(data.suggestedCards || []);
       setSelectedCards(new Set((data.suggestedCards || []).map((_, i) => i)));
 
-      setBuildingMap(true);
+      setBuildingViz(true);
       try {
-        const mapData = await buildQAMindMap(q, data.answer, data.suggestedCards || [], data.relatedEntries || []);
-        if (mapData.nodes?.length > 0) {
-          setMindMapData(mapData);
-          setTimeout(() => { if (graphRef.current) graphRef.current.zoomToFit(400, 40); }, 500);
-        }
+        const vd = await buildQAMindMap(q, data.answer, data.suggestedCards || [], data.relatedEntries || []);
+        if (vd.type) setVizData(vd);
       } catch (_) {}
-      setBuildingMap(false);
+      setBuildingViz(false);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'ai', text: `错误: ${err.message}`, cards: [] }]);
       setLatestCards([]);
@@ -88,67 +200,9 @@ export default function QAPage({ onSaved }) {
     setMessages([]);
     setLatestCards([]);
     setSelectedCards(new Set());
-    setMindMapData({ nodes: [], links: [] });
+    setVizData(null);
     setInput('');
   };
-
-  const paintNode = useCallback((node, ctx) => {
-    const r = node.type === 'question' ? 10 : 7;
-    const color = NODE_COLORS[node.type] || '#999';
-
-    ctx.beginPath();
-    if (node.type === 'question') {
-      const s = r * 1.4;
-      ctx.moveTo(node.x, node.y - s);
-      for (let i = 0; i < 5; i++) {
-        const angle = (i * 4 * Math.PI) / 5 - Math.PI / 2;
-        const outerX = node.x + s * Math.cos(angle);
-        const outerY = node.y + s * Math.sin(angle);
-        ctx.lineTo(outerX, outerY);
-        const innerAngle = angle + (2 * Math.PI) / 10;
-        const innerX = node.x + (s * 0.45) * Math.cos(innerAngle);
-        const innerY = node.y + (s * 0.45) * Math.sin(innerAngle);
-        ctx.lineTo(innerX, innerY);
-      }
-      ctx.closePath();
-    } else {
-      ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-    }
-    ctx.fillStyle = color;
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.font = `${node.type === 'question' ? 'bold 11px' : '10px'} system-ui`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = '#e0e0e0';
-    ctx.fillText(node.label || '', node.x, node.y + r + 3);
-  }, []);
-
-  const paintLink = useCallback((link, ctx) => {
-    const src = link.source;
-    const tgt = link.target;
-    if (!src.x || !tgt.x) return;
-
-    ctx.beginPath();
-    ctx.moveTo(src.x, src.y);
-    ctx.lineTo(tgt.x, tgt.y);
-    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    if (link.label) {
-      const mx = (src.x + tgt.x) / 2;
-      const my = (src.y + tgt.y) / 2;
-      ctx.font = '9px system-ui';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = 'rgba(255,255,255,0.4)';
-      ctx.fillText(link.label, mx, my);
-    }
-  }, []);
 
   return (
     <div style={{ display: 'flex', height: '100%', background: '#0f1117' }}>
@@ -157,7 +211,7 @@ export default function QAPage({ onSaved }) {
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #2a2d35', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <div style={{ fontSize: 16, fontWeight: 600, color: '#fff' }}>💬 知识问答</div>
-            <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>多轮对话 · 思维导图可视化</div>
+            <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>多轮对话 · 结构化知识可视化</div>
           </div>
           {messages.length > 0 && (
             <span onClick={handleReset} style={{ fontSize: 12, color: '#666', cursor: 'pointer', padding: '4px 10px', borderRadius: 6, background: '#1c1f2e' }}>
@@ -166,13 +220,16 @@ export default function QAPage({ onSaved }) {
           )}
         </div>
 
-        {/* Messages */}
         <div ref={chatRef} style={{ flex: 1, overflowY: 'auto', padding: '12px 16px' }}>
           {messages.length === 0 && (
             <div style={{ textAlign: 'center', color: '#555', marginTop: 60 }}>
               <div style={{ fontSize: 40, marginBottom: 12 }}>🧠</div>
               <div style={{ fontSize: 14 }}>输入问题开始探索</div>
-              <div style={{ fontSize: 12, marginTop: 6, color: '#444' }}>AI 会生成知识卡片和思维导图</div>
+              <div style={{ fontSize: 12, marginTop: 8, color: '#444', lineHeight: 1.8 }}>
+                对比类问题 → 左右对比卡片<br />
+                时间线问题 → 时间轴展示<br />
+                其他问题 → 知识树展示
+              </div>
             </div>
           )}
           {messages.map((m, i) => (
@@ -189,12 +246,9 @@ export default function QAPage({ onSaved }) {
               </div>
             </div>
           ))}
-          {asking && (
-            <div style={{ fontSize: 12, color: '#9c27b0', padding: '8px 0' }}>AI 思考中...</div>
-          )}
+          {asking && <div style={{ fontSize: 12, color: '#9c27b0', padding: '8px 0' }}>AI 思考中...</div>}
         </div>
 
-        {/* Cards */}
         {latestCards.length > 0 && !asking && (
           <div style={{ padding: '10px 16px', borderTop: '1px solid #2a2d35', maxHeight: 200, overflowY: 'auto' }}>
             <div style={{ fontSize: 11, color: '#888', marginBottom: 6 }}>建议知识卡片：</div>
@@ -217,7 +271,6 @@ export default function QAPage({ onSaved }) {
           </div>
         )}
 
-        {/* Input */}
         <div style={{ padding: '12px 16px', borderTop: '1px solid #2a2d35' }}>
           <div style={{ display: 'flex', gap: 6 }}>
             <input value={input} onChange={e => setInput(e.target.value)}
@@ -234,56 +287,23 @@ export default function QAPage({ onSaved }) {
         </div>
       </div>
 
-      {/* Right: Mind Map */}
-      <div style={{ flex: 1, position: 'relative' }}>
-        {mindMapData.nodes.length === 0 && !buildingMap && (
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-            textAlign: 'center', color: '#444' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>🗺️</div>
-            <div style={{ fontSize: 15 }}>思维导图</div>
-            <div style={{ fontSize: 12, marginTop: 6 }}>提问后自动生成知识关联图</div>
-          </div>
-        )}
-        {buildingMap && (
-          <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-            textAlign: 'center', color: '#9c27b0' }}>
-            <div style={{ fontSize: 14 }}>正在生成思维导图...</div>
-          </div>
-        )}
-        {mindMapData.nodes.length > 0 && (
-          <>
-            <div style={{ position: 'absolute', top: 12, right: 12, zIndex: 10, background: 'rgba(22,24,34,0.9)',
-              padding: '8px 12px', borderRadius: 8, fontSize: 11 }}>
-              <div style={{ color: '#888', marginBottom: 4 }}>图例</div>
-              {Object.entries(NODE_COLORS).map(([type, color]) => (
-                <div key={type} style={{ display: 'flex', alignItems: 'center', marginBottom: 2 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: color, marginRight: 6 }} />
-                  <span style={{ color: '#aaa' }}>
-                    {{ question: '问题', answer: '要点', concept: '概念', card: '卡片', related: '关联' }[type] || type}
-                  </span>
-                </div>
-              ))}
+      {/* Right: Structured Visualization */}
+      <div style={{ flex: 1, overflowY: 'auto' }}>
+        {!vizData && !buildingViz && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#444' }}>
+            <div style={{ textAlign: 'center' }}>
+              <div style={{ fontSize: 48, marginBottom: 12 }}>📊</div>
+              <div style={{ fontSize: 15 }}>知识可视化</div>
+              <div style={{ fontSize: 12, marginTop: 6 }}>提问后自动生成结构化展示</div>
             </div>
-            <ForceGraph2D
-              ref={graphRef}
-              graphData={mindMapData}
-              nodeCanvasObject={paintNode}
-              nodePointerAreaPaint={(node, color, ctx) => {
-                ctx.beginPath();
-                ctx.arc(node.x, node.y, 10, 0, 2 * Math.PI);
-                ctx.fillStyle = color;
-                ctx.fill();
-              }}
-              linkCanvasObject={paintLink}
-              linkCanvasObjectMode={() => 'replace'}
-              backgroundColor="#0f1117"
-              d3AlphaDecay={0.04}
-              d3VelocityDecay={0.3}
-              warmupTicks={50}
-              cooldownTicks={100}
-            />
-          </>
+          </div>
         )}
+        {buildingViz && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#9c27b0' }}>
+            <div style={{ fontSize: 14 }}>正在生成知识图表...</div>
+          </div>
+        )}
+        {vizData && <StructuredViz data={vizData} />}
       </div>
     </div>
   );
