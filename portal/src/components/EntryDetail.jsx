@@ -47,6 +47,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     if (cached) {
       setAsking(cached.asking || false);
       setLoadingQ(false);
+      setLoadingTopic(cached.loadingTopic || false);
       setTopicHTML(cached.topicHTML || '');
       setTopicPageId(cached.topicPageId || null);
       setTopicVersion(cached.topicVersion || 0);
@@ -62,6 +63,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     } else {
       setAsking(false);
       setLoadingQ(false);
+      setLoadingTopic(false);
       setSmartQuestions([]);
       setSelectedQs(new Set());
       setQaHistory([]);
@@ -96,9 +98,9 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     entryDataCacheRef.current[entry.id] = {
       topicHTML, topicPageId, topicVersion, topicVersionCount,
       qaHistory,
-      comments, lastUpdated, topicStatus, topicDirty, asking,
+      comments, lastUpdated, topicStatus, topicDirty, asking, loadingTopic,
     };
-  }, [topicHTML, topicPageId, topicVersion, topicVersionCount, qaHistory, comments, lastUpdated, topicStatus, topicDirty, asking]);
+  }, [topicHTML, topicPageId, topicVersion, topicVersionCount, qaHistory, comments, lastUpdated, topicStatus, topicDirty, asking, loadingTopic]);
 
   const loadSavedTopicPage = async () => {
     const currentId = entry.id;
@@ -279,13 +281,21 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setTopicStatus('正在生成...');
     try {
       const data = await generateTopicPage(genEntryId, qaHistory);
-      if (entryIdRef.current !== genEntryId) { setLoadingTopic(false); return; }
+      if (entryIdRef.current !== genEntryId) {
+        const c = entryDataCacheRef.current[genEntryId];
+        if (c) { c.loadingTopic = false; c.topicHTML = html; c.topicStatus = '已生成（后台完成）'; }
+        return;
+      }
       const html = injectTimestamp(data.html || '');
       setTopicHTML(html);
       setTab('topic');
       try {
         const saved = await saveTopicPage(genEntryId, html, qaHistory, comments);
-        if (entryIdRef.current !== genEntryId) { setLoadingTopic(false); return; }
+        if (entryIdRef.current !== genEntryId) {
+          const c = entryDataCacheRef.current[genEntryId];
+          if (c) { c.loadingTopic = false; c.topicPageId = saved.id; c.topicVersion = saved.version; c.topicVersionCount = saved.version; c.lastUpdated = saved.created_at; c.topicStatus = `v${saved.version} 已保存`; c.topicDirty = false; c.topicHTML = html; }
+          return;
+        }
         setTopicPageId(saved.id);
         setTopicVersion(saved.version);
         setTopicVersionCount(saved.version);
@@ -301,7 +311,12 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       if (entryIdRef.current === genEntryId) setTopicStatus('生成失败');
       console.error(err);
     }
-    setLoadingTopic(false);
+    if (entryIdRef.current === genEntryId) {
+      setLoadingTopic(false);
+    } else {
+      const c = entryDataCacheRef.current[genEntryId];
+      if (c) c.loadingTopic = false;
+    }
   };
 
   const handleRefreshTopic = async () => {
@@ -310,12 +325,21 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setTopicStatus('正在更新...');
     try {
       const data = await generateTopicPage(genEntryId, qaHistory);
-      if (entryIdRef.current !== genEntryId) { setLoadingTopic(false); return; }
       const html = injectTimestamp(data.html || '');
+      if (entryIdRef.current !== genEntryId) {
+        const c = entryDataCacheRef.current[genEntryId];
+        if (c) { c.loadingTopic = false; c.topicHTML = html; c.topicStatus = '已更新（后台完成）'; }
+        try { await saveTopicPage(genEntryId, html, qaHistory, comments); } catch {}
+        return;
+      }
       setTopicHTML(html);
       try {
         const saved = await saveTopicPage(genEntryId, html, qaHistory, comments);
-        if (entryIdRef.current !== genEntryId) { setLoadingTopic(false); return; }
+        if (entryIdRef.current !== genEntryId) {
+          const c = entryDataCacheRef.current[genEntryId];
+          if (c) { c.loadingTopic = false; c.topicPageId = saved.id; c.topicVersion = saved.version; c.topicVersionCount = saved.version; c.lastUpdated = saved.created_at; c.topicStatus = `v${saved.version} 已保存`; c.topicDirty = false; c.topicHTML = html; }
+          return;
+        }
         setTopicPageId(saved.id);
         setTopicVersion(saved.version);
         setTopicVersionCount(saved.version);
@@ -330,7 +354,12 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     } catch (err) {
       if (entryIdRef.current === genEntryId) setTopicStatus('更新失败');
     }
-    setLoadingTopic(false);
+    if (entryIdRef.current === genEntryId) {
+      setLoadingTopic(false);
+    } else {
+      const c = entryDataCacheRef.current[genEntryId];
+      if (c) c.loadingTopic = false;
+    }
   };
 
   const viewVersion = async (v) => {
@@ -599,11 +628,26 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
           ) : (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#666' }}>
               <div style={{ fontSize: 48 }}>📄</div>
-              <div style={{ fontSize: 14 }}>尚未生成专题页</div>
-              <button onClick={handleGenerateTopic} disabled={loadingTopic}
-                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#4285f4', color: '#fff', cursor: 'pointer', fontSize: 14 }}>
-                {loadingTopic ? '生成中...' : '生成专题页'}
-              </button>
+              {qaHistory.filter(h => h.answer && !h.loading).length > 0 ? (
+                <>
+                  <div style={{ fontSize: 14 }}>尚未生成专题页</div>
+                  <button onClick={handleGenerateTopic} disabled={loadingTopic}
+                    style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#4285f4', color: '#fff', cursor: 'pointer', fontSize: 14 }}>
+                    {loadingTopic ? '生成中...' : '生成专题页'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <div style={{ fontSize: 14 }}>需要先生成智能问题并获取答案</div>
+                  <div style={{ fontSize: 12, color: '#888', maxWidth: 360, textAlign: 'center' }}>
+                    请先到「探索更多」标签生成智能问题，批量提问获取答案后，再回来生成专题页
+                  </div>
+                  <button onClick={() => setTab('qa')}
+                    style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#34a853', color: '#fff', cursor: 'pointer', fontSize: 14 }}>
+                    去生成智能问题 →
+                  </button>
+                </>
+              )}
             </div>
           )}
         </div>
