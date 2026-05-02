@@ -68,3 +68,22 @@ export async function searchEntries(q) {
   const res = await fetch(`${API}/api/entries?q=${encodeURIComponent(q)}`);
   return res.json();
 }
+
+export async function restructureGraph(instruction, subject = '') {
+  const res = await fetch(`${API}/api/restructure`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ instruction, subject }),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || 'Restructure failed');
+  return res.json();
+}
+
+export async function buildQAMindMap(question, answer, cards = [], relatedEntries = []) {
+  const res = await fetch(`${API}/api/qa/mindmap`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question, answer, cards, relatedEntries }),
+  });
+  return res.json();
+}

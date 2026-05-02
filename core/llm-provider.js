@@ -178,4 +178,71 @@ Return ONLY valid JSON, no other text. Do not wrap in code fences.`;
   }
 }
 
-module.exports = { callLLM, analyze, findConnections, askQuestion };
+async function restructure(instruction, entries) {
+  const entrySummary = entries.map(e =>
+    `[${e.id}] title="${e.title}" subject="${e.subject}" tags=${JSON.stringify(e.tags)} content="${e.content.slice(0, 60)}"`
+  ).join('\n');
+
+  const prompt = `You are a knowledge graph organizer. A student has the following knowledge entries and wants to restructure them.
+
+Student's instruction: "${instruction}"
+
+Current entries:
+${entrySummary}
+
+Based on the instruction, return a JSON array of changes to make. Each change is an object:
+- "action": "update" (modify subject/tags/title of existing entry) or "merge" (combine entries) or "split" (split one entry into multiple)
+- For "update": { "action": "update", "id": "entry_id", "subject": "new_subject", "tags": ["new","tags"], "title": "new_title_if_changed" }
+- For "merge": { "action": "merge", "ids": ["id1","id2",...], "merged_title": "combined title", "merged_content": "combined content", "subject": "subject", "tags": ["tags"] }
+- For "split": not commonly needed, skip for now
+
+Only include entries that actually need changes. Return ONLY valid JSON array, no other text.
+If no changes are needed, return [].`;
+
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 4096 });
+  const match = result.match(/\[[\s\S]*\]/);
+  return match ? JSON.parse(match[0]) : [];
+}
+
+async function buildQAMindMap(question, answer, cards, relatedEntries) {
+  const context = [
+    `Question: ${question}`,
+    `Answer: ${answer}`,
+    cards.length > 0 ? `Cards: ${cards.map(c => c.title).join(', ')}` : '',
+    relatedEntries.length > 0 ? `Related: ${relatedEntries.map(e => e.title).join(', ')}` : '',
+  ].filter(Boolean).join('\n');
+
+  const prompt = `Based on this Q&A exchange, create a mind map structure showing how concepts connect.
+
+${context}
+
+Return a JSON object with:
+{
+  "nodes": [
+    { "id": "q", "label": "the question (short)", "type": "question" },
+    { "id": "a1", "label": "key point 1", "type": "answer" },
+    { "id": "c1", "label": "concept name", "type": "concept" },
+    ...more nodes for key concepts, comparisons, facts
+  ],
+  "links": [
+    { "source": "q", "target": "a1", "label": "relation" },
+    ...
+  ]
+}
+
+Rules:
+- The question node is the center
+- Answer key points branch from it
+- Related concepts/cards branch from answer points
+- Keep labels SHORT (under 15 chars in Chinese)
+- 8-15 nodes total, make it readable
+- Return ONLY valid JSON, no other text.`;
+
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 2048 });
+  const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (!match) return { nodes: [], links: [] };
+  try { return JSON.parse(match[0]); } catch { return { nodes: [], links: [] }; }
+}
+
+module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap };

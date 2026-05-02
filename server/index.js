@@ -234,5 +234,57 @@ app.delete('/api/entries/:id', (req, res) => {
   res.json({ ok: true });
 });
 
+// Restructure: user instructs how to reorganize knowledge graph
+app.post('/api/restructure', async (req, res) => {
+  try {
+    const { instruction, subject } = req.body;
+    if (!instruction) return res.status(400).json({ error: 'instruction is required' });
+    let entries = storage.getAllEntries();
+    if (subject) entries = entries.filter(e => e.subject === subject || e.subject?.startsWith(subject));
+    const changes = await llm.restructure(instruction, entries);
+    const applied = [];
+    for (const change of changes) {
+      if (change.action === 'update' && change.id) {
+        const existing = storage.getEntry(change.id);
+        if (existing) {
+          const updated = storage.updateEntry(change.id, {
+            title: change.title || existing.title,
+            content: existing.content,
+            subject: change.subject || existing.subject,
+            tags: change.tags || existing.tags,
+          });
+          if (updated) applied.push({ action: 'update', id: change.id, title: updated.title, subject: updated.subject });
+        }
+      } else if (change.action === 'merge' && change.ids?.length > 1) {
+        const mergedEntry = storage.addEntry({
+          title: change.merged_title,
+          content: change.merged_content,
+          subject: change.subject || '',
+          tags: change.tags || [],
+          source_type: 'merge',
+          source_ref: change.ids.join(','),
+        });
+        for (const id of change.ids) storage.deleteEntry(id);
+        applied.push({ action: 'merge', ids: change.ids, newId: mergedEntry.id, title: mergedEntry.title });
+      }
+    }
+    res.json({ changes: applied, total: applied.length });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// QA mind map: generate mind map structure from QA result
+app.post('/api/qa/mindmap', async (req, res) => {
+  try {
+    const { question, answer, cards, relatedEntries } = req.body;
+    if (!question) return res.status(400).json({ error: 'question is required' });
+    const mindmap = await llm.buildQAMindMap(question, answer || '', cards || [], relatedEntries || []);
+    res.json(mindmap);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`StudyGraph server running on http://localhost:${PORT}`));

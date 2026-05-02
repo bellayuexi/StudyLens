@@ -4,7 +4,8 @@ import TimelineView from './TimelineView.jsx';
 import IngestPanel from './IngestPanel.jsx';
 import EntryDetail from './EntryDetail.jsx';
 import CategoryView from './CategoryView.jsx';
-import QAPanel from './QAPanel.jsx';
+import QAPage from './QAPage.jsx';
+import RestructurePanel from './RestructurePanel.jsx';
 import { fetchGraph } from '../lib/api.js';
 
 const SUBJECT_COLORS = {};
@@ -20,6 +21,7 @@ const VIEWS = [
   { id: 'graph', label: '🔗 知识图谱', desc: '关联网络' },
   { id: 'timeline', label: '📅 时间线', desc: '按历史年代排列' },
   { id: 'category', label: '📂 分类', desc: '按学科归类' },
+  { id: 'qa', label: '💬 问答', desc: '知识问答' },
 ];
 
 export default function App() {
@@ -85,7 +87,8 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif', background: '#0f1117', color: '#e0e0e0', overflow: 'hidden' }}>
-      {/* Left Panel */}
+      {/* Left Panel — hidden in QA mode */}
+      {viewMode !== 'qa' ? (
       <div style={{ width: leftWidth, minWidth: 300, borderRight: '1px solid #2a2d35', display: 'flex', flexDirection: 'column', background: '#161822', flexShrink: 0 }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #2a2d35' }}>
           <h1 style={{ margin: 0, fontSize: 22, color: '#fff' }}>📚 StudyGraph</h1>
@@ -103,8 +106,6 @@ export default function App() {
         </div>
 
         <IngestPanel onIngested={loadGraph} loading={loading} setLoading={setLoading} />
-
-        <QAPanel onSaved={loadGraph} />
 
         {/* View switcher */}
         <div style={{ padding: '8px 16px', borderBottom: '1px solid #2a2d35', display: 'flex', gap: 4 }}>
@@ -164,7 +165,21 @@ export default function App() {
           ))}
         </div>
       </div>
+      ) : (
+      <div style={{ width: 50, background: '#161822', borderRight: '1px solid #2a2d35', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 12, flexShrink: 0 }}>
+        {VIEWS.map(v => (
+          <div key={v.id} onClick={() => setViewMode(v.id)} title={v.desc}
+            style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              cursor: 'pointer', marginBottom: 4, fontSize: 16,
+              background: viewMode === v.id ? '#4285f4' : 'transparent', transition: 'background 0.15s' }}>
+            {v.label.slice(0, 2)}
+          </div>
+        ))}
+      </div>
+      )}
 
+      {viewMode !== 'qa' && (
+      <>
       {/* Resize handle */}
       <div onMouseDown={() => setDragging(true)}
         style={{ width: 4, cursor: 'col-resize', background: dragging ? '#4285f4' : 'transparent', flexShrink: 0 }}
@@ -182,7 +197,7 @@ export default function App() {
 
         {viewMode === 'graph' && (
           <>
-            {/* Legend — bottom right to avoid overlapping nodes */}
+            <RestructurePanel subjects={subjects} onRestructured={loadGraph} />
             {subjects.length > 0 && (
               <div style={{ position: 'absolute', bottom: 12, right: 12, zIndex: 10, background: 'rgba(22,24,34,0.9)',
                 padding: '10px 14px', borderRadius: 8, fontSize: 12 }}>
@@ -221,6 +236,12 @@ export default function App() {
           onNavigate={(entry) => setSelectedEntry(entry)}
           onUpdated={loadGraph}
         />
+      )}
+      </>
+      )}
+
+      {viewMode === 'qa' && (
+        <QAPage onSaved={loadGraph} />
       )}
     </div>
   );
