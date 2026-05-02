@@ -1,9 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { deleteEntry, updateEntry, generateSmartQuestions, askEntryQuestion, generateTopicPage, saveTopicPage, getLatestTopicPage, getTopicPages, getTopicPageByVersion, updateTopicPageComments, updateTopicPageQaHistory } from '../lib/api.js';
 
 const QUESTION_COLORS = { '概念': '#4285f4', '原因': '#ea4335', '影响': '#34a853', '对比': '#fbbc05', '思考': '#9c27b0', '自定义': '#ff6d00' };
 
 export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted, onNavigate, onUpdated }) {
+  const navigate = useNavigate();
   const [tab, setTab] = useState('topic');
   const [smartQuestions, setSmartQuestions] = useState([]);
   const [selectedQs, setSelectedQs] = useState(new Set());
@@ -851,6 +853,15 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
               <div style={{ fontSize: 12, color: '#888', padding: 8 }}>AI 正在思考...</div>
             </div>
           ))}
+
+          {/* Deep analysis entry */}
+          <div style={{ marginTop: 16, padding: '12px 16px', background: '#161822', borderRadius: 8, border: '1px solid #2a2d35' }}>
+            <button onClick={() => navigate(`/deep/${entry.id}`)}
+              style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #9c27b044',
+                background: '#9c27b022', color: '#ce93d8', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+              🔬 深入分析 — 分解子主题并逐个探索
+            </button>
+          </div>
         </div>
       )}
     </div>

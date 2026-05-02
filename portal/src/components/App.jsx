@@ -136,10 +136,12 @@ export default function App() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
                     <span style={{ fontSize: 10, color: '#555' }}>{e.subject}</span>
-                    <span onClick={(ev) => { ev.stopPropagation(); navigate(`/deep/${e.id}`); }}
-                      style={{ fontSize: 10, color: '#4285f4', cursor: 'pointer', padding: '1px 6px', borderRadius: 4, background: '#4285f411' }}>
-                      🔬 深入
-                    </span>
+                    {e.has_children && (
+                      <span onClick={(ev) => { ev.stopPropagation(); navigate(`/deep/${e.id}`); }}
+                        style={{ fontSize: 10, color: '#4285f4', cursor: 'pointer', padding: '1px 6px', borderRadius: 4, background: '#4285f411' }}>
+                        🔬 深入
+                      </span>
+                    )}
                   </div>
                 </div>
               ))}

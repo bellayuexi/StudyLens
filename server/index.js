@@ -18,7 +18,11 @@ const upload = multer({ dest: uploadDir, limits: { fileSize: 20 * 1024 * 1024 } 
 // Get all entries + connections for graph
 app.get('/api/graph', (req, res) => {
   const b = req.query.backend || 'wiki';
-  const entries = storage.getAllEntries(b).filter(e => !e.parent_id);
+  const allEntries = storage.getAllEntries(b);
+  const entries = allEntries.filter(e => !e.parent_id).map(e => ({
+    ...e,
+    has_children: allEntries.some(c => c.parent_id === e.id),
+  }));
   const connections = storage.getAllConnections(b);
   res.json({ entries, connections, backend: b });
 });
