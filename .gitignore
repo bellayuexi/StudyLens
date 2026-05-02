@@ -3,3 +3,4 @@ portal/node_modules/
 *.db
 screenshots/
 uploads/
+data/

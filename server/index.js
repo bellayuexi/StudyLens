@@ -3,7 +3,7 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const storage = require('../core/storage');
+const storage = require('../core/dual-storage');
 const llm = require('../core/llm-provider');
 const extractor = require('../core/extractor');
 
@@ -42,6 +42,7 @@ app.post('/api/ingest', async (req, res) => {
     const { text, subject, source_type = 'text', source_ref = '' } = req.body;
     if (!text) return res.status(400).json({ error: 'text is required' });
 
+    storage.addRaw(text, source_type, source_ref);
     const knowledgePoints = await llm.analyze(text, subject);
     const existingEntries = storage.getAllEntries();
     const created = [];
@@ -155,6 +156,7 @@ app.post('/api/ingest/file', upload.single('file'), async (req, res) => {
     const text = await extractor.extractFromFile(dest);
     fs.unlinkSync(dest);
 
+    storage.addRaw(text, ext.replace('.', ''), origName);
     const subject = req.body.subject || '';
     const knowledgePoints = await llm.analyze(text.slice(0, 10000), subject);
     const existingEntries = storage.getAllEntries();
@@ -189,6 +191,7 @@ app.post('/api/ingest/url', async (req, res) => {
     if (!url) return res.status(400).json({ error: 'url is required' });
 
     const text = await extractor.extractFromUrl(url);
+    storage.addRaw(text, 'url', url);
     const knowledgePoints = await llm.analyze(text.slice(0, 10000), subject || '');
     const existingEntries = storage.getAllEntries();
     const created = [];
