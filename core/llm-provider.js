@@ -302,10 +302,10 @@ ${existingSection}
 只返回JSON，不要其他文字。`;
 
   const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 1024 });
-  const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
   const match = cleaned.match(/\[[\s\S]*\]/);
-  if (!match) return [];
-  try { return JSON.parse(match[0]); } catch { return []; }
+  if (!match) { console.error('[smartQ] no match in LLM response:', result.slice(0, 200)); return []; }
+  try { return JSON.parse(match[0]); } catch (e) { console.error('[smartQ] JSON parse error:', e.message); return []; }
 }
 
 async function generateTopicHTML(entry, relatedEntries = [], qaHistory = []) {
