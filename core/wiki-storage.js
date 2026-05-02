@@ -8,9 +8,10 @@ const DRILL_CORE = path.join(WIKI_ROOT, 'drill', 'core');
 const DRILL_EXT = path.join(WIKI_ROOT, 'drill', 'extended');
 const INDEX_DIR = path.join(WIKI_ROOT, 'index');
 const TAGS_DIR = path.join(INDEX_DIR, 'tags');
+const TOPICS_DIR = path.join(WIKI_ROOT, 'topics');
 
 function ensureDirs() {
-  for (const d of [RAW_DIR, DRILL_CORE, DRILL_EXT, INDEX_DIR, TAGS_DIR]) {
+  for (const d of [RAW_DIR, DRILL_CORE, DRILL_EXT, INDEX_DIR, TAGS_DIR, TOPICS_DIR]) {
     fs.mkdirSync(d, { recursive: true });
   }
 }
@@ -259,4 +260,71 @@ function updateEntry(id, { title, content, subject, tags }) {
   return updated;
 }
 
-module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT };
+// --- Topic pages ---
+
+function getTopicDir(entryId) {
+  const dir = path.join(TOPICS_DIR, entryId.slice(0, 8));
+  fs.mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function saveTopicPage(entryId, html, qaHistory = [], comments = []) {
+  const dir = getTopicDir(entryId);
+  const existing = getTopicPages(entryId);
+  const version = existing.length > 0 ? existing[0].version + 1 : 1;
+  const id = uuidv4();
+  const now = new Date().toISOString();
+
+  const meta = { id, entry_id: entryId, version, comments, qa_history: qaHistory, created_at: now };
+  const content = `---\n${JSON.stringify(meta, null, 2)}\n---\n\n${html}`;
+  fs.writeFileSync(path.join(dir, `v${version}.md`), content, 'utf-8');
+
+  return { id, entry_id: entryId, version, html, comments, qa_history: qaHistory, created_at: now };
+}
+
+function getTopicPages(entryId) {
+  const dir = path.join(TOPICS_DIR, entryId.slice(0, 8));
+  if (!fs.existsSync(dir)) return [];
+  const pages = [];
+  for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.md')).sort().reverse()) {
+    try {
+      const raw = fs.readFileSync(path.join(dir, f), 'utf-8');
+      const match = raw.match(/^---\n([\s\S]*?)\n---\n\n?([\s\S]*)$/);
+      if (!match) continue;
+      const meta = JSON.parse(match[1]);
+      if (meta.entry_id !== entryId) continue;
+      pages.push({ ...meta, html: match[2] });
+    } catch {}
+  }
+  return pages.sort((a, b) => b.version - a.version);
+}
+
+function getLatestTopicPage(entryId) {
+  const pages = getTopicPages(entryId);
+  return pages.length > 0 ? pages[0] : null;
+}
+
+function updateTopicPageComments(pageId, comments) {
+  // Find across all topic dirs
+  if (!fs.existsSync(TOPICS_DIR)) return;
+  for (const dir of fs.readdirSync(TOPICS_DIR)) {
+    const dirPath = path.join(TOPICS_DIR, dir);
+    if (!fs.statSync(dirPath).isDirectory()) continue;
+    for (const f of fs.readdirSync(dirPath).filter(f => f.endsWith('.md'))) {
+      const filePath = path.join(dirPath, f);
+      try {
+        const raw = fs.readFileSync(filePath, 'utf-8');
+        const match = raw.match(/^---\n([\s\S]*?)\n---\n\n?([\s\S]*)$/);
+        if (!match) continue;
+        const meta = JSON.parse(match[1]);
+        if (meta.id === pageId) {
+          meta.comments = comments;
+          fs.writeFileSync(filePath, `---\n${JSON.stringify(meta, null, 2)}\n---\n\n${match[2]}`, 'utf-8');
+          return;
+        }
+      } catch {}
+    }
+  }
+}
+
+module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments };

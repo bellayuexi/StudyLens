@@ -61,19 +61,19 @@ function updateEntry(id, data) {
 }
 
 function saveTopicPage(entryId, html, qaHistory, comments) {
-  return sqliteStorage.saveTopicPage(entryId, html, qaHistory, comments);
+  return wikiStorage.saveTopicPage(entryId, html, qaHistory, comments);
 }
 
 function getTopicPages(entryId) {
-  return sqliteStorage.getTopicPages(entryId);
+  return wikiStorage.getTopicPages(entryId);
 }
 
 function getLatestTopicPage(entryId) {
-  return sqliteStorage.getLatestTopicPage(entryId);
+  return wikiStorage.getLatestTopicPage(entryId);
 }
 
 function updateTopicPageComments(pageId, comments) {
-  return sqliteStorage.updateTopicPageComments(pageId, comments);
+  return wikiStorage.updateTopicPageComments(pageId, comments);
 }
 
 module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments };
