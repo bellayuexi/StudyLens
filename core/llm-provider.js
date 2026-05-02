@@ -299,13 +299,23 @@ ${existingSection}
 5. 深入思考（评价/启示）
 
 返回JSON数组，每个元素: {"question": "问题内容", "category": "概念/原因/影响/对比/思考"}
+重要：问题文本中如果要引用术语，请用「」而不是引号，避免JSON解析错误。
 只返回JSON，不要其他文字。`;
 
   const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 1024 });
-  const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').replace(/[“”]/g, '"').replace(/[‘’]/g, "'");
-  const match = cleaned.match(/\[[\s\S]*\]/);
+  const stripped = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  const match = stripped.match(/\[[\s\S]*\]/);
   if (!match) { console.error('[smartQ] no match in LLM response:', result.slice(0, 200)); return []; }
-  try { return JSON.parse(match[0]); } catch (e) { console.error('[smartQ] JSON parse error:', e.message); return []; }
+  try { return JSON.parse(match[0]); } catch (e1) {
+    // Repair: extract question/category pairs via regex
+    const items = [];
+    const re = /[“"]question[”"]\s*:\s*[“"]([^”"]*(?:[“"][^”"]*)*)[”"]\s*,\s*[“"]category[”"]\s*:\s*[“"]([^”"]*)[”"]/g;
+    let rm;
+    while ((rm = re.exec(match[0])) !== null) items.push({ question: rm[1], category: rm[2] });
+    if (items.length > 0) return items;
+    console.error("[smartQ] parse fail", e1.message);
+    return [];
+  }
 }
 
 async function generateTopicHTML(entry, relatedEntries = [], qaHistory = []) {
@@ -354,13 +364,21 @@ async function expandEntry(entry) {
 例如"王安石变法"可以拆解为：背景、青苗法、免役法、市易法、保甲法、影响与评价等。
 
 返回JSON数组，每个元素: {"title": "子知识点标题", "content": "简要描述（50-100字）", "category": "背景/内容/影响/对比/评价"}
+重要：文本中引用术语请用「」而不是引号，避免JSON解析错误。
 只返回JSON，不要其他文字。`;
 
   const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 2048 });
-  const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').replace(/[""]/g, '"').replace(/['']/g, "'");
-  const match = cleaned.match(/\[[\s\S]*\]/);
+  const stripped = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  const match = stripped.match(/\[[\s\S]*\]/);
   if (!match) return [];
-  try { return JSON.parse(match[0]); } catch { return []; }
+  try { return JSON.parse(match[0]); } catch (e1) {
+    const items = [];
+    const re = /[“"]title[”"]\s*:\s*[“"]([^”"]+)[”"]\s*,\s*[“"]content[”"]\s*:\s*[“"]([^”"]+)[”"]\s*,\s*[“"]category[”"]\s*:\s*[“"]([^”"]+)[”"]/g;
+    let rm;
+    while ((rm = re.exec(match[0])) !== null) items.push({ title: rm[1], content: rm[2], category: rm[3] });
+    if (items.length > 0) return items;
+    return [];
+  }
 }
 
 module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap, generateSmartQuestions, generateTopicHTML, expandEntry };
