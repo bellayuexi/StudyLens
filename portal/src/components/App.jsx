@@ -40,7 +40,8 @@ export default function App() {
       name: e.title,
       subject: e.subject,
       val: 4 + connections.filter(c => c.from_id === e.id || c.to_id === e.id).length * 2,
-      color: getColor(e.subject),
+      color: e.source_type === 'qa' ? '#ce93d8' : getColor(e.subject),
+      isQA: e.source_type === 'qa',
       _entry: e,
     }));
     const nodeIds = new Set(nodes.map(n => n.id));

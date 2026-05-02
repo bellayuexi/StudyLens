@@ -152,7 +152,8 @@ Return a JSON object:
   ]
 }
 
-Return ONLY valid JSON, no other text.`;
+CRITICAL: The answer field must be PLAIN TEXT only — no markdown formatting (no **, no ##, no -). Use simple punctuation and line breaks instead.
+Return ONLY valid JSON, no other text. Do not wrap in code fences.`;
 
   const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 4096 });
   const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '');

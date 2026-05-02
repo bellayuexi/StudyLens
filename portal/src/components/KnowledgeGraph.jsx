@@ -53,14 +53,29 @@ export default function KnowledgeGraph({ data, onNodeClick, selectedId }) {
       ctx.fill();
     }
 
-    ctx.beginPath();
-    ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
-    ctx.fillStyle = isSelected ? '#fff' : node.color;
-    ctx.fill();
-    if (isSelected) {
-      ctx.strokeStyle = node.color;
+    if (node.isQA) {
+      // Diamond shape for Q&A nodes
+      ctx.beginPath();
+      ctx.moveTo(node.x, node.y - r * 1.3);
+      ctx.lineTo(node.x + r, node.y);
+      ctx.lineTo(node.x, node.y + r * 1.3);
+      ctx.lineTo(node.x - r, node.y);
+      ctx.closePath();
+      ctx.fillStyle = isSelected ? '#fff' : node.color;
+      ctx.fill();
+      ctx.strokeStyle = '#9c27b0';
       ctx.lineWidth = 2;
       ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
+      ctx.fillStyle = isSelected ? '#fff' : node.color;
+      ctx.fill();
+      if (isSelected) {
+        ctx.strokeStyle = node.color;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
     }
 
     const fontSize = Math.max(11 / globalScale, 3.5);
