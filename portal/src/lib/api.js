@@ -143,3 +143,12 @@ export async function updateTopicPageComments(pageId, comments) {
   });
   return res.json();
 }
+
+export async function updateTopicPageQaHistory(pageId, qaHistory) {
+  const res = await fetch(`${API}/api/topic-pages/${pageId}/qa-history`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ qaHistory }),
+  });
+  return res.json();
+}

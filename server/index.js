@@ -381,4 +381,14 @@ app.put('/api/topic-pages/:pageId/comments', (req, res) => {
   }
 });
 
+app.put('/api/topic-pages/:pageId/qa-history', (req, res) => {
+  try {
+    const { qaHistory } = req.body;
+    storage.updateTopicPageQaHistory(req.params.pageId, qaHistory || []);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => console.log(`StudyGraph server running on http://localhost:${PORT}`));

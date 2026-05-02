@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { deleteEntry, updateEntry, generateSmartQuestions, askEntryQuestion, generateTopicPage, saveTopicPage, getLatestTopicPage, getTopicPages, getTopicPageByVersion, updateTopicPageComments } from '../lib/api.js';
+import { deleteEntry, updateEntry, generateSmartQuestions, askEntryQuestion, generateTopicPage, saveTopicPage, getLatestTopicPage, getTopicPages, getTopicPageByVersion, updateTopicPageComments, updateTopicPageQaHistory } from '../lib/api.js';
 
 const QUESTION_COLORS = { '概念': '#4285f4', '原因': '#ea4335', '影响': '#34a853', '对比': '#fbbc05', '思考': '#9c27b0', '自定义': '#ff6d00' };
 
@@ -30,60 +30,107 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const [saving, setSaving] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const qaRef = useRef(null);
+  const questionsCacheRef = useRef({});
+  const entryIdRef = useRef(entry.id);
+  const bgTasksRef = useRef({});
+  const askingCountRef = useRef(0);
+  const entryDataCacheRef = useRef({});
+  const [loadingEntry, setLoadingEntry] = useState(false);
 
   useEffect(() => {
-    setSmartQuestions([]);
-    setSelectedQs(new Set());
-    setQaHistory([]);
-    setTopicHTML('');
-    setTopicPageId(null);
-    setTopicVersion(0);
-    setTopicVersionCount(0);
-    setViewingVersion(null);
-    setTopicStatus('');
-    setTopicDirty(false);
-    setLastUpdated('');
-    setComments([]);
-    setCommentMode(false);
+    entryIdRef.current = entry.id;
     setEditingField(null);
-    setTab('topic');
-    loadSavedTopicPage();
-    loadSmartQuestions();
+    setCommentMode(false);
+    setAsking(false);
+
+    // Restore from cache immediately if available
+    const cached = entryDataCacheRef.current[entry.id];
+    if (cached) {
+      setTopicHTML(cached.topicHTML || '');
+      setTopicPageId(cached.topicPageId || null);
+      setTopicVersion(cached.topicVersion || 0);
+      setTopicVersionCount(cached.topicVersionCount || 0);
+      setQaHistory(cached.qaHistory || []);
+      setComments(cached.comments || []);
+      setLastUpdated(cached.lastUpdated || '');
+      setTopicStatus(cached.topicStatus || '');
+      setTopicDirty(cached.topicDirty || false);
+      setViewingVersion(null);
+      setTab('topic');
+      setLoadingEntry(false);
+    } else {
+      setSmartQuestions([]);
+      setSelectedQs(new Set());
+      setQaHistory([]);
+      setTopicHTML('');
+      setTopicPageId(null);
+      setTopicVersion(0);
+      setTopicVersionCount(0);
+      setViewingVersion(null);
+      setTopicStatus('');
+      setTopicDirty(false);
+      setLastUpdated('');
+      setComments([]);
+      setTab('topic');
+      setLoadingEntry(true);
+      loadSavedTopicPage();
+    }
+
+    // Load cached questions if available
+    const cachedQs = questionsCacheRef.current[entry.id];
+    if (cachedQs) {
+      setSmartQuestions(cachedQs);
+      setSelectedQs(new Set(cachedQs.map(q => q.id)));
+    } else {
+      setSmartQuestions([]);
+      setSelectedQs(new Set());
+    }
   }, [entry.id]);
 
+  // Cache current entry data when it changes
+  useEffect(() => {
+    if (!entry.id || loadingEntry) return;
+    entryDataCacheRef.current[entry.id] = {
+      topicHTML, topicPageId, topicVersion, topicVersionCount,
+      qaHistory: qaHistory.filter(h => !h.loading),
+      comments, lastUpdated, topicStatus, topicDirty,
+    };
+  }, [topicHTML, topicPageId, topicVersion, topicVersionCount, qaHistory, comments, lastUpdated, topicStatus, topicDirty]);
+
   const loadSavedTopicPage = async () => {
+    const currentId = entry.id;
     try {
-      const data = await getLatestTopicPage(entry.id);
+      const data = await getLatestTopicPage(currentId);
+      if (entryIdRef.current !== currentId) return;
       if (data.page) {
         setTopicHTML(data.page.html);
         setTopicPageId(data.page.id);
         setTopicVersion(data.page.version);
         setTopicVersionCount(data.page.version);
         setComments(data.page.comments || []);
-        setQaHistory(data.page.qa_history || []);
+        const qa = (data.page.qa_history || []).filter(h => h.answer);
+        setQaHistory(qa);
         setLastUpdated(data.page.created_at);
         setTopicStatus(`v${data.page.version} 已保存`);
         setTopicDirty(false);
       }
     } catch (e) { console.error(e); }
+    if (entryIdRef.current === currentId) setLoadingEntry(false);
   };
 
   const loadSmartQuestions = async () => {
+    const currentId = entry.id;
     setLoadingQ(true);
     try {
-      const data = await generateSmartQuestions(entry.id);
+      const data = await generateSmartQuestions(currentId);
+      if (entryIdRef.current !== currentId) return;
       const qs = (data.questions || []).map((q, i) => ({ ...q, id: i }));
+      questionsCacheRef.current[currentId] = qs;
       setSmartQuestions(qs);
       setSelectedQs(new Set(qs.map(q => q.id)));
     } catch (e) { console.error(e); }
     setLoadingQ(false);
   };
-
-  useEffect(() => {
-    if (smartQuestions.length > 0 && !topicHTML && !loadingTopic && topicVersion === 0) {
-      handleGenerateTopic();
-    }
-  }, [smartQuestions]);
 
   const toggleQ = (id) => {
     setSelectedQs(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
@@ -111,18 +158,33 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
 
   const handleAsk = async (question) => {
     if (!question || asking) return;
+    const askingEntryId = entry.id;
+    const askingPageId = topicPageId;
     setAsking(true);
     const history = qaHistory.map(h => ({ question: h.question, answer: h.answer }));
     setQaHistory(prev => [...prev, { question, answer: '', loading: true }]);
     try {
-      const data = await askEntryQuestion(entry.id, question, history);
+      const data = await askEntryQuestion(askingEntryId, question, history);
+      if (entryIdRef.current !== askingEntryId) {
+        if (askingPageId) {
+          updateTopicPageQaHistory(askingPageId, [...history, { question, answer: data.answer }]).catch(() => {});
+        }
+        setAsking(false);
+        return;
+      }
+      const newItem = { question, answer: data.answer, cards: data.suggestedCards || [], loading: false };
       setQaHistory(prev => {
         const updated = [...prev];
-        updated[updated.length - 1] = { question, answer: data.answer, cards: data.suggestedCards || [], loading: false };
+        updated[updated.length - 1] = newItem;
+        if (askingPageId) {
+          const qaToSave = updated.filter(h => !h.loading).map(h => ({ question: h.question, answer: h.answer }));
+          updateTopicPageQaHistory(askingPageId, qaToSave).catch(() => {});
+        }
         return updated;
       });
       setTopicDirty(true);
     } catch (err) {
+      if (entryIdRef.current !== askingEntryId) { setAsking(false); return; }
       setQaHistory(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = { question, answer: `错误: ${err.message}`, loading: false };
@@ -135,9 +197,49 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
 
   const handleBatchAsk = async () => {
     const selected = smartQuestions.filter(q => selectedQs.has(q.id));
-    if (!selected.length || asking) return;
-    for (const q of selected) {
-      await handleAsk(q.question);
+    if (!selected.length) return;
+    const batchEntryId = entry.id;
+    const batchPageId = topicPageId;
+    const baseHistory = qaHistory.filter(h => !h.loading).map(h => ({ question: h.question, answer: h.answer }));
+
+    // Only set asking if we're on this entry
+    if (entryIdRef.current === batchEntryId) setAsking(true);
+
+    // Show all questions as loading in UI
+    const loadingItems = selected.map(q => ({ question: q.question, answer: '', loading: true, _qid: q.id }));
+    if (entryIdRef.current === batchEntryId) {
+      setQaHistory(prev => [...prev, ...loadingItems]);
+    }
+
+    // Track results for persistence
+    const results = {};
+
+    // Fire all questions in parallel
+    const promises = selected.map(async (q) => {
+      try {
+        const data = await askEntryQuestion(batchEntryId, q.question, baseHistory);
+        results[q.id] = { question: q.question, answer: data.answer, cards: data.suggestedCards || [], loading: false };
+      } catch (err) {
+        results[q.id] = { question: q.question, answer: `错误: ${err.message}`, loading: false };
+      }
+
+      // Update UI if still on same entry
+      if (entryIdRef.current === batchEntryId) {
+        setQaHistory(prev => prev.map(h => h._qid === q.id ? { ...results[q.id], _qid: q.id } : h));
+        setTopicDirty(true);
+      }
+
+      // Persist incrementally
+      if (batchPageId) {
+        const allDone = [...baseHistory, ...Object.values(results).map(r => ({ question: r.question, answer: r.answer }))];
+        updateTopicPageQaHistory(batchPageId, allDone).catch(() => {});
+      }
+    });
+
+    await Promise.all(promises);
+    if (entryIdRef.current === batchEntryId) {
+      setAsking(false);
+      setTimeout(() => qaRef.current?.scrollTo(0, qaRef.current.scrollHeight), 100);
     }
   };
 
@@ -148,15 +250,18 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   };
 
   const handleGenerateTopic = async () => {
+    const genEntryId = entry.id;
     setLoadingTopic(true);
     setTopicStatus('正在生成...');
     try {
-      const data = await generateTopicPage(entry.id, qaHistory);
+      const data = await generateTopicPage(genEntryId, qaHistory);
+      if (entryIdRef.current !== genEntryId) { setLoadingTopic(false); return; }
       const html = injectTimestamp(data.html || '');
       setTopicHTML(html);
       setTab('topic');
       try {
-        const saved = await saveTopicPage(entry.id, html, qaHistory, comments);
+        const saved = await saveTopicPage(genEntryId, html, qaHistory, comments);
+        if (entryIdRef.current !== genEntryId) { setLoadingTopic(false); return; }
         setTopicPageId(saved.id);
         setTopicVersion(saved.version);
         setTopicVersionCount(saved.version);
@@ -166,24 +271,27 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         setTopicDirty(false);
       } catch (saveErr) {
         console.error('Save failed:', saveErr);
-        setTopicStatus('已生成（保存失败，请重试）');
+        if (entryIdRef.current === genEntryId) setTopicStatus('已生成（保存失败，请重试）');
       }
     } catch (err) {
-      setTopicStatus('生成失败');
+      if (entryIdRef.current === genEntryId) setTopicStatus('生成失败');
       console.error(err);
     }
     setLoadingTopic(false);
   };
 
   const handleRefreshTopic = async () => {
+    const genEntryId = entry.id;
     setLoadingTopic(true);
     setTopicStatus('正在更新...');
     try {
-      const data = await generateTopicPage(entry.id, qaHistory);
+      const data = await generateTopicPage(genEntryId, qaHistory);
+      if (entryIdRef.current !== genEntryId) { setLoadingTopic(false); return; }
       const html = injectTimestamp(data.html || '');
       setTopicHTML(html);
       try {
-        const saved = await saveTopicPage(entry.id, html, qaHistory, comments);
+        const saved = await saveTopicPage(genEntryId, html, qaHistory, comments);
+        if (entryIdRef.current !== genEntryId) { setLoadingTopic(false); return; }
         setTopicPageId(saved.id);
         setTopicVersion(saved.version);
         setTopicVersionCount(saved.version);
@@ -193,10 +301,10 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         setTopicDirty(false);
       } catch (saveErr) {
         console.error('Save failed:', saveErr);
-        setTopicStatus('已更新（保存失败，请重试）');
+        if (entryIdRef.current === genEntryId) setTopicStatus('已更新（保存失败，请重试）');
       }
     } catch (err) {
-      setTopicStatus('更新失败');
+      if (entryIdRef.current === genEntryId) setTopicStatus('更新失败');
     }
     setLoadingTopic(false);
   };
@@ -348,9 +456,38 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         ))}
       </div>
 
+      {/* Loading state */}
+      {loadingEntry && (
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 24, marginBottom: 8 }}>⏳</div>
+            <div style={{ fontSize: 13 }}>加载中...</div>
+          </div>
+        </div>
+      )}
+
       {/* Topic Page Tab */}
-      {tab === 'topic' && (
+      {!loadingEntry && tab === 'topic' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {/* Content overview */}
+          {editingField === 'content' ? (
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid #2a2d35' }}>
+              <textarea value={editForm.content} onChange={e => setEditForm({ ...editForm, content: e.target.value })}
+                rows={4} style={{ ...inputStyle, lineHeight: 1.8, resize: 'vertical' }} />
+              <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                <button onClick={saveField} disabled={saving} style={{ padding: '4px 12px', borderRadius: 4, border: 'none', background: '#34a853', color: '#fff', cursor: 'pointer', fontSize: 11 }}>
+                  {saving ? '...' : '保存'}
+                </button>
+                <button onClick={() => setEditingField(null)} style={{ padding: '4px 12px', borderRadius: 4, border: 'none', background: '#666', color: '#fff', cursor: 'pointer', fontSize: 11 }}>取消</button>
+              </div>
+            </div>
+          ) : (
+            <div onClick={() => startFieldEdit('content')}
+              style={{ fontSize: 13, lineHeight: 1.7, color: '#bbb', background: '#161822', padding: '10px 16px', borderBottom: '1px solid #2a2d35', cursor: 'pointer', maxHeight: 80, overflow: 'hidden' }}
+              title="点击编辑">
+              {entry.content}
+            </div>
+          )}
           {/* Toolbar */}
           <div style={{ padding: '6px 16px', borderBottom: '1px solid #2a2d35', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#161822', flexWrap: 'wrap', gap: 4 }}>
             <div style={{ fontSize: 11, color: '#888', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -438,15 +575,18 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
           ) : (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#666' }}>
               <div style={{ fontSize: 48 }}>📄</div>
-              <div style={{ fontSize: 14 }}>正在等待智能问题生成...</div>
-              <div style={{ fontSize: 12, color: '#555' }}>问题生成后将自动构建专题页面</div>
+              <div style={{ fontSize: 14 }}>尚未生成专题页</div>
+              <button onClick={handleGenerateTopic} disabled={loadingTopic}
+                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#4285f4', color: '#fff', cursor: 'pointer', fontSize: 14 }}>
+                {loadingTopic ? '生成中...' : '生成专题页'}
+              </button>
             </div>
           )}
         </div>
       )}
 
       {/* Explore Tab */}
-      {tab === 'explore' && (
+      {!loadingEntry && tab === 'explore' && (
         <div ref={qaRef} style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
           {/* Content */}
           {editingField === 'content' ? (
@@ -481,12 +621,17 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                     {smartQuestions.every(q => selectedQs.has(q.id)) ? '取消全选' : '全选'}
                   </span>
                 )}
-                {!loadingQ && <span onClick={loadSmartQuestions} style={{ fontSize: 11, color: '#4285f4', cursor: 'pointer' }}>刷新</span>}
+                {!loadingQ && <span onClick={() => { delete questionsCacheRef.current[entry.id]; loadSmartQuestions(); }} style={{ fontSize: 11, color: '#4285f4', cursor: 'pointer' }}>刷新</span>}
               </div>
             </div>
 
             {loadingQ ? (
               <div style={{ fontSize: 12, color: '#888', padding: 8 }}>正在生成智能问题...</div>
+            ) : smartQuestions.length === 0 ? (
+              <button onClick={loadSmartQuestions}
+                style={{ width: '100%', padding: '10px', borderRadius: 6, border: '1px dashed #4285f444', background: '#4285f411', color: '#4285f4', cursor: 'pointer', fontSize: 13 }}>
+                💡 生成智能问题
+              </button>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {smartQuestions.map(q => (

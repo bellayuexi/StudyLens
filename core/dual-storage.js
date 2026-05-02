@@ -76,4 +76,8 @@ function updateTopicPageComments(pageId, comments) {
   return wikiStorage.updateTopicPageComments(pageId, comments);
 }
 
-module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments };
+function updateTopicPageQaHistory(pageId, qaHistory) {
+  return wikiStorage.updateTopicPageQaHistory(pageId, qaHistory);
+}
+
+module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory };

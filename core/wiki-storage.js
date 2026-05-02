@@ -304,8 +304,7 @@ function getLatestTopicPage(entryId) {
   return pages.length > 0 ? pages[0] : null;
 }
 
-function updateTopicPageComments(pageId, comments) {
-  // Find across all topic dirs
+function updateTopicPageField(pageId, field, value) {
   if (!fs.existsSync(TOPICS_DIR)) return;
   for (const dir of fs.readdirSync(TOPICS_DIR)) {
     const dirPath = path.join(TOPICS_DIR, dir);
@@ -318,7 +317,7 @@ function updateTopicPageComments(pageId, comments) {
         if (!match) continue;
         const meta = JSON.parse(match[1]);
         if (meta.id === pageId) {
-          meta.comments = comments;
+          meta[field] = value;
           fs.writeFileSync(filePath, `---\n${JSON.stringify(meta, null, 2)}\n---\n\n${match[2]}`, 'utf-8');
           return;
         }
@@ -327,4 +326,12 @@ function updateTopicPageComments(pageId, comments) {
   }
 }
 
-module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments };
+function updateTopicPageComments(pageId, comments) {
+  updateTopicPageField(pageId, 'comments', comments);
+}
+
+function updateTopicPageQaHistory(pageId, qaHistory) {
+  updateTopicPageField(pageId, 'qa_history', qaHistory);
+}
+
+module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory };
