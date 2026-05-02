@@ -7,9 +7,10 @@ const RAW_DIR = path.join(WIKI_ROOT, 'raw');
 const DRILL_CORE = path.join(WIKI_ROOT, 'drill', 'core');
 const DRILL_EXT = path.join(WIKI_ROOT, 'drill', 'extended');
 const INDEX_DIR = path.join(WIKI_ROOT, 'index');
+const TAGS_DIR = path.join(INDEX_DIR, 'tags');
 
 function ensureDirs() {
-  for (const d of [RAW_DIR, DRILL_CORE, DRILL_EXT, INDEX_DIR]) {
+  for (const d of [RAW_DIR, DRILL_CORE, DRILL_EXT, INDEX_DIR, TAGS_DIR]) {
     fs.mkdirSync(d, { recursive: true });
   }
 }
@@ -43,6 +44,52 @@ function getEntryIndex() {
 
 function saveEntryIndex(entries) {
   writeJson(path.join(INDEX_DIR, 'entries.json'), entries);
+}
+
+// --- Tag index ---
+
+function getTagIndex(tag) {
+  return readJson(path.join(TAGS_DIR, `${sanitize(tag)}.json`), []);
+}
+
+function saveTagIndex(tag, entries) {
+  writeJson(path.join(TAGS_DIR, `${sanitize(tag)}.json`), entries);
+}
+
+function addToTagIndex(entryId, title, subject, tags) {
+  for (const tag of tags) {
+    const idx = getTagIndex(tag);
+    if (!idx.some(e => e.id === entryId)) {
+      idx.push({ id: entryId, title, subject });
+      saveTagIndex(tag, idx);
+    }
+  }
+}
+
+function removeFromTagIndex(entryId, tags) {
+  for (const tag of tags) {
+    const idx = getTagIndex(tag).filter(e => e.id !== entryId);
+    saveTagIndex(tag, idx);
+  }
+}
+
+function rebuildTagIndex() {
+  const entries = getAllEntries();
+  const tagMap = {};
+  for (const e of entries) {
+    for (const tag of (e.tags || [])) {
+      if (!tagMap[tag]) tagMap[tag] = [];
+      tagMap[tag].push({ id: e.id, title: e.title, subject: e.subject });
+    }
+  }
+  // Clear old tag files
+  if (fs.existsSync(TAGS_DIR)) {
+    for (const f of fs.readdirSync(TAGS_DIR)) fs.unlinkSync(path.join(TAGS_DIR, f));
+  }
+  for (const [tag, entries] of Object.entries(tagMap)) {
+    saveTagIndex(tag, entries);
+  }
+  return Object.keys(tagMap).length;
 }
 
 // --- Raw layer ---
@@ -131,6 +178,8 @@ function addEntry({ title, content, subject = '', tags = [], source_type = 'text
   index.push({ id, title, subject, source_type, file: path.relative(WIKI_ROOT, path.join(subDir, fileName)) });
   saveEntryIndex(index);
 
+  if (tags.length > 0) addToTagIndex(id, title, subject, tags);
+
   return entry;
 }
 
@@ -180,6 +229,7 @@ function searchEntries(query) {
 
 function deleteEntry(id) {
   const entry = getEntry(id);
+  if (entry?.tags?.length > 0) removeFromTagIndex(id, entry.tags);
   if (entry?._file && fs.existsSync(entry._file)) fs.unlinkSync(entry._file);
   const index = getEntryIndex().filter(e => e.id !== id);
   saveEntryIndex(index);
@@ -190,6 +240,7 @@ function deleteEntry(id) {
 function updateEntry(id, { title, content, subject, tags }) {
   const entry = getEntry(id);
   if (!entry) return null;
+  const oldTags = entry.tags || [];
   const updated = { ...entry, title, content, subject, tags };
   delete updated._file;
   if (entry._file && fs.existsSync(entry._file)) {
@@ -199,7 +250,13 @@ function updateEntry(id, { title, content, subject, tags }) {
   const idx = index.findIndex(e => e.id === id);
   if (idx >= 0) { index[idx].title = title; index[idx].subject = subject; }
   saveEntryIndex(index);
+
+  const removedTags = oldTags.filter(t => !tags.includes(t));
+  const addedTags = tags.filter(t => !oldTags.includes(t));
+  if (removedTags.length > 0) removeFromTagIndex(id, removedTags);
+  if (addedTags.length > 0) addToTagIndex(id, title, subject, addedTags);
+
   return updated;
 }
 
-module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, WIKI_ROOT };
+module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT };
