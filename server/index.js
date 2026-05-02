@@ -87,14 +87,14 @@ app.post('/api/connections', (req, res) => {
 // Q&A: ask a question with existing knowledge as context
 app.post('/api/qa', async (req, res) => {
   try {
-    const { question } = req.body;
+    const { question, history } = req.body;
     if (!question) return res.status(400).json({ error: 'question is required' });
     const allEntries = storage.getAllEntries();
-    // Extract 2-4 char Chinese terms for matching
+    const searchText = [question, ...(history || []).map(h => h.question)].join(' ');
     const keywords = [];
     for (let len = 4; len >= 2; len--) {
-      for (let i = 0; i <= question.length - len; i++) {
-        const w = question.slice(i, i + len);
+      for (let i = 0; i <= searchText.length - len; i++) {
+        const w = searchText.slice(i, i + len);
         if (/^[一-鿿]+$/.test(w)) keywords.push(w);
       }
     }
@@ -103,7 +103,7 @@ app.post('/api/qa', async (req, res) => {
       const text = e.title + e.content + (e.tags || []).join(' ') + e.subject;
       return uniqueKw.some(kw => text.includes(kw));
     }).slice(0, 20);
-    const result = await llm.askQuestion(question, relevant.length > 0 ? relevant : allEntries.slice(0, 10));
+    const result = await llm.askQuestion(question, relevant.length > 0 ? relevant : allEntries.slice(0, 10), history || []);
     res.json({ ...result, relatedEntries: relevant.map(e => ({ id: e.id, title: e.title, subject: e.subject })) });
   } catch (err) {
     res.status(500).json({ error: err.message });

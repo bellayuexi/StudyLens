@@ -27,11 +27,11 @@ export async function updateEntry(id, data) {
   return res.json();
 }
 
-export async function askQuestion(question) {
+export async function askQuestion(question, history = []) {
   const res = await fetch(`${API}/api/qa`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({ question, history }),
   });
   return res.json();
 }

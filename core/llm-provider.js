@@ -119,53 +119,60 @@ Return ONLY valid JSON, no other text.`;
   return match ? JSON.parse(match[0]) : [];
 }
 
-async function askQuestion(question, contextEntries = []) {
+async function askQuestion(question, contextEntries = [], history = []) {
   const context = contextEntries.length > 0
     ? contextEntries.map(e => `【${e.title}】(${e.subject}) ${e.content}`).join('\n\n')
     : '';
 
-  const prompt = `You are an expert study assistant with deep knowledge across all subjects. A student is studying and asks you a question.
+  const systemPrompt = `You are an expert study assistant with deep knowledge across all subjects. A student is studying and asks you questions.
 
-IMPORTANT: Use your OWN comprehensive knowledge to answer the question thoroughly and accurately. Do NOT limit your answer to only what is in the student's notes — the notes are supplementary context, not the boundary of your answer.
+IMPORTANT: Use your OWN comprehensive knowledge to answer thoroughly and accurately. The student's notes are supplementary context, not the boundary of your answer.
 
-${context ? `The student's existing study notes for reference (use these to connect your answer to what they already know, but go well beyond them):\n${context}\n` : ''}
-
-Student's question: ${question}
+${context ? `The student's existing study notes for reference:\n${context}\n` : ''}
 
 Instructions:
-1. Answer the question using your full knowledge — be thorough, accurate, and educational
-2. If the student has relevant notes, reference them to build connections, but always provide the complete answer
-3. Use comparisons, analysis, and specific historical facts/data where appropriate
-4. Write the answer in Chinese, suitable for a middle/high school student
-5. Suggest knowledge cards that capture the KEY points from your answer — these should be NEW knowledge that extends beyond what's already in the student's notes
+1. Answer using your full knowledge — be thorough, accurate, and educational
+2. If the student has relevant notes, reference them to build connections
+3. Use comparisons, analysis, and specific facts/data where appropriate
+4. Write in Chinese, suitable for a middle/high school student
+5. Suggest knowledge cards that capture KEY points — NEW knowledge beyond existing notes
+6. In follow-up turns, refine/expand based on the student's feedback. Accumulate ALL worthy knowledge cards from the entire conversation, not just the latest turn.
 
 Return a JSON object:
 {
-  "answer": "Your comprehensive, detailed answer in Chinese...",
+  "answer": "Your comprehensive answer in Chinese...",
   "suggestedCards": [
     {
       "title": "card title (under 20 chars)",
-      "content": "knowledge point explained clearly and completely",
-      "subject": "precise subject like 历史-唐朝 or 历史-北宋",
-      "tags": ["relevant", "tags", "including dimensional tags like 政治制度"]
+      "content": "knowledge point explained clearly",
+      "subject": "precise subject like 历史-唐朝",
+      "tags": ["relevant", "tags"]
     }
   ]
 }
 
-CRITICAL: The answer field must be PLAIN TEXT only — no markdown formatting (no **, no ##, no -). Use simple punctuation and line breaks instead.
+CRITICAL: The answer field must be PLAIN TEXT only — no markdown formatting (no **, no ##, no -).
 Return ONLY valid JSON, no other text. Do not wrap in code fences.`;
 
-  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 4096 });
+  const messages = [
+    { role: 'user', content: systemPrompt },
+    { role: 'assistant', content: '{"answer": "好的，我准备好了，请提问。", "suggestedCards": []}' },
+  ];
+  for (const h of history) {
+    messages.push({ role: 'user', content: h.question });
+    if (h.answer) messages.push({ role: 'assistant', content: JSON.stringify({ answer: h.answer, suggestedCards: h.suggestedCards || [] }) });
+  }
+  messages.push({ role: 'user', content: question });
+
+  const result = await callLLM(messages, { maxTokens: 4096 });
   const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '');
   const match = cleaned.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('LLM did not return valid JSON');
   try {
     return JSON.parse(match[0]);
   } catch (e) {
-    // Try to fix common JSON issues: unescaped newlines in strings
     const fixed = match[0].replace(/(?<=:\s*"[^"]*)\n/g, '\\n');
     try { return JSON.parse(fixed); } catch {}
-    // Fallback: extract answer text manually
     const ansMatch = match[0].match(/"answer"\s*:\s*"([\s\S]*?)"\s*,\s*"suggestedCards"/);
     return { answer: ansMatch ? ansMatch[1].replace(/\\n/g, '\n') : result, suggestedCards: [] };
   }
