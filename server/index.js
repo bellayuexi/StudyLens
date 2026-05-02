@@ -76,6 +76,57 @@ app.post('/api/connections', (req, res) => {
   res.json(conn);
 });
 
+// Q&A: ask a question with existing knowledge as context
+app.post('/api/qa', async (req, res) => {
+  try {
+    const { question } = req.body;
+    if (!question) return res.status(400).json({ error: 'question is required' });
+    const allEntries = storage.getAllEntries();
+    const q = question.toLowerCase();
+    const relevant = allEntries.filter(e =>
+      e.tags.some(t => q.includes(t.toLowerCase())) ||
+      q.split(/\s+/).some(w => w.length > 1 && (e.title.includes(w) || e.content.includes(w)))
+    ).slice(0, 15);
+    const result = await llm.askQuestion(question, relevant.length > 0 ? relevant : allEntries.slice(0, 10));
+    res.json({ ...result, relatedEntries: relevant.map(e => ({ id: e.id, title: e.title, subject: e.subject })) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Q&A: save suggested cards
+app.post('/api/qa/save', async (req, res) => {
+  try {
+    const { question, cards } = req.body;
+    if (!cards?.length) return res.status(400).json({ error: 'cards required' });
+    const existingEntries = storage.getAllEntries();
+    const created = [];
+    for (const card of cards) {
+      const entry = storage.addEntry({
+        title: card.title,
+        content: card.content,
+        subject: card.subject || '',
+        tags: card.tags || [],
+        source_type: 'qa',
+        source_ref: question || '',
+      });
+      created.push(entry);
+      try {
+        const connections = await llm.findConnections(entry, existingEntries);
+        for (const conn of connections) {
+          if (existingEntries.some(e => e.id === conn.id)) {
+            storage.addConnection(entry.id, conn.id, conn.relation);
+          }
+        }
+      } catch (_) {}
+      existingEntries.push(entry);
+    }
+    res.json({ created });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Update entry
 app.put('/api/entries/:id', (req, res) => {
   const { title, content, subject, tags } = req.body;

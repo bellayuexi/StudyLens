@@ -4,6 +4,7 @@ import TimelineView from './TimelineView.jsx';
 import IngestPanel from './IngestPanel.jsx';
 import EntryDetail from './EntryDetail.jsx';
 import CategoryView from './CategoryView.jsx';
+import QAPanel from './QAPanel.jsx';
 import { fetchGraph } from '../lib/api.js';
 
 const SUBJECT_COLORS = {};
@@ -90,6 +91,8 @@ export default function App() {
 
         <IngestPanel onIngested={loadGraph} loading={loading} setLoading={setLoading} />
 
+        <QAPanel onSaved={loadGraph} />
+
         {/* View switcher */}
         <div style={{ padding: '8px 16px', borderBottom: '1px solid #2a2d35', display: 'flex', gap: 4 }}>
           {VIEWS.map(v => (
@@ -140,7 +143,10 @@ export default function App() {
                 overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
                 {e.content}
               </div>
-              <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>{e.subject} · {e.created_date}</div>
+              <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
+                {e.source_type === 'qa' && <span style={{ background: '#9c27b044', color: '#ce93d8', padding: '1px 6px', borderRadius: 4, fontSize: 10, marginRight: 4 }}>问答</span>}
+                {e.subject} · {e.created_date}
+              </div>
             </div>
           ))}
         </div>

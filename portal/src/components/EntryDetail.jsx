@@ -53,6 +53,7 @@ export default function EntryDetail({ entry, connectedEntries = [], onClose, onD
           : <>
               {entry.subject && <span style={{ background: '#2a2d45', padding: '3px 10px', borderRadius: 12 }}>{entry.subject}</span>}
               <span style={{ background: '#1c1f2e', padding: '3px 10px', borderRadius: 12 }}>{entry.created_date}</span>
+              {entry.source_type === 'qa' && <span style={{ background: '#9c27b044', color: '#ce93d8', padding: '3px 10px', borderRadius: 12 }}>问答扩展</span>}
             </>
         }
       </div>

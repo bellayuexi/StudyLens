@@ -119,4 +119,42 @@ Return ONLY valid JSON, no other text.`;
   return match ? JSON.parse(match[0]) : [];
 }
 
-module.exports = { callLLM, analyze, findConnections };
+async function askQuestion(question, contextEntries = []) {
+  const context = contextEntries.length > 0
+    ? contextEntries.map(e => `【${e.title}】(${e.subject}) ${e.content}`).join('\n\n')
+    : '（暂无相关知识条目）';
+
+  const prompt = `You are a knowledgeable study assistant. A student asks a question about their study material.
+
+Relevant knowledge from their study notes:
+${context}
+
+Student's question: ${question}
+
+Please:
+1. Answer the question thoroughly, referencing their existing knowledge where applicable
+2. Provide insights, comparisons, or analysis as appropriate
+3. After the answer, suggest knowledge cards that could be created from this Q&A
+
+Return a JSON object:
+{
+  "answer": "Your detailed answer in Chinese...",
+  "suggestedCards": [
+    {
+      "title": "card title (under 20 chars)",
+      "content": "knowledge point explained clearly",
+      "subject": "precise subject like 历史-唐朝",
+      "tags": ["relevant", "tags", "including dimensional tags like 政治制度"]
+    }
+  ]
+}
+
+Return ONLY valid JSON, no other text.`;
+
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 4096 });
+  const match = result.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error('LLM did not return valid JSON');
+  return JSON.parse(match[0]);
+}
+
+module.exports = { callLLM, analyze, findConnections, askQuestion };
