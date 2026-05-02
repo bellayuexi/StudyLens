@@ -128,7 +128,6 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     if (entryIdRef.current === currentId) setLoadingQ(true);
     try {
       const data = await generateSmartQuestions(currentId);
-      if (entryIdRef.current !== currentId) return;
       const qs = (data.questions || []).map((q, i) => {
         const answered = qaHistory.some(h => h.answer && (
           h.question === q.question || h.question.includes(q.question) || q.question.includes(h.question)
@@ -136,8 +135,10 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         return { ...q, id: i, answered };
       });
       questionsCacheRef.current[currentId] = qs;
-      setSmartQuestions(qs);
-      setSelectedQs(new Set(qs.filter(q => !q.answered).map(q => q.id)));
+      if (entryIdRef.current === currentId) {
+        setSmartQuestions(qs);
+        setSelectedQs(new Set(qs.filter(q => !q.answered).map(q => q.id)));
+      }
     } catch (e) { console.error(e); }
     if (entryIdRef.current === currentId) setLoadingQ(false);
   };
@@ -642,7 +643,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                   <div style={{ fontSize: 12, color: '#888', maxWidth: 360, textAlign: 'center' }}>
                     请先到「探索更多」标签生成智能问题，批量提问获取答案后，再回来生成专题页
                   </div>
-                  <button onClick={() => setTab('qa')}
+                  <button onClick={() => setTab('explore')}
                     style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#34a853', color: '#fff', cursor: 'pointer', fontSize: 14 }}>
                     去生成智能问题 →
                   </button>
