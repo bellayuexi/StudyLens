@@ -279,14 +279,18 @@ Rules:
   }
 }
 
-async function generateSmartQuestions(entry) {
+async function generateSmartQuestions(entry, existingQaHistory = []) {
+  const existingSection = existingQaHistory.length > 0
+    ? `\n以下问题已经被回答过，请不要生成与这些问题重复或高度相似的问题：\n${existingQaHistory.map(h => `- ${h.question}`).join('\n')}\n`
+    : '';
+
   const prompt = `你是一个学习辅导助手。根据以下知识点，生成5个有深度的学习问题，帮助学生深入理解这个知识点。
 
 知识点标题: ${entry.title}
 学科分类: ${entry.subject}
 内容: ${entry.content}
 标签: ${(entry.tags || []).join(', ')}
-
+${existingSection}
 生成的问题应该覆盖：
 1. 基本概念（是什么）
 2. 原因分析（为什么）

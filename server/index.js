@@ -298,7 +298,9 @@ app.post('/api/entries/:id/questions', async (req, res) => {
   try {
     const entry = storage.getEntry(req.params.id);
     if (!entry) return res.status(404).json({ error: 'entry not found' });
-    const questions = await llm.generateSmartQuestions(entry);
+    const topicPage = storage.getLatestTopicPage(req.params.id);
+    const existingQa = (topicPage && topicPage.qa_history) || [];
+    const questions = await llm.generateSmartQuestions(entry, existingQa);
     res.json({ questions });
   } catch (err) {
     res.status(500).json({ error: err.message });

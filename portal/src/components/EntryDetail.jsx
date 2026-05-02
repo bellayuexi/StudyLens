@@ -125,10 +125,15 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     try {
       const data = await generateSmartQuestions(currentId);
       if (entryIdRef.current !== currentId) return;
-      const qs = (data.questions || []).map((q, i) => ({ ...q, id: i }));
+      const qs = (data.questions || []).map((q, i) => {
+        const answered = qaHistory.some(h => h.answer && (
+          h.question === q.question || h.question.includes(q.question) || q.question.includes(h.question)
+        ));
+        return { ...q, id: i, answered };
+      });
       questionsCacheRef.current[currentId] = qs;
       setSmartQuestions(qs);
-      setSelectedQs(new Set(qs.map(q => q.id)));
+      setSelectedQs(new Set(qs.filter(q => !q.answered).map(q => q.id)));
     } catch (e) { console.error(e); }
     if (entryIdRef.current === currentId) setLoadingQ(false);
   };
@@ -653,8 +658,9 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                         onClick={() => handleAsk(q.question)}
                         onMouseEnter={ev => ev.currentTarget.style.background = '#1c2030'}
                         onMouseLeave={ev => ev.currentTarget.style.background = '#161822'}>
-                        <div style={{ fontSize: 13, color: '#ddd', paddingRight: 40 }}>{q.question}</div>
+                        <div style={{ fontSize: 13, color: q.answered ? '#888' : '#ddd', paddingRight: 40 }}>{q.question}</div>
                         <span style={{ fontSize: 10, color: QUESTION_COLORS[q.category] || '#888' }}>{q.category}</span>
+                        {q.answered && <span style={{ fontSize: 10, color: '#34a853', marginLeft: 6 }}>✓ 已回答</span>}
                         <div style={{ position: 'absolute', right: 8, top: 8, display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
                           <span onClick={() => { setEditingQIdx(q.id); setEditingQText(q.question); }} style={{ fontSize: 11, color: '#666', cursor: 'pointer' }}>✎</span>
                           <span onClick={() => deleteQ(q.id)} style={{ fontSize: 11, color: '#666', cursor: 'pointer' }}>×</span>
