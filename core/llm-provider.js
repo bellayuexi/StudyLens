@@ -263,11 +263,20 @@ Rules:
 - For tree: max 4 branches, max 4 children each
 - Return ONLY valid JSON, no other text.`;
 
-  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 3000 });
-  const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 4096, providers: [DEFAULT_PROVIDERS[0]] });
+  const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
   const match = cleaned.match(/\{[\s\S]*\}/);
-  if (!match) return { type: 'tree', title: '', branches: [] };
-  try { return JSON.parse(match[0]); } catch { return { type: 'tree', title: '', branches: [] }; }
+  if (!match) { console.warn('[buildQAMindMap] no JSON found'); return { type: 'tree', title: '', branches: [] }; }
+  let raw = match[0];
+  try { return JSON.parse(raw); } catch (e1) {
+    // Fix common issues: trailing commas, unescaped newlines in strings
+    raw = raw.replace(/,\s*([\]}])/g, '$1');
+    raw = raw.replace(/(?<=:\s*"[^"]*)\n/g, '\\n');
+    try { return JSON.parse(raw); } catch (e2) {
+      console.warn('[buildQAMindMap] parse error after fix:', e2.message, 'raw tail:', raw.slice(-100));
+      return { type: 'tree', title: '', branches: [] };
+    }
+  }
 }
 
 module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap };

@@ -278,10 +278,17 @@ app.post('/api/restructure', async (req, res) => {
 app.post('/api/qa/mindmap', async (req, res) => {
   try {
     const { question, answer, cards, relatedEntries } = req.body;
+    console.log('[mindmap] received question:', question?.slice(0, 50), 'answer:', answer?.slice(0, 50));
     if (!question) return res.status(400).json({ error: 'question is required' });
     const mindmap = await llm.buildQAMindMap(question, answer || '', cards || [], relatedEntries || []);
+    console.log('[mindmap] type:', mindmap?.type, 'title:', mindmap?.title);
+    if (!mindmap || !mindmap.type || !['comparison', 'timeline', 'tree'].includes(mindmap.type)) {
+      console.warn('[mindmap] Invalid response, returning fallback tree');
+      return res.json({ type: 'tree', title: question.slice(0, 20), branches: [] });
+    }
     res.json(mindmap);
   } catch (err) {
+    console.error('[mindmap] Error:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

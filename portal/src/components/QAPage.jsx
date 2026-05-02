@@ -167,8 +167,10 @@ export default function QAPage({ onSaved }) {
       setBuildingViz(true);
       try {
         const vd = await buildQAMindMap(q, data.answer, data.suggestedCards || [], data.relatedEntries || []);
-        if (vd.type) setVizData(vd);
-      } catch (_) {}
+        if (vd && vd.type) setVizData(vd);
+      } catch (vizErr) {
+        console.error('Viz generation failed:', vizErr);
+      }
       setBuildingViz(false);
     } catch (err) {
       setMessages(prev => [...prev, { role: 'ai', text: `错误: ${err.message}`, cards: [] }]);
