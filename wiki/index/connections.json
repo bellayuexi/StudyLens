@@ -1,0 +1,163 @@
+[
+  {
+    "id": "f4e579d8-ed16-43d2-88e7-c413c9c8868d",
+    "from_id": "4b28506b-d7f1-44b8-a1df-51afa789ffbd",
+    "to_id": "d167432f-0513-4933-8e3d-8f5296334e02",
+    "relation": "共同标签: 隋朝",
+    "created_at": "2026-05-02T03:33:57.909Z"
+  },
+  {
+    "id": "076686fd-1edc-43a5-b19e-3aa89b4935e9",
+    "from_id": "4b28506b-d7f1-44b8-a1df-51afa789ffbd",
+    "to_id": "27fe0a6f-7ff2-4acb-9ec1-7d0c5914fdd2",
+    "relation": "共同标签: 隋朝",
+    "created_at": "2026-05-02T03:33:57.911Z"
+  },
+  {
+    "id": "5d6f7fd8-50c7-43e9-9cf4-adb595acc0ea",
+    "from_id": "4b28506b-d7f1-44b8-a1df-51afa789ffbd",
+    "to_id": "69a4e05d-5371-4546-8447-855d66af2974",
+    "relation": "共同标签: 隋朝",
+    "created_at": "2026-05-02T03:33:57.913Z"
+  },
+  {
+    "id": "3e64b85e-494f-4501-8ce4-08e4870e7124",
+    "from_id": "d167432f-0513-4933-8e3d-8f5296334e02",
+    "to_id": "27fe0a6f-7ff2-4acb-9ec1-7d0c5914fdd2",
+    "relation": "共同标签: 隋朝",
+    "created_at": "2026-05-02T03:33:57.915Z"
+  },
+  {
+    "id": "7ad2407c-0385-4278-8440-dfa529b37873",
+    "from_id": "d167432f-0513-4933-8e3d-8f5296334e02",
+    "to_id": "69a4e05d-5371-4546-8447-855d66af2974",
+    "relation": "共同标签: 隋朝",
+    "created_at": "2026-05-02T03:33:57.917Z"
+  },
+  {
+    "id": "93dded8e-ecfc-4dfa-9a98-b04a6597766b",
+    "from_id": "27fe0a6f-7ff2-4acb-9ec1-7d0c5914fdd2",
+    "to_id": "69a4e05d-5371-4546-8447-855d66af2974",
+    "relation": "共同标签: 隋朝",
+    "created_at": "2026-05-02T03:33:57.919Z"
+  },
+  {
+    "id": "39347e4d-2f96-4356-b284-87c66dcfd557",
+    "from_id": "2bea9ceb-fcfe-4b77-b683-94925472268b",
+    "to_id": "56f785c6-4d1e-4dbb-8de9-71e59b797afd",
+    "relation": "共同标签: 唐朝, 盛世",
+    "created_at": "2026-05-02T03:33:57.921Z"
+  },
+  {
+    "id": "6e8e9b4f-f91c-4229-822b-9ae9e1b1ae53",
+    "from_id": "c4c8dbad-c3a4-4dba-8dea-99507f74a1bf",
+    "to_id": "223a0ae1-d45d-40d2-af9c-de6d7e2f5d19",
+    "relation": "共同标签: 唐朝, 日本",
+    "created_at": "2026-05-02T03:33:57.923Z"
+  },
+  {
+    "id": "e0ac1d7e-496f-44f1-bbb0-537b39b8eb10",
+    "from_id": "a78dea8d-b65a-458d-8b16-8622c2f670d1",
+    "to_id": "e4f975be-8a3c-4a7a-b059-1d90fe514a31",
+    "relation": "共同标签: 南宋",
+    "created_at": "2026-05-02T03:33:57.925Z"
+  },
+  {
+    "id": "333628a3-1a69-4c3a-9dd9-9e0c445ab796",
+    "from_id": "150e00e1-99b2-4419-a02f-8b2fcc0f9a2b",
+    "to_id": "7f851e2a-0448-4b7c-bea8-2ca9abb721f5",
+    "relation": "共同标签: 北宋, 四大发明",
+    "created_at": "2026-05-02T03:33:57.928Z"
+  },
+  {
+    "id": "4be5c1d3-7650-4bc3-b89f-0942e4a38455",
+    "from_id": "150e00e1-99b2-4419-a02f-8b2fcc0f9a2b",
+    "to_id": "1e73f4d2-e7c8-4518-9542-96cad26c96a5",
+    "relation": "共同标签: 四大发明",
+    "created_at": "2026-05-02T03:33:57.929Z"
+  },
+  {
+    "id": "01b654d8-3ebc-46b9-a7a8-5c87be4aedb0",
+    "from_id": "7f851e2a-0448-4b7c-bea8-2ca9abb721f5",
+    "to_id": "1e73f4d2-e7c8-4518-9542-96cad26c96a5",
+    "relation": "共同标签: 四大发明",
+    "created_at": "2026-05-02T03:33:57.932Z"
+  },
+  {
+    "id": "22e5ff68-a1ed-441b-b68b-814076c268df",
+    "from_id": "e72d440e-3bd3-418e-8694-5d4a58ff76df",
+    "to_id": "1d10a3e2-cdf4-4e15-b06b-98d5b9b272df",
+    "relation": "共同标签: 元朝",
+    "created_at": "2026-05-02T03:33:57.934Z"
+  },
+  {
+    "id": "ba14ca0b-fc56-45c8-a0d5-679cfaf0f915",
+    "from_id": "e72d440e-3bd3-418e-8694-5d4a58ff76df",
+    "to_id": "0ecb3ae7-d5de-4ca7-ae3f-57da2146d4ef",
+    "relation": "共同标签: 元朝",
+    "created_at": "2026-05-02T03:33:57.936Z"
+  },
+  {
+    "id": "a1ef954b-d46f-4803-9fde-11b9734ac460",
+    "from_id": "1d10a3e2-cdf4-4e15-b06b-98d5b9b272df",
+    "to_id": "0ecb3ae7-d5de-4ca7-ae3f-57da2146d4ef",
+    "relation": "共同标签: 元朝",
+    "created_at": "2026-05-02T03:33:57.940Z"
+  },
+  {
+    "id": "a6d3995e-12a8-419c-9bee-ff7102e4c308",
+    "from_id": "af5e6377-675d-47e9-848e-2c2994ea4453",
+    "to_id": "fe80f4be-7fde-4105-ac0f-d25d0fe297cb",
+    "relation": "直接对比唐宋政治制度，详细说明北宋分化事权的具体措施",
+    "created_at": "2026-05-02T03:33:57.942Z"
+  },
+  {
+    "id": "471d8f9b-8105-4095-8fdb-aaeb4602cc1d",
+    "from_id": "af5e6377-675d-47e9-848e-2c2994ea4453",
+    "to_id": "9ec693d6-8520-4988-b89f-e8012bfcab6a",
+    "relation": "同属北宋加强中央集权的制度设计，二府三司制是中枢层面，强干弱枝是中央与地方层面",
+    "created_at": "2026-05-02T03:33:57.945Z"
+  },
+  {
+    "id": "edebd212-59e1-495d-b521-08d2a9943a7c",
+    "from_id": "fe80f4be-7fde-4105-ac0f-d25d0fe297cb",
+    "to_id": "af5e6377-675d-47e9-848e-2c2994ea4453",
+    "relation": "直接描述北宋二府三司制分化事权的具体内容，与新条目高度重合",
+    "created_at": "2026-05-02T03:33:57.947Z"
+  },
+  {
+    "id": "d0449e65-6f93-4d57-ad42-7b883656c94d",
+    "from_id": "fe80f4be-7fde-4105-ac0f-d25d0fe297cb",
+    "to_id": "9ec693d6-8520-4988-b89f-e8012bfcab6a",
+    "relation": "北宋强干弱枝政策同属吸取唐末藩镇割据教训的制度改革",
+    "created_at": "2026-05-02T03:33:57.949Z"
+  },
+  {
+    "id": "3bb46ad3-92c8-4c47-8da4-541dea834dd1",
+    "from_id": "9ec693d6-8520-4988-b89f-e8012bfcab6a",
+    "to_id": "fe80f4be-7fde-4105-ac0f-d25d0fe297cb",
+    "relation": "都涉及北宋吸取唐末藩镇割据教训加强中央集权的措施",
+    "created_at": "2026-05-02T03:33:57.951Z"
+  },
+  {
+    "id": "e68ec8ac-8116-4557-a04c-4af5b3ab578f",
+    "from_id": "9ec693d6-8520-4988-b89f-e8012bfcab6a",
+    "to_id": "af5e6377-675d-47e9-848e-2c2994ea4453",
+    "relation": "强干弱枝是地方层面的集权，二府三司是中央层面的集权，共同构成北宋集权体制",
+    "created_at": "2026-05-02T03:33:57.954Z"
+  },
+  {
+    "id": "0af29f9c-be38-4e4b-8ccd-51edaa12ecab",
+    "from_id": "9ec693d6-8520-4988-b89f-e8012bfcab6a",
+    "to_id": "686ab663-38a4-408e-b31d-5e9a99f52319",
+    "relation": "强干弱枝导致军事积弱，是北宋被金灭亡的重要原因",
+    "created_at": "2026-05-02T03:33:57.958Z"
+  },
+  {
+    "id": "bbe0d26e-5155-4352-be7f-efae2bc3e7af",
+    "from_id": "9ec693d6-8520-4988-b89f-e8012bfcab6a",
+    "to_id": "a78dea8d-b65a-458d-8b16-8622c2f670d1",
+    "relation": "北宋军事积弱与强干弱枝政策削弱地方军事力量有关",
+    "created_at": "2026-05-02T03:33:57.965Z"
+  }
+]

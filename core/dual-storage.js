@@ -1,6 +1,10 @@
 const sqliteStorage = require('./storage');
 const wikiStorage = require('./wiki-storage');
 
+function getReader(backend) {
+  return backend === 'sqlite' ? sqliteStorage : wikiStorage;
+}
+
 function addRaw(text, sourceType, sourceRef) {
   return wikiStorage.addRaw(text, sourceType, sourceRef);
 }
@@ -25,20 +29,20 @@ function addConnection(fromId, toId, relation = '') {
   return conn;
 }
 
-function getAllEntries() {
-  return sqliteStorage.getAllEntries();
+function getAllEntries(backend = 'wiki') {
+  return getReader(backend).getAllEntries();
 }
 
-function getAllConnections() {
-  return sqliteStorage.getAllConnections();
+function getAllConnections(backend = 'wiki') {
+  return getReader(backend).getAllConnections();
 }
 
-function getEntry(id) {
-  return sqliteStorage.getEntry(id);
+function getEntry(id, backend = 'wiki') {
+  return getReader(backend).getEntry(id);
 }
 
-function searchEntries(query) {
-  return sqliteStorage.searchEntries(query);
+function searchEntries(query, backend = 'wiki') {
+  return getReader(backend).searchEntries(query);
 }
 
 function deleteEntry(id) {

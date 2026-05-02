@@ -31,9 +31,10 @@ export default function App() {
   const [dragging, setDragging] = useState(false);
   const [filterSubject, setFilterSubject] = useState(null);
   const [viewMode, setViewMode] = useState('graph');
+  const [backend, setBackend] = useState('wiki');
 
   const loadGraph = useCallback(async () => {
-    const { entries, connections } = await fetchGraph();
+    const { entries, connections } = await fetchGraph(backend);
     setAllEntries(entries);
     const nodes = entries.map(e => ({
       id: e.id,
@@ -49,9 +50,10 @@ export default function App() {
       .filter(c => nodeIds.has(c.from_id) && nodeIds.has(c.to_id))
       .map(c => ({ source: c.from_id, target: c.to_id, label: c.relation }));
     setGraphData({ nodes, links });
-  }, []);
+  }, [backend]);
 
   useEffect(() => { loadGraph(); }, [loadGraph]);
+  useEffect(() => { loadGraph(); }, [backend]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -88,6 +90,16 @@ export default function App() {
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #2a2d35' }}>
           <h1 style={{ margin: 0, fontSize: 22, color: '#fff' }}>📚 StudyGraph</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: '#888' }}>个人知识图谱学习系统</p>
+          <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
+            {['wiki', 'sqlite'].map(b => (
+              <button key={b} onClick={() => setBackend(b)}
+                style={{ flex: 1, padding: '4px 0', borderRadius: 4, border: 'none', cursor: 'pointer', fontSize: 11,
+                  background: backend === b ? (b === 'wiki' ? '#34a853' : '#4285f4') : '#1c1f2e',
+                  color: backend === b ? '#fff' : '#777' }}>
+                {b === 'wiki' ? 'LM Wiki' : 'SQLite'}
+              </button>
+            ))}
+          </div>
         </div>
 
         <IngestPanel onIngested={loadGraph} loading={loading} setLoading={setLoading} />

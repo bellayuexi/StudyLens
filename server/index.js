@@ -17,21 +17,24 @@ const upload = multer({ dest: uploadDir, limits: { fileSize: 20 * 1024 * 1024 } 
 
 // Get all entries + connections for graph
 app.get('/api/graph', (req, res) => {
-  const entries = storage.getAllEntries();
-  const connections = storage.getAllConnections();
-  res.json({ entries, connections });
+  const b = req.query.backend || 'wiki';
+  const entries = storage.getAllEntries(b);
+  const connections = storage.getAllConnections(b);
+  res.json({ entries, connections, backend: b });
 });
 
 // Get all entries
 app.get('/api/entries', (req, res) => {
+  const b = req.query.backend || 'wiki';
   const { q } = req.query;
-  const entries = q ? storage.searchEntries(q) : storage.getAllEntries();
+  const entries = q ? storage.searchEntries(q, b) : storage.getAllEntries(b);
   res.json(entries);
 });
 
 // Get single entry
 app.get('/api/entries/:id', (req, res) => {
-  const entry = storage.getEntry(req.params.id);
+  const b = req.query.backend || 'wiki';
+  const entry = storage.getEntry(req.params.id, b);
   if (!entry) return res.status(404).json({ error: 'Not found' });
   res.json(entry);
 });
