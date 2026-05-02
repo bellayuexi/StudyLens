@@ -30,7 +30,7 @@ function extractYear(content) {
   return match ? parseInt(match[1]) : null;
 }
 
-export default function TimelineView({ entries, onEntryClick, selectedId }) {
+export default function TimelineView({ entries, onEntryClick, selectedId, compact }) {
   const [onlyDated, setOnlyDated] = useState(false);
 
   const timeline = useMemo(() => {
@@ -50,6 +50,23 @@ export default function TimelineView({ entries, onEntryClick, selectedId }) {
         return { subject, info, dated, undated, all: items };
       });
   }, [entries]);
+
+  const renderCompactEntry = (e) => {
+    const isSelected = e.id === selectedId;
+    return (
+      <div key={e.id} onClick={() => onEntryClick(e)}
+        style={{ padding: '6px 10px', marginBottom: 3, borderRadius: 6, cursor: 'pointer',
+          background: isSelected ? '#2a2d45' : '#1c1f2e',
+          borderLeft: `3px solid ${getColor(e.subject)}`, transition: 'background 0.15s' }}
+        onMouseEnter={ev => { if (!isSelected) ev.currentTarget.style.background = '#222640'; }}
+        onMouseLeave={ev => { if (!isSelected) ev.currentTarget.style.background = '#1c1f2e'; }}>
+        <div style={{ fontSize: 12, fontWeight: 500, color: '#ddd' }}>
+          {e.year && <span style={{ color: '#888', marginRight: 4, fontSize: 10 }}>{e.year}年</span>}
+          {e.title}
+        </div>
+      </div>
+    );
+  };
 
   const renderEntry = (e, isIndented) => {
     const isSelected = e.id === selectedId;
@@ -112,6 +129,25 @@ export default function TimelineView({ entries, onEntryClick, selectedId }) {
       </div>
     </div>
   );
+
+  if (compact) {
+    return (
+      <div style={{ padding: '6px 10px' }}>
+        <div style={{ fontSize: 11, color: '#666', marginBottom: 6 }}>
+          {entries.length} 个知识点（时间线）
+        </div>
+        {timeline.map((group, gi) => (
+          <div key={gi} style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: getColor(group.subject), marginBottom: 4 }}>
+              {group.info.label}
+              {group.info.start && <span style={{ fontSize: 10, color: '#666', marginLeft: 4 }}>{group.info.start}—{group.info.end}</span>}
+            </div>
+            {[...group.dated, ...(onlyDated ? [] : group.undated)].map(e => renderCompactEntry(e))}
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div style={{ height: '100%', overflowY: 'auto', padding: '20px 30px', background: '#0f1117' }}>

@@ -15,15 +15,15 @@ function getColor(subject) {
 }
 
 const VIEWS = [
-  { id: 'timeline', label: '📅 时间线', desc: '按历史年代排列' },
-  { id: 'category', label: '📂 分类', desc: '按学科归类' },
+  { id: 'timeline', label: '📅 时间线' },
+  { id: 'category', label: '📂 分类' },
 ];
 
 export default function App() {
   const [allEntries, setAllEntries] = useState([]);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [leftWidth, setLeftWidth] = useState(420);
+  const [leftWidth, setLeftWidth] = useState(360);
   const [dragging, setDragging] = useState(false);
   const [filterSubject, setFilterSubject] = useState(null);
   const [viewMode, setViewMode] = useState('category');
@@ -39,7 +39,7 @@ export default function App() {
 
   useEffect(() => {
     if (!dragging) return;
-    const onMove = (e) => setLeftWidth(Math.max(300, Math.min(700, e.clientX)));
+    const onMove = (e) => setLeftWidth(Math.max(280, Math.min(500, e.clientX)));
     const onUp = () => setDragging(false);
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
@@ -47,7 +47,6 @@ export default function App() {
   }, [dragging]);
 
   const subjects = [...new Set(allEntries.map(e => e.subject).filter(Boolean))];
-
   const handleEntryClick = (entry) => setSelectedEntry(entry);
 
   const filteredEntries = allEntries.filter(e => {
@@ -61,86 +60,85 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif', background: '#0f1117', color: '#e0e0e0', overflow: 'hidden' }}>
-      {/* Left Panel */}
-      <div style={{ width: leftWidth, minWidth: 300, borderRight: '1px solid #2a2d35', display: 'flex', flexDirection: 'column', background: '#161822', flexShrink: 0 }}>
-        <div style={{ padding: '16px 20px', borderBottom: '1px solid #2a2d35' }}>
-          <h1 style={{ margin: 0, fontSize: 22, color: '#fff' }}>📚 StudyGraph</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: '#888' }}>个人知识图谱学习系统</p>
-          <div style={{ display: 'flex', gap: 4, marginTop: 8 }}>
-            {['wiki', 'sqlite'].map(b => (
-              <button key={b} onClick={() => setBackend(b)}
-                style={{ flex: 1, padding: '4px 0', borderRadius: 4, border: 'none', cursor: 'pointer', fontSize: 11,
-                  background: backend === b ? (b === 'wiki' ? '#34a853' : '#4285f4') : '#1c1f2e',
-                  color: backend === b ? '#fff' : '#777' }}>
-                {b === 'wiki' ? 'LM Wiki' : 'SQLite'}
-              </button>
-            ))}
+      {/* Left Sidebar */}
+      <div style={{ width: leftWidth, minWidth: 280, borderRight: '1px solid #2a2d35', display: 'flex', flexDirection: 'column', background: '#161822', flexShrink: 0 }}>
+        {/* Header */}
+        <div style={{ padding: '12px 16px', borderBottom: '1px solid #2a2d35' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h1 style={{ margin: 0, fontSize: 18, color: '#fff' }}>📚 StudyGraph</h1>
+            <div style={{ display: 'flex', gap: 2 }}>
+              {['wiki', 'sqlite'].map(b => (
+                <button key={b} onClick={() => setBackend(b)}
+                  style={{ padding: '2px 8px', borderRadius: 4, border: 'none', cursor: 'pointer', fontSize: 10,
+                    background: backend === b ? (b === 'wiki' ? '#34a853' : '#4285f4') : '#1c1f2e',
+                    color: backend === b ? '#fff' : '#777' }}>
+                  {b === 'wiki' ? 'Wiki' : 'DB'}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         <IngestPanel onIngested={loadGraph} loading={loading} setLoading={setLoading} />
 
-        {/* View switcher */}
-        <div style={{ padding: '8px 16px', borderBottom: '1px solid #2a2d35', display: 'flex', gap: 4 }}>
+        {/* View switcher + Search */}
+        <div style={{ padding: '6px 12px', borderBottom: '1px solid #2a2d35', display: 'flex', gap: 4, alignItems: 'center' }}>
           {VIEWS.map(v => (
             <button key={v.id} onClick={() => setViewMode(v.id)}
-              style={{ flex: 1, padding: '6px 4px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12,
-                background: viewMode === v.id ? '#4285f4' : '#1c1f2e', color: viewMode === v.id ? '#fff' : '#aaa',
-                transition: 'background 0.15s' }}>
+              style={{ padding: '5px 10px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: 12,
+                background: viewMode === v.id ? '#4285f4' : '#1c1f2e', color: viewMode === v.id ? '#fff' : '#aaa' }}>
               {v.label}
             </button>
           ))}
-        </div>
-
-        {/* Search */}
-        <div style={{ padding: '8px 16px', borderBottom: '1px solid #2a2d35' }}>
           <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-            placeholder="🔍 搜索知识点..."
-            style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #2a2d45',
-              background: '#1c1f2e', color: '#ddd', fontSize: 13, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }} />
+            placeholder="🔍 搜索..."
+            style={{ flex: 1, padding: '5px 10px', borderRadius: 6, border: '1px solid #2a2d45',
+              background: '#1c1f2e', color: '#ddd', fontSize: 12, outline: 'none', fontFamily: 'inherit', minWidth: 0 }} />
         </div>
 
         {/* Subject filter */}
-        {subjects.length > 0 && (
-          <div style={{ padding: '8px 16px', borderBottom: '1px solid #2a2d35', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+        {viewMode === 'category' && subjects.length > 0 && (
+          <div style={{ padding: '6px 12px', borderBottom: '1px solid #2a2d35', display: 'flex', flexWrap: 'wrap', gap: 3 }}>
             <span onClick={() => setFilterSubject(null)}
-              style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
+              style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, cursor: 'pointer',
                 background: filterSubject === null ? '#4285f4' : '#1c1f2e', color: filterSubject === null ? '#fff' : '#aaa' }}>全部</span>
             {subjects.map(s => (
               <span key={s} onClick={() => setFilterSubject(s === filterSubject ? null : s)}
-                style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, cursor: 'pointer',
+                style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, cursor: 'pointer',
                   background: s === filterSubject ? getColor(s) : '#1c1f2e',
                   color: s === filterSubject ? '#fff' : '#aaa',
-                  borderLeft: `3px solid ${getColor(s)}` }}>
+                  borderLeft: `2px solid ${getColor(s)}` }}>
                 {s}
               </span>
             ))}
           </div>
         )}
 
-        {/* Entry list */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 14px' }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
-            知识条目 ({filteredEntries.length})
-          </div>
-          {filteredEntries.map(e => (
-            <div key={e.id} onClick={() => handleEntryClick(e)}
-              style={{ padding: '10px 12px', marginBottom: 5, borderRadius: 8, cursor: 'pointer',
-                background: selectedEntry?.id === e.id ? '#2a2d45' : '#1c1f2e',
-                borderLeft: `3px solid ${getColor(e.subject)}`,
-                transition: 'background 0.15s' }}
-              onMouseEnter={ev => { if (selectedEntry?.id !== e.id) ev.currentTarget.style.background = '#222640'; }}
-              onMouseLeave={ev => { if (selectedEntry?.id !== e.id) ev.currentTarget.style.background = '#1c1f2e'; }}>
-              <div style={{ fontSize: 14, fontWeight: 500 }}>{e.title}</div>
-              <div style={{ fontSize: 12, color: '#999', marginTop: 3, lineHeight: 1.4,
-                overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                {e.content}
+        {/* Entry list — inline timeline or category */}
+        <div style={{ flex: 1, overflowY: 'auto' }}>
+          {viewMode === 'category' ? (
+            <div style={{ padding: '6px 10px' }}>
+              <div style={{ fontSize: 11, color: '#666', marginBottom: 6 }}>
+                {filteredEntries.length} 个知识点
               </div>
-              <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
-                {e.subject} · {e.created_date}
-              </div>
+              {filteredEntries.map(e => (
+                <div key={e.id} onClick={() => handleEntryClick(e)}
+                  style={{ padding: '8px 10px', marginBottom: 4, borderRadius: 6, cursor: 'pointer',
+                    background: selectedEntry?.id === e.id ? '#2a2d45' : '#1c1f2e',
+                    borderLeft: `3px solid ${getColor(e.subject)}`, transition: 'background 0.15s' }}
+                  onMouseEnter={ev => { if (selectedEntry?.id !== e.id) ev.currentTarget.style.background = '#222640'; }}
+                  onMouseLeave={ev => { if (selectedEntry?.id !== e.id) ev.currentTarget.style.background = '#1c1f2e'; }}>
+                  <div style={{ fontSize: 13, fontWeight: 500 }}>{e.title}</div>
+                  <div style={{ fontSize: 11, color: '#888', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {e.content}
+                  </div>
+                  <div style={{ fontSize: 10, color: '#555', marginTop: 2 }}>{e.subject}</div>
+                </div>
+              ))}
             </div>
-          ))}
+          ) : (
+            <TimelineView entries={filteredEntries} onEntryClick={handleEntryClick} selectedId={selectedEntry?.id} compact />
+          )}
         </div>
       </div>
 
@@ -150,35 +148,27 @@ export default function App() {
         onMouseEnter={ev => ev.currentTarget.style.background = '#4285f4'}
         onMouseLeave={ev => { if (!dragging) ev.currentTarget.style.background = 'transparent'; }} />
 
-      {/* Center: Main View */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        {loading && (
-          <div style={{ position: 'absolute', top: 16, left: '50%', transform: 'translateX(-50%)',
-            background: '#4285f4', color: '#fff', padding: '8px 20px', borderRadius: 20, zIndex: 10, fontSize: 13 }}>
-            AI 正在分析知识点...
+      {/* Main Content: Knowledge Exploration */}
+      <div style={{ flex: 1, overflow: 'hidden' }}>
+        {selectedEntry ? (
+          <EntryDetail
+            entry={selectedEntry}
+            allEntries={allEntries}
+            onClose={() => setSelectedEntry(null)}
+            onDeleted={() => { setSelectedEntry(null); loadGraph(); }}
+            onNavigate={(entry) => setSelectedEntry(entry)}
+            onUpdated={loadGraph}
+          />
+        ) : (
+          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ textAlign: 'center', color: '#444' }}>
+              <div style={{ fontSize: 64, marginBottom: 16 }}>📚</div>
+              <div style={{ fontSize: 18, color: '#666' }}>选择一个知识点开始探索</div>
+              <div style={{ fontSize: 13, color: '#444', marginTop: 8 }}>点击左侧列表中的知识点，深入学习</div>
+            </div>
           </div>
         )}
-
-        {viewMode === 'timeline' && (
-          <TimelineView entries={filteredEntries} onEntryClick={handleEntryClick} selectedId={selectedEntry?.id} />
-        )}
-
-        {viewMode === 'category' && (
-          <CategoryView entries={filteredEntries} onEntryClick={handleEntryClick} selectedId={selectedEntry?.id} />
-        )}
       </div>
-
-      {/* Right: Detail */}
-      {selectedEntry && (
-        <EntryDetail
-          entry={selectedEntry}
-          connectedEntries={[]}
-          onClose={() => setSelectedEntry(null)}
-          onDeleted={() => { setSelectedEntry(null); loadGraph(); }}
-          onNavigate={(entry) => setSelectedEntry(entry)}
-          onUpdated={loadGraph}
-        />
-      )}
     </div>
   );
 }
