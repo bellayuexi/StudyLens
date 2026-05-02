@@ -3,6 +3,7 @@ import KnowledgeGraph from './KnowledgeGraph.jsx';
 import TimelineView from './TimelineView.jsx';
 import IngestPanel from './IngestPanel.jsx';
 import EntryDetail from './EntryDetail.jsx';
+import CategoryView from './CategoryView.jsx';
 import { fetchGraph } from '../lib/api.js';
 
 const SUBJECT_COLORS = {};
@@ -76,44 +77,7 @@ export default function App() {
     return allEntries.filter(e => connIds.has(e.id));
   };
 
-  // Category view: group by subject
-  const renderCategoryView = () => {
-    const grouped = {};
-    allEntries.forEach(e => {
-      const key = e.subject || '未分类';
-      if (!grouped[key]) grouped[key] = [];
-      grouped[key].push(e);
-    });
-
-    return (
-      <div style={{ height: '100%', overflowY: 'auto', padding: '20px 30px', background: '#0f1117' }}>
-        <div style={{ maxWidth: 1000, margin: '0 auto', display: 'flex', flexWrap: 'wrap', gap: 20 }}>
-          {Object.entries(grouped).map(([subject, items]) => (
-            <div key={subject} style={{ flex: '1 1 300px', minWidth: 280, background: '#161822', borderRadius: 10,
-              borderTop: `3px solid ${getColor(subject)}`, padding: '16px 18px' }}>
-              <div style={{ fontSize: 16, fontWeight: 600, color: '#fff', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ width: 12, height: 12, borderRadius: '50%', background: getColor(subject), display: 'inline-block' }} />
-                {subject}
-              </div>
-              <div style={{ fontSize: 12, color: '#888', marginBottom: 12 }}>{items.length} 个知识点</div>
-              {items.map(e => (
-                <div key={e.id} onClick={() => handleEntryClick(e)}
-                  style={{ padding: '8px 10px', marginBottom: 4, borderRadius: 6, cursor: 'pointer',
-                    background: selectedEntry?.id === e.id ? '#2a2d45' : '#1c1f2e', transition: 'background 0.15s' }}
-                  onMouseEnter={ev => { if (selectedEntry?.id !== e.id) ev.currentTarget.style.background = '#222640'; }}
-                  onMouseLeave={ev => { if (selectedEntry?.id !== e.id) ev.currentTarget.style.background = '#1c1f2e'; }}>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: '#ddd' }}>{e.title}</div>
-                  <div style={{ fontSize: 11, color: '#888', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {e.content.slice(0, 60)}...
-                  </div>
-                </div>
-              ))}
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  };
+  // Category view replaced by CategoryView component
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif', background: '#0f1117', color: '#e0e0e0', overflow: 'hidden' }}>
@@ -223,7 +187,9 @@ export default function App() {
           <TimelineView entries={allEntries} onEntryClick={handleEntryClick} selectedId={selectedEntry?.id} />
         )}
 
-        {viewMode === 'category' && renderCategoryView()}
+        {viewMode === 'category' && (
+          <CategoryView entries={allEntries} onEntryClick={handleEntryClick} selectedId={selectedEntry?.id} />
+        )}
       </div>
 
       {/* Right: Detail */}
