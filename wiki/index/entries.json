@@ -23,21 +23,21 @@
   {
     "id": "aaf9f3a9-ac45-4261-9a64-216745ce3917",
     "title": "火药广泛应用",
-    "subject": "历史-宋朝",
+    "subject": "历史-北宋",
     "source_type": "text",
     "file": "drill\\core\\历史-宋朝\\火药广泛应用_aaf9f3a9.md"
   },
   {
     "id": "c3e5297b-4777-4118-8964-53b3dcf61c10",
     "title": "宋词",
-    "subject": "历史-宋朝",
+    "subject": "历史-南宋",
     "source_type": "text",
     "file": "drill\\core\\历史-宋朝\\宋词_c3e5297b.md"
   },
   {
     "id": "525d2134-d9c0-4cc3-9902-a41613980336",
     "title": "元曲",
-    "subject": "历史-宋朝",
+    "subject": "历史-元朝",
     "source_type": "text",
     "file": "drill\\core\\历史-宋朝\\元曲_525d2134.md"
   },
@@ -51,7 +51,7 @@
   {
     "id": "3b745e22-7395-4249-a4fc-e73b3dceadb9",
     "title": "宋代都市生活",
-    "subject": "历史-宋朝",
+    "subject": "历史-南宋",
     "source_type": "text",
     "file": "drill\\core\\历史-宋朝\\宋代都市生活_3b745e22.md"
   },
@@ -107,7 +107,7 @@
   {
     "id": "97acba5a-0a37-454a-abdc-88b70aa4c63d",
     "title": "宋代农业发展",
-    "subject": "历史-宋朝",
+    "subject": "历史-南宋",
     "source_type": "text",
     "file": "drill\\core\\历史-宋朝\\宋代农业发展_97acba5a.md"
   },
@@ -128,7 +128,7 @@
   {
     "id": "f1234dc6-9b91-4b8b-a50a-e199cee2228a",
     "title": "宋代商业繁荣",
-    "subject": "历史-宋朝",
+    "subject": "历史-南宋",
     "source_type": "text",
     "file": "drill\\core\\历史-宋朝\\宋代商业繁荣_f1234dc6.md"
   },
@@ -320,5 +320,33 @@
     "subject": "历史-唐朝",
     "source_type": "text",
     "file": "drill\\core\\历史-唐朝\\开元盛世_b6c39271.md"
+  },
+  {
+    "id": "1d803df8-4fd7-43ff-9967-ed4b4c77e1c6",
+    "title": "唐朝三省六部制详解",
+    "subject": "历史-唐朝",
+    "source_type": "qa",
+    "file": "drill\\extended\\历史-唐朝\\唐朝三省六部制详解_1d803df8.md"
+  },
+  {
+    "id": "a9546bd4-25f0-4f42-a56f-c051589bff1e",
+    "title": "宋朝中央官制改革",
+    "subject": "历史-北宋",
+    "source_type": "qa",
+    "file": "drill\\extended\\历史-宋朝\\宋朝中央官制改革_a9546bd4.md"
+  },
+  {
+    "id": "ca770c05-3de0-44ae-8b61-f2b5da1962d0",
+    "title": "唐宋官制演变本质",
+    "subject": "历史-中国古代政治制度",
+    "source_type": "qa",
+    "file": "drill\\extended\\历史-中国古代政治制度\\唐宋官制演变本质_ca770c05.md"
+  },
+  {
+    "id": "b7cf0920-43e9-4d20-a28f-77d98d3be94d",
+    "title": "六部职能口诀",
+    "subject": "历史-唐朝",
+    "source_type": "qa",
+    "file": "drill\\extended\\历史-唐朝\\六部职能口诀_b7cf0920.md"
   }
 ]

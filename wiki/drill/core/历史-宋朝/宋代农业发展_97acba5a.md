@@ -1,7 +1,7 @@
 ---
 id: 97acba5a-0a37-454a-abdc-88b70aa4c63d
 title: 宋代农业发展
-subject: 历史-宋朝
+subject: 历史-南宋
 tags: ["宋朝","农业","占城稻","太湖流域","经济发展"]
 source_type: text
 source_ref: 
