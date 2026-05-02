@@ -412,7 +412,9 @@ app.post('/api/entries/:id/expand', async (req, res) => {
   try {
     const entry = storage.getEntry(req.params.id);
     if (!entry) return res.status(404).json({ error: 'entry not found' });
-    const subTopics = await llm.expandEntry(entry);
+    const topicPage = storage.getLatestTopicPage(req.params.id);
+    const qaHistory = (topicPage && topicPage.qa_history) || [];
+    const subTopics = await llm.expandEntry(entry, qaHistory);
     const children = [];
     for (const sub of subTopics) {
       const child = storage.addEntry({
