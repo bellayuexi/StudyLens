@@ -122,28 +122,31 @@ Return ONLY valid JSON, no other text.`;
 async function askQuestion(question, contextEntries = []) {
   const context = contextEntries.length > 0
     ? contextEntries.map(e => `【${e.title}】(${e.subject}) ${e.content}`).join('\n\n')
-    : '（暂无相关知识条目）';
+    : '';
 
-  const prompt = `You are a knowledgeable study assistant. A student asks a question about their study material.
+  const prompt = `You are an expert study assistant with deep knowledge across all subjects. A student is studying and asks you a question.
 
-Relevant knowledge from their study notes:
-${context}
+IMPORTANT: Use your OWN comprehensive knowledge to answer the question thoroughly and accurately. Do NOT limit your answer to only what is in the student's notes — the notes are supplementary context, not the boundary of your answer.
+
+${context ? `The student's existing study notes for reference (use these to connect your answer to what they already know, but go well beyond them):\n${context}\n` : ''}
 
 Student's question: ${question}
 
-Please:
-1. Answer the question thoroughly, referencing their existing knowledge where applicable
-2. Provide insights, comparisons, or analysis as appropriate
-3. After the answer, suggest knowledge cards that could be created from this Q&A
+Instructions:
+1. Answer the question using your full knowledge — be thorough, accurate, and educational
+2. If the student has relevant notes, reference them to build connections, but always provide the complete answer
+3. Use comparisons, analysis, and specific historical facts/data where appropriate
+4. Write the answer in Chinese, suitable for a middle/high school student
+5. Suggest knowledge cards that capture the KEY points from your answer — these should be NEW knowledge that extends beyond what's already in the student's notes
 
 Return a JSON object:
 {
-  "answer": "Your detailed answer in Chinese...",
+  "answer": "Your comprehensive, detailed answer in Chinese...",
   "suggestedCards": [
     {
       "title": "card title (under 20 chars)",
-      "content": "knowledge point explained clearly",
-      "subject": "precise subject like 历史-唐朝",
+      "content": "knowledge point explained clearly and completely",
+      "subject": "precise subject like 历史-唐朝 or 历史-北宋",
       "tags": ["relevant", "tags", "including dimensional tags like 政治制度"]
     }
   ]
@@ -152,9 +155,19 @@ Return a JSON object:
 Return ONLY valid JSON, no other text.`;
 
   const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 4096 });
-  const match = result.match(/\{[\s\S]*\}/);
+  const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  const match = cleaned.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('LLM did not return valid JSON');
-  return JSON.parse(match[0]);
+  try {
+    return JSON.parse(match[0]);
+  } catch (e) {
+    // Try to fix common JSON issues: unescaped newlines in strings
+    const fixed = match[0].replace(/(?<=:\s*"[^"]*)\n/g, '\\n');
+    try { return JSON.parse(fixed); } catch {}
+    // Fallback: extract answer text manually
+    const ansMatch = match[0].match(/"answer"\s*:\s*"([\s\S]*?)"\s*,\s*"suggestedCards"/);
+    return { answer: ansMatch ? ansMatch[1].replace(/\\n/g, '\n') : result, suggestedCards: [] };
+  }
 }
 
 module.exports = { callLLM, analyze, findConnections, askQuestion };
