@@ -279,4 +279,63 @@ Rules:
   }
 }
 
-module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap };
+async function generateSmartQuestions(entry) {
+  const prompt = `你是一个学习辅导助手。根据以下知识点，生成5个有深度的学习问题，帮助学生深入理解这个知识点。
+
+知识点标题: ${entry.title}
+学科分类: ${entry.subject}
+内容: ${entry.content}
+标签: ${(entry.tags || []).join(', ')}
+
+生成的问题应该覆盖：
+1. 基本概念（是什么）
+2. 原因分析（为什么）
+3. 影响/意义（有什么影响）
+4. 比较对比（与其他知识的关联）
+5. 深入思考（评价/启示）
+
+返回JSON数组，每个元素: {"question": "问题内容", "category": "概念/原因/影响/对比/思考"}
+只返回JSON，不要其他文字。`;
+
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 1024 });
+  const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '');
+  const match = cleaned.match(/\[[\s\S]*\]/);
+  if (!match) return [];
+  try { return JSON.parse(match[0]); } catch { return []; }
+}
+
+async function generateTopicHTML(entry, relatedEntries = [], qaHistory = []) {
+  const related = relatedEntries.map(e => `【${e.title}】${e.content.slice(0, 100)}`).join('\n');
+  const qaContext = qaHistory.map(h => `Q: ${h.question}\nA: ${h.answer}`).join('\n\n');
+
+  const prompt = `你是一个教育内容设计师。基于以下知识点和相关资料，生成一个美观的HTML专题页面。
+
+主题知识点:
+标题: ${entry.title}
+学科: ${entry.subject}
+内容: ${entry.content}
+
+${related ? `相关知识点:\n${related}\n` : ''}
+${qaContext ? `相关问答:\n${qaContext}\n` : ''}
+
+要求：
+1. 生成完整的HTML页面（含内联CSS），适合iframe嵌入
+2. 深色主题（背景 #0f1117，文字 #e0e0e0）
+3. 分章节展示：导语→背景→核心内容→影响/意义→总结
+4. 使用清晰的排版：标题、卡片、分隔线、高亮重点
+5. 中文内容，适合中学生阅读
+6. 使用你自己的知识补充完整内容，不要局限于提供的材料
+7. 页面宽度100%，无需滚动条样式
+8. 配色美观，使用渐变和阴影效果
+
+只返回HTML代码，不要包裹在代码块中。`;
+
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 8192 });
+  let html = result.replace(/```html\s*/g, '').replace(/```\s*/g, '').trim();
+  if (!html.includes('<html') && !html.includes('<!DOCTYPE')) {
+    html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="background:#0f1117;color:#e0e0e0;font-family:system-ui;padding:24px">${html}</body></html>`;
+  }
+  return html;
+}
+
+module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap, generateSmartQuestions, generateTopicHTML };

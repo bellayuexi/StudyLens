@@ -1,11 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import KnowledgeGraph from './KnowledgeGraph.jsx';
 import TimelineView from './TimelineView.jsx';
 import IngestPanel from './IngestPanel.jsx';
 import EntryDetail from './EntryDetail.jsx';
 import CategoryView from './CategoryView.jsx';
-import QAPage from './QAPage.jsx';
-import RestructurePanel from './RestructurePanel.jsx';
 import { fetchGraph } from '../lib/api.js';
 
 const SUBJECT_COLORS = {};
@@ -18,44 +15,27 @@ function getColor(subject) {
 }
 
 const VIEWS = [
-  { id: 'graph', label: '🔗 知识图谱', desc: '关联网络' },
   { id: 'timeline', label: '📅 时间线', desc: '按历史年代排列' },
   { id: 'category', label: '📂 分类', desc: '按学科归类' },
-  { id: 'qa', label: '💬 问答', desc: '知识问答' },
 ];
 
 export default function App() {
-  const [graphData, setGraphData] = useState({ nodes: [], links: [] });
   const [allEntries, setAllEntries] = useState([]);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [loading, setLoading] = useState(false);
   const [leftWidth, setLeftWidth] = useState(420);
   const [dragging, setDragging] = useState(false);
   const [filterSubject, setFilterSubject] = useState(null);
-  const [viewMode, setViewMode] = useState('graph');
+  const [viewMode, setViewMode] = useState('category');
   const [backend, setBackend] = useState('wiki');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const loadGraph = useCallback(async () => {
-    const { entries, connections } = await fetchGraph(backend);
+    const { entries } = await fetchGraph(backend);
     setAllEntries(entries);
-    const nodes = entries.map(e => ({
-      id: e.id,
-      name: e.title,
-      subject: e.subject,
-      val: 4 + connections.filter(c => c.from_id === e.id || c.to_id === e.id).length * 2,
-      color: e.source_type === 'qa' ? '#ce93d8' : getColor(e.subject),
-      isQA: e.source_type === 'qa',
-      _entry: e,
-    }));
-    const nodeIds = new Set(nodes.map(n => n.id));
-    const links = connections
-      .filter(c => nodeIds.has(c.from_id) && nodeIds.has(c.to_id))
-      .map(c => ({ source: c.from_id, target: c.to_id, label: c.relation }));
-    setGraphData({ nodes, links });
   }, [backend]);
 
   useEffect(() => { loadGraph(); }, [loadGraph]);
-  useEffect(() => { loadGraph(); }, [backend]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -68,27 +48,20 @@ export default function App() {
 
   const subjects = [...new Set(allEntries.map(e => e.subject).filter(Boolean))];
 
-  const handleNodeClick = (node) => setSelectedEntry(node._entry);
   const handleEntryClick = (entry) => setSelectedEntry(entry);
 
-  const getConnectedEntries = (entry) => {
-    if (!entry) return [];
-    const connIds = new Set();
-    graphData.links.forEach(l => {
-      const src = typeof l.source === 'object' ? l.source.id : l.source;
-      const tgt = typeof l.target === 'object' ? l.target.id : l.target;
-      if (src === entry.id) connIds.add(tgt);
-      if (tgt === entry.id) connIds.add(src);
-    });
-    return allEntries.filter(e => connIds.has(e.id));
-  };
-
-  // Category view replaced by CategoryView component
+  const filteredEntries = allEntries.filter(e => {
+    if (filterSubject && e.subject !== filterSubject) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      return (e.title + e.content + (e.tags || []).join(' ') + e.subject).toLowerCase().includes(q);
+    }
+    return true;
+  });
 
   return (
     <div style={{ display: 'flex', height: '100vh', fontFamily: 'system-ui, -apple-system, sans-serif', background: '#0f1117', color: '#e0e0e0', overflow: 'hidden' }}>
-      {/* Left Panel — hidden in QA mode */}
-      {viewMode !== 'qa' ? (
+      {/* Left Panel */}
       <div style={{ width: leftWidth, minWidth: 300, borderRight: '1px solid #2a2d35', display: 'flex', flexDirection: 'column', background: '#161822', flexShrink: 0 }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid #2a2d35' }}>
           <h1 style={{ margin: 0, fontSize: 22, color: '#fff' }}>📚 StudyGraph</h1>
@@ -119,6 +92,14 @@ export default function App() {
           ))}
         </div>
 
+        {/* Search */}
+        <div style={{ padding: '8px 16px', borderBottom: '1px solid #2a2d35' }}>
+          <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            placeholder="🔍 搜索知识点..."
+            style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid #2a2d45',
+              background: '#1c1f2e', color: '#ddd', fontSize: 13, boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }} />
+        </div>
+
         {/* Subject filter */}
         {subjects.length > 0 && (
           <div style={{ padding: '8px 16px', borderBottom: '1px solid #2a2d35', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
@@ -140,11 +121,9 @@ export default function App() {
         {/* Entry list */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '8px 14px' }}>
           <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
-            知识条目 ({filterSubject ? allEntries.filter(e => e.subject === filterSubject).length : allEntries.length})
+            知识条目 ({filteredEntries.length})
           </div>
-          {allEntries
-            .filter(e => !filterSubject || e.subject === filterSubject)
-            .map(e => (
+          {filteredEntries.map(e => (
             <div key={e.id} onClick={() => handleEntryClick(e)}
               style={{ padding: '10px 12px', marginBottom: 5, borderRadius: 8, cursor: 'pointer',
                 background: selectedEntry?.id === e.id ? '#2a2d45' : '#1c1f2e',
@@ -158,28 +137,13 @@ export default function App() {
                 {e.content}
               </div>
               <div style={{ fontSize: 11, color: '#666', marginTop: 4 }}>
-                {e.source_type === 'qa' && <span style={{ background: '#9c27b044', color: '#ce93d8', padding: '1px 6px', borderRadius: 4, fontSize: 10, marginRight: 4 }}>问答</span>}
                 {e.subject} · {e.created_date}
               </div>
             </div>
           ))}
         </div>
       </div>
-      ) : (
-      <div style={{ width: 50, background: '#161822', borderRight: '1px solid #2a2d35', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 12, flexShrink: 0 }}>
-        {VIEWS.map(v => (
-          <div key={v.id} onClick={() => setViewMode(v.id)} title={v.desc}
-            style={{ width: 36, height: 36, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              cursor: 'pointer', marginBottom: 4, fontSize: 16,
-              background: viewMode === v.id ? '#4285f4' : 'transparent', transition: 'background 0.15s' }}>
-            {v.label.slice(0, 2)}
-          </div>
-        ))}
-      </div>
-      )}
 
-      {viewMode !== 'qa' && (
-      <>
       {/* Resize handle */}
       <div onMouseDown={() => setDragging(true)}
         style={{ width: 4, cursor: 'col-resize', background: dragging ? '#4285f4' : 'transparent', flexShrink: 0 }}
@@ -195,34 +159,12 @@ export default function App() {
           </div>
         )}
 
-        {viewMode === 'graph' && (
-          <>
-            <RestructurePanel subjects={subjects} onRestructured={loadGraph} />
-            {subjects.length > 0 && (
-              <div style={{ position: 'absolute', bottom: 12, right: 12, zIndex: 10, background: 'rgba(22,24,34,0.9)',
-                padding: '10px 14px', borderRadius: 8, fontSize: 12 }}>
-                <div style={{ color: '#888', marginBottom: 6, fontSize: 11 }}>图例</div>
-                {subjects.map(s => (
-                  <div key={s} style={{ display: 'flex', alignItems: 'center', marginBottom: 3 }}>
-                    <div style={{ width: 10, height: 10, borderRadius: '50%', background: getColor(s), marginRight: 6 }} />
-                    <span style={{ color: '#ccc' }}>{s}</span>
-                  </div>
-                ))}
-                <div style={{ color: '#666', marginTop: 6, fontSize: 10, lineHeight: 1.4 }}>
-                  点击节点查看详情 · 滚轮缩放 · 拖拽平移
-                </div>
-              </div>
-            )}
-            <KnowledgeGraph data={graphData} onNodeClick={handleNodeClick} selectedId={selectedEntry?.id} />
-          </>
-        )}
-
         {viewMode === 'timeline' && (
-          <TimelineView entries={allEntries} onEntryClick={handleEntryClick} selectedId={selectedEntry?.id} />
+          <TimelineView entries={filteredEntries} onEntryClick={handleEntryClick} selectedId={selectedEntry?.id} />
         )}
 
         {viewMode === 'category' && (
-          <CategoryView entries={allEntries} onEntryClick={handleEntryClick} selectedId={selectedEntry?.id} />
+          <CategoryView entries={filteredEntries} onEntryClick={handleEntryClick} selectedId={selectedEntry?.id} />
         )}
       </div>
 
@@ -230,18 +172,12 @@ export default function App() {
       {selectedEntry && (
         <EntryDetail
           entry={selectedEntry}
-          connectedEntries={getConnectedEntries(selectedEntry)}
+          connectedEntries={[]}
           onClose={() => setSelectedEntry(null)}
           onDeleted={() => { setSelectedEntry(null); loadGraph(); }}
           onNavigate={(entry) => setSelectedEntry(entry)}
           onUpdated={loadGraph}
         />
-      )}
-      </>
-      )}
-
-      {viewMode === 'qa' && (
-        <QAPage onSaved={loadGraph} />
       )}
     </div>
   );

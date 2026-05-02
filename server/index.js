@@ -293,5 +293,56 @@ app.post('/api/qa/mindmap', async (req, res) => {
   }
 });
 
+// Generate smart questions for an entry
+app.post('/api/entries/:id/questions', async (req, res) => {
+  try {
+    const entry = storage.getEntry(req.params.id);
+    if (!entry) return res.status(404).json({ error: 'entry not found' });
+    const questions = await llm.generateSmartQuestions(entry);
+    res.json({ questions });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Ask a question scoped to a specific entry
+app.post('/api/entries/:id/ask', async (req, res) => {
+  try {
+    const entry = storage.getEntry(req.params.id);
+    if (!entry) return res.status(404).json({ error: 'entry not found' });
+    const { question, history } = req.body;
+    if (!question) return res.status(400).json({ error: 'question is required' });
+    const allEntries = storage.getAllEntries();
+    const related = allEntries.filter(e => {
+      if (e.id === entry.id) return false;
+      const eTags = new Set(e.tags || []);
+      return (entry.tags || []).some(t => eTags.has(t)) || e.subject === entry.subject;
+    }).slice(0, 15);
+    const context = [entry, ...related];
+    const result = await llm.askQuestion(question, context, history || []);
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Generate HTML topic page for an entry
+app.post('/api/entries/:id/topic-page', async (req, res) => {
+  try {
+    const entry = storage.getEntry(req.params.id);
+    if (!entry) return res.status(404).json({ error: 'entry not found' });
+    const allEntries = storage.getAllEntries();
+    const related = allEntries.filter(e => {
+      if (e.id === entry.id) return false;
+      const eTags = new Set(e.tags || []);
+      return (entry.tags || []).some(t => eTags.has(t)) || e.subject === entry.subject;
+    }).slice(0, 10);
+    const html = await llm.generateTopicHTML(entry, related, req.body.qaHistory || []);
+    res.json({ html });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`StudyGraph server running on http://localhost:${PORT}`));

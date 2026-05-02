@@ -87,3 +87,26 @@ export async function buildQAMindMap(question, answer, cards = [], relatedEntrie
   });
   return res.json();
 }
+
+export async function generateSmartQuestions(entryId) {
+  const res = await fetch(`${API}/api/entries/${entryId}/questions`, { method: 'POST' });
+  return res.json();
+}
+
+export async function askEntryQuestion(entryId, question, history = []) {
+  const res = await fetch(`${API}/api/entries/${entryId}/ask`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question, history }),
+  });
+  return res.json();
+}
+
+export async function generateTopicPage(entryId, qaHistory = []) {
+  const res = await fetch(`${API}/api/entries/${entryId}/topic-page`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ qaHistory }),
+  });
+  return res.json();
+}
