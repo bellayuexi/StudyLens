@@ -102,9 +102,11 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
 
   const addCustomQuestion = () => {
     if (!newQuestion.trim()) return;
-    const q = newQuestion.trim();
+    const id = Date.now();
+    const q = { id, question: newQuestion.trim(), category: '自定义' };
+    setSmartQuestions(prev => [...prev, q]);
+    setSelectedQs(prev => new Set(prev).add(id));
     setNewQuestion('');
-    handleAsk(q);
   };
 
   const handleAsk = async (question) => {
@@ -152,15 +154,20 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       const data = await generateTopicPage(entry.id, qaHistory);
       const html = injectTimestamp(data.html || '');
       setTopicHTML(html);
-      const saved = await saveTopicPage(entry.id, html, qaHistory, comments);
-      setTopicPageId(saved.id);
-      setTopicVersion(saved.version);
-      setTopicVersionCount(saved.version);
-      setLastUpdated(saved.created_at);
-      setViewingVersion(null);
-      setTopicStatus(`v${saved.version} 已保存`);
-      setTopicDirty(false);
       setTab('topic');
+      try {
+        const saved = await saveTopicPage(entry.id, html, qaHistory, comments);
+        setTopicPageId(saved.id);
+        setTopicVersion(saved.version);
+        setTopicVersionCount(saved.version);
+        setLastUpdated(saved.created_at);
+        setViewingVersion(null);
+        setTopicStatus(`v${saved.version} 已保存`);
+        setTopicDirty(false);
+      } catch (saveErr) {
+        console.error('Save failed:', saveErr);
+        setTopicStatus('已生成（保存失败，请重试）');
+      }
     } catch (err) {
       setTopicStatus('生成失败');
       console.error(err);
@@ -175,14 +182,19 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       const data = await generateTopicPage(entry.id, qaHistory);
       const html = injectTimestamp(data.html || '');
       setTopicHTML(html);
-      const saved = await saveTopicPage(entry.id, html, qaHistory, comments);
-      setTopicPageId(saved.id);
-      setTopicVersion(saved.version);
-      setTopicVersionCount(saved.version);
-      setLastUpdated(saved.created_at);
-      setViewingVersion(null);
-      setTopicStatus(`v${saved.version} 已保存`);
-      setTopicDirty(false);
+      try {
+        const saved = await saveTopicPage(entry.id, html, qaHistory, comments);
+        setTopicPageId(saved.id);
+        setTopicVersion(saved.version);
+        setTopicVersionCount(saved.version);
+        setLastUpdated(saved.created_at);
+        setViewingVersion(null);
+        setTopicStatus(`v${saved.version} 已保存`);
+        setTopicDirty(false);
+      } catch (saveErr) {
+        console.error('Save failed:', saveErr);
+        setTopicStatus('已更新（保存失败，请重试）');
+      }
     } catch (err) {
       setTopicStatus('更新失败');
     }
@@ -414,8 +426,12 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
 
           {/* Content */}
           {loadingTopic && !topicHTML ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-              正在自动生成专题页面...
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#888' }}>
+              <div style={{ fontSize: 36 }}>⏳</div>
+              <div style={{ fontSize: 14 }}>正在根据智能问题自动生成专题页面...</div>
+              <div style={{ fontSize: 12, color: '#666', maxWidth: 400, textAlign: 'center' }}>
+                系统会用AI生成的学习问题来构建专题页面，首次生成可能需要10-30秒
+              </div>
             </div>
           ) : topicHTML ? (
             <iframe srcDoc={topicHTML} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="知识专题" />
@@ -423,6 +439,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#666' }}>
               <div style={{ fontSize: 48 }}>📄</div>
               <div style={{ fontSize: 14 }}>正在等待智能问题生成...</div>
+              <div style={{ fontSize: 12, color: '#555' }}>问题生成后将自动构建专题页面</div>
             </div>
           )}
         </div>
@@ -512,16 +529,16 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             )}
           </div>
 
-          {/* Single question input (replaces both "add custom" and "direct ask") */}
+          {/* Add custom question to list */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
             <input value={newQuestion} onChange={e => setNewQuestion(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') addCustomQuestion(); }}
-              placeholder="输入问题并提问..."
+              placeholder="添加自定义问题到列表..."
               style={{ ...inputStyle, flex: 1 }} />
-            <button onClick={addCustomQuestion} disabled={asking || !newQuestion.trim()}
-              style={{ padding: '8px 14px', borderRadius: 6, border: 'none', cursor: (asking || !newQuestion.trim()) ? 'default' : 'pointer',
-                background: '#4285f4', color: '#fff', fontSize: 13, flexShrink: 0, opacity: (asking || !newQuestion.trim()) ? 0.5 : 1 }}>
-              提问
+            <button onClick={addCustomQuestion} disabled={!newQuestion.trim()}
+              style={{ padding: '8px 14px', borderRadius: 6, border: 'none', cursor: !newQuestion.trim() ? 'default' : 'pointer',
+                background: '#34a853', color: '#fff', fontSize: 13, flexShrink: 0, opacity: !newQuestion.trim() ? 0.5 : 1 }}>
+              +添加
             </button>
           </div>
 
