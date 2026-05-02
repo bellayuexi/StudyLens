@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import EntryDetail from './EntryDetail.jsx';
-import { getChildren, expandEntry, addChildEntry, deleteEntry, updateEntry } from '../lib/api.js';
+import { getChildren, expandEntry, addChildEntry, deleteEntry, updateEntry, getLatestTopicPage, generateTopicPage, saveTopicPage } from '../lib/api.js';
 
 const CATEGORY_COLORS = {
   '背景': '#4285f4', '内容': '#34a853', '影响': '#fbbc05',
@@ -27,6 +27,9 @@ export default function DeepAnalysis() {
   const [addMode, setAddMode] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
+  const [parentTopicHTML, setParentTopicHTML] = useState('');
+  const [parentTopicVersion, setParentTopicVersion] = useState(0);
+  const [updatingSummary, setUpdatingSummary] = useState(false);
 
   const loadData = useCallback(async () => {
     const res = await fetch(`/api/entries/${entryId}`);
@@ -36,6 +39,13 @@ export default function DeepAnalysis() {
     }
     const childRes = await getChildren(entryId);
     setChildren(childRes.children || []);
+    try {
+      const topicData = await getLatestTopicPage(entryId);
+      if (topicData.page) {
+        setParentTopicHTML(topicData.page.html);
+        setParentTopicVersion(topicData.page.version);
+      }
+    } catch {}
   }, [entryId]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -65,6 +75,25 @@ export default function DeepAnalysis() {
     setNewTitle('');
     setNewContent('');
     setAddMode(false);
+  };
+
+  const handleUpdateSummary = async () => {
+    setUpdatingSummary(true);
+    try {
+      const childQa = children.map(c => ({
+        question: c.title,
+        answer: c.content,
+        category: c.tags?.find(t => Object.keys(CATEGORY_COLORS).some(k => t.includes(k))) || '子主题',
+      }));
+      const data = await generateTopicPage(entryId, childQa, parentTopicHTML);
+      const ts = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+      const badge = `<div style="text-align:right;padding:8px 16px;font-size:11px;color:#666;border-bottom:1px solid #333;">综述更新: ${ts}</div>`;
+      const html = (data.html || '').replace(/<body[^>]*>/, (m) => m + badge) || badge + (data.html || '');
+      setParentTopicHTML(html);
+      const saved = await saveTopicPage(entryId, html, childQa);
+      setParentTopicVersion(saved.version);
+    } catch (e) { console.error(e); }
+    setUpdatingSummary(false);
   };
 
   const categories = {};
@@ -175,14 +204,35 @@ export default function DeepAnalysis() {
             onUpdated={loadData}
           />
         ) : (
-          <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ textAlign: 'center', color: '#444' }}>
-              <div style={{ fontSize: 64, marginBottom: 16 }}>🔬</div>
-              <div style={{ fontSize: 18, color: '#666' }}>{parentEntry.title} - 深入分析</div>
-              <div style={{ fontSize: 13, color: '#444', marginTop: 8 }}>
-                {children.length > 0 ? '选择左侧子知识点开始探索' : '点击「AI自动拆解」生成子知识点'}
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {/* Summary toolbar */}
+            <div style={{ padding: '10px 16px', borderBottom: '1px solid #2a2d35', background: '#161822', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+                📄 {parentEntry.title} — 综述
+                {parentTopicVersion > 0 && <span style={{ fontSize: 11, color: '#34a853', marginLeft: 6 }}>v{parentTopicVersion}</span>}
               </div>
+              {children.length > 0 && (
+                <button onClick={handleUpdateSummary} disabled={updatingSummary}
+                  style={{ padding: '5px 14px', borderRadius: 6, border: 'none', fontSize: 12,
+                    background: updatingSummary ? '#333' : '#9c27b033', color: updatingSummary ? '#666' : '#ce93d8',
+                    cursor: updatingSummary ? 'wait' : 'pointer' }}>
+                  {updatingSummary ? '更新中...' : '🔄 用子节点内容更新综述'}
+                </button>
+              )}
             </div>
+            {parentTopicHTML ? (
+              <iframe srcDoc={parentTopicHTML} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="综述页面" />
+            ) : (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center', color: '#444' }}>
+                  <div style={{ fontSize: 64, marginBottom: 16 }}>🔬</div>
+                  <div style={{ fontSize: 18, color: '#666' }}>{parentEntry.title} - 深入分析</div>
+                  <div style={{ fontSize: 13, color: '#444', marginTop: 8 }}>
+                    {children.length > 0 ? '选择左侧子知识点开始探索，或点击「更新综述」生成综合页面' : '点击「AI自动拆解」生成子知识点'}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
