@@ -45,6 +45,25 @@ export async function saveQACards(question, cards) {
   return res.json();
 }
 
+export async function ingestFile(file, subject = '') {
+  const form = new FormData();
+  form.append('file', file);
+  if (subject) form.append('subject', subject);
+  const res = await fetch(`${API}/api/ingest/file`, { method: 'POST', body: form });
+  if (!res.ok) throw new Error((await res.json()).error || 'Upload failed');
+  return res.json();
+}
+
+export async function ingestUrl(url, subject = '') {
+  const res = await fetch(`${API}/api/ingest/url`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, subject }),
+  });
+  if (!res.ok) throw new Error((await res.json()).error || 'URL fetch failed');
+  return res.json();
+}
+
 export async function searchEntries(q) {
   const res = await fetch(`${API}/api/entries?q=${encodeURIComponent(q)}`);
   return res.json();

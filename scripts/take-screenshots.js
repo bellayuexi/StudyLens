@@ -9,6 +9,7 @@ const fs = require('fs');
 
 const VIEWS = [
   { name: 'graph', label: '知识图谱', wait: 3000 },
+  { name: 'graph-focused', label: '知识图谱', wait: 500, clickCanvas: true },
   { name: 'timeline', label: '时间线', wait: 1500 },
   { name: 'category', label: '分类', wait: 1500 },
 ];
@@ -38,6 +39,17 @@ async function run() {
       return false;
     }, view.label);
     if (clicked) await new Promise(r => setTimeout(r, view.wait));
+
+    // Click on canvas to trigger focus interaction
+    if (view.clickCanvas) {
+      const canvas = await page.$('canvas');
+      if (canvas) {
+        const box = await canvas.boundingBox();
+        // Click center-ish of the canvas where nodes cluster
+        await page.mouse.click(box.x + box.width * 0.5, box.y + box.height * 0.45);
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
 
     const filePath = path.join(OUT_DIR, `${view.name}.png`);
     await page.screenshot({ path: filePath, fullPage: false });

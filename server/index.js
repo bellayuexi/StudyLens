@@ -1,11 +1,19 @@
 const express = require('express');
 const cors = require('cors');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const storage = require('../core/storage');
 const llm = require('../core/llm-provider');
+const extractor = require('../core/extractor');
 
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
+
+const uploadDir = path.join(__dirname, '..', 'uploads');
+if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+const upload = multer({ dest: uploadDir, limits: { fileSize: 20 * 1024 * 1024 } });
 
 // Get all entries + connections for graph
 app.get('/api/graph', (req, res) => {
@@ -130,6 +138,77 @@ app.post('/api/qa/save', async (req, res) => {
       existingEntries.push(entry);
     }
     res.json({ created });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Ingest from file upload (PDF, Word, Excel, txt)
+app.post('/api/ingest/file', upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: 'file is required' });
+    const origName = req.file.originalname;
+    const ext = path.extname(origName).toLowerCase();
+    const dest = req.file.path + ext;
+    fs.renameSync(req.file.path, dest);
+
+    const text = await extractor.extractFromFile(dest);
+    fs.unlinkSync(dest);
+
+    const subject = req.body.subject || '';
+    const knowledgePoints = await llm.analyze(text.slice(0, 10000), subject);
+    const existingEntries = storage.getAllEntries();
+    const created = [];
+
+    for (const kp of knowledgePoints) {
+      const entry = storage.addEntry({
+        title: kp.title, content: kp.content,
+        subject: kp.subject || subject || '', tags: kp.tags || [],
+        source_type: ext.replace('.', ''), source_ref: origName,
+      });
+      created.push(entry);
+      try {
+        const connections = await llm.findConnections(entry, existingEntries);
+        for (const conn of connections) {
+          if (existingEntries.some(e => e.id === conn.id)) storage.addConnection(entry.id, conn.id, conn.relation);
+        }
+      } catch (_) {}
+      existingEntries.push(entry);
+    }
+    res.json({ created, extractedLength: text.length });
+  } catch (err) {
+    if (req.file) try { fs.unlinkSync(req.file.path); } catch (_) {}
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Ingest from URL
+app.post('/api/ingest/url', async (req, res) => {
+  try {
+    const { url, subject } = req.body;
+    if (!url) return res.status(400).json({ error: 'url is required' });
+
+    const text = await extractor.extractFromUrl(url);
+    const knowledgePoints = await llm.analyze(text.slice(0, 10000), subject || '');
+    const existingEntries = storage.getAllEntries();
+    const created = [];
+
+    for (const kp of knowledgePoints) {
+      const entry = storage.addEntry({
+        title: kp.title, content: kp.content,
+        subject: kp.subject || subject || '', tags: kp.tags || [],
+        source_type: 'url', source_ref: url,
+      });
+      created.push(entry);
+      try {
+        const connections = await llm.findConnections(entry, existingEntries);
+        for (const conn of connections) {
+          if (existingEntries.some(e => e.id === conn.id)) storage.addConnection(entry.id, conn.id, conn.relation);
+        }
+      } catch (_) {}
+      existingEntries.push(entry);
+    }
+    res.json({ created, extractedLength: text.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
