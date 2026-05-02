@@ -41,12 +41,12 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     entryIdRef.current = entry.id;
     setEditingField(null);
     setCommentMode(false);
-    setAsking(false);
-    setLoadingQ(false);
 
     // Restore from cache immediately if available
     const cached = entryDataCacheRef.current[entry.id];
     if (cached) {
+      setAsking(cached.asking || false);
+      setLoadingQ(false);
       setTopicHTML(cached.topicHTML || '');
       setTopicPageId(cached.topicPageId || null);
       setTopicVersion(cached.topicVersion || 0);
@@ -60,6 +60,8 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       setTab('topic');
       setLoadingEntry(false);
     } else {
+      setAsking(false);
+      setLoadingQ(false);
       setSmartQuestions([]);
       setSelectedQs(new Set());
       setQaHistory([]);
@@ -93,10 +95,10 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     if (!entry.id || loadingEntry) return;
     entryDataCacheRef.current[entry.id] = {
       topicHTML, topicPageId, topicVersion, topicVersionCount,
-      qaHistory: qaHistory.filter(h => !h.loading),
-      comments, lastUpdated, topicStatus, topicDirty,
+      qaHistory,
+      comments, lastUpdated, topicStatus, topicDirty, asking,
     };
-  }, [topicHTML, topicPageId, topicVersion, topicVersionCount, qaHistory, comments, lastUpdated, topicStatus, topicDirty]);
+  }, [topicHTML, topicPageId, topicVersion, topicVersionCount, qaHistory, comments, lastUpdated, topicStatus, topicDirty, asking]);
 
   const loadSavedTopicPage = async () => {
     const currentId = entry.id;
@@ -217,6 +219,13 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       setQaHistory(prev => [...prev, ...loadingItems]);
     }
 
+    // Also ensure cache reflects asking state
+    const c = entryDataCacheRef.current[batchEntryId];
+    if (c) {
+      c.asking = true;
+      c.qaHistory = [...(c.qaHistory || []), ...loadingItems];
+    }
+
     // Track results for persistence
     const results = {};
 
@@ -229,10 +238,16 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         results[q.id] = { question: q.question, answer: `错误: ${err.message}`, loading: false };
       }
 
-      // Update UI if still on same entry
+      // Update UI if still on same entry, otherwise update cache
       if (entryIdRef.current === batchEntryId) {
         setQaHistory(prev => prev.map(h => h._qid === q.id ? { ...results[q.id], _qid: q.id } : h));
         setTopicDirty(true);
+      } else {
+        const c = entryDataCacheRef.current[batchEntryId];
+        if (c) {
+          c.qaHistory = (c.qaHistory || []).map(h => h._qid === q.id ? { ...results[q.id], _qid: q.id } : h);
+          c.topicDirty = true;
+        }
       }
 
       // Persist incrementally
@@ -246,6 +261,9 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     if (entryIdRef.current === batchEntryId) {
       setAsking(false);
       setTimeout(() => qaRef.current?.scrollTo(0, qaRef.current.scrollHeight), 100);
+    } else {
+      const c = entryDataCacheRef.current[batchEntryId];
+      if (c) c.asking = false;
     }
   };
 
