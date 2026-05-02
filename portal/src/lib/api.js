@@ -125,6 +125,11 @@ export async function getTopicPages(entryId) {
   return res.json();
 }
 
+export async function getTopicPageByVersion(entryId, version) {
+  const data = await getTopicPages(entryId);
+  return (data.pages || []).find(p => p.version === version) || null;
+}
+
 export async function getLatestTopicPage(entryId) {
   const res = await fetch(`${API}/api/entries/${entryId}/topic-page/latest`);
   return res.json();

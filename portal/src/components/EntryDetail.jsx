@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { deleteEntry, updateEntry, generateSmartQuestions, askEntryQuestion, generateTopicPage, saveTopicPage, getLatestTopicPage, updateTopicPageComments } from '../lib/api.js';
+import React, { useState, useEffect, useRef } from 'react';
+import { deleteEntry, updateEntry, generateSmartQuestions, askEntryQuestion, generateTopicPage, saveTopicPage, getLatestTopicPage, getTopicPages, getTopicPageByVersion, updateTopicPageComments } from '../lib/api.js';
 
 const QUESTION_COLORS = { '概念': '#4285f4', '原因': '#ea4335', '影响': '#34a853', '对比': '#fbbc05', '思考': '#9c27b0', '自定义': '#ff6d00' };
 
@@ -11,14 +11,17 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const [editingQIdx, setEditingQIdx] = useState(null);
   const [editingQText, setEditingQText] = useState('');
   const [newQuestion, setNewQuestion] = useState('');
-  const [customQ, setCustomQ] = useState('');
   const [qaHistory, setQaHistory] = useState([]);
   const [asking, setAsking] = useState(false);
   const [topicHTML, setTopicHTML] = useState('');
   const [topicPageId, setTopicPageId] = useState(null);
   const [topicVersion, setTopicVersion] = useState(0);
+  const [topicVersionCount, setTopicVersionCount] = useState(0);
+  const [viewingVersion, setViewingVersion] = useState(null);
   const [loadingTopic, setLoadingTopic] = useState(false);
   const [topicStatus, setTopicStatus] = useState('');
+  const [topicDirty, setTopicDirty] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState('');
   const [comments, setComments] = useState([]);
   const [commentMode, setCommentMode] = useState(false);
   const [newComment, setNewComment] = useState('');
@@ -27,7 +30,6 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const [saving, setSaving] = useState(false);
   const [tagInput, setTagInput] = useState('');
   const qaRef = useRef(null);
-  const iframeRef = useRef(null);
 
   useEffect(() => {
     setSmartQuestions([]);
@@ -36,7 +38,11 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setTopicHTML('');
     setTopicPageId(null);
     setTopicVersion(0);
+    setTopicVersionCount(0);
+    setViewingVersion(null);
     setTopicStatus('');
+    setTopicDirty(false);
+    setLastUpdated('');
     setComments([]);
     setCommentMode(false);
     setEditingField(null);
@@ -52,9 +58,12 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         setTopicHTML(data.page.html);
         setTopicPageId(data.page.id);
         setTopicVersion(data.page.version);
+        setTopicVersionCount(data.page.version);
         setComments(data.page.comments || []);
         setQaHistory(data.page.qa_history || []);
+        setLastUpdated(data.page.created_at);
         setTopicStatus(`v${data.page.version} 已保存`);
+        setTopicDirty(false);
       }
     } catch (e) { console.error(e); }
   };
@@ -70,7 +79,6 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setLoadingQ(false);
   };
 
-  // Auto-generate topic page if none saved and questions loaded
   useEffect(() => {
     if (smartQuestions.length > 0 && !topicHTML && !loadingTopic && topicVersion === 0) {
       handleGenerateTopic();
@@ -94,17 +102,14 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
 
   const addCustomQuestion = () => {
     if (!newQuestion.trim()) return;
-    const id = Date.now();
-    const q = { id, question: newQuestion.trim(), category: '自定义' };
-    setSmartQuestions(prev => [...prev, q]);
-    setSelectedQs(prev => new Set(prev).add(id));
+    const q = newQuestion.trim();
     setNewQuestion('');
+    handleAsk(q);
   };
 
   const handleAsk = async (question) => {
     if (!question || asking) return;
     setAsking(true);
-    setCustomQ('');
     const history = qaHistory.map(h => ({ question: h.question, answer: h.answer }));
     setQaHistory(prev => [...prev, { question, answer: '', loading: true }]);
     try {
@@ -114,6 +119,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         updated[updated.length - 1] = { question, answer: data.answer, cards: data.suggestedCards || [], loading: false };
         return updated;
       });
+      setTopicDirty(true);
     } catch (err) {
       setQaHistory(prev => {
         const updated = [...prev];
@@ -133,18 +139,27 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     }
   };
 
+  const injectTimestamp = (html) => {
+    const ts = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
+    const badge = `<div style="text-align:right;padding:8px 16px;font-size:11px;color:#666;border-bottom:1px solid #333;">最后更新: ${ts}</div>`;
+    return html.replace(/<body[^>]*>/, (m) => m + badge) || badge + html;
+  };
+
   const handleGenerateTopic = async () => {
     setLoadingTopic(true);
     setTopicStatus('正在生成...');
     try {
       const data = await generateTopicPage(entry.id, qaHistory);
-      const html = data.html || '';
+      const html = injectTimestamp(data.html || '');
       setTopicHTML(html);
-      // Auto-save
       const saved = await saveTopicPage(entry.id, html, qaHistory, comments);
       setTopicPageId(saved.id);
       setTopicVersion(saved.version);
+      setTopicVersionCount(saved.version);
+      setLastUpdated(saved.created_at);
+      setViewingVersion(null);
       setTopicStatus(`v${saved.version} 已保存`);
+      setTopicDirty(false);
       setTab('topic');
     } catch (err) {
       setTopicStatus('生成失败');
@@ -158,17 +173,36 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setTopicStatus('正在更新...');
     try {
       const data = await generateTopicPage(entry.id, qaHistory);
-      const html = data.html || '';
+      const html = injectTimestamp(data.html || '');
       setTopicHTML(html);
       const saved = await saveTopicPage(entry.id, html, qaHistory, comments);
       setTopicPageId(saved.id);
       setTopicVersion(saved.version);
+      setTopicVersionCount(saved.version);
+      setLastUpdated(saved.created_at);
+      setViewingVersion(null);
       setTopicStatus(`v${saved.version} 已保存`);
+      setTopicDirty(false);
     } catch (err) {
       setTopicStatus('更新失败');
-      console.error(err);
     }
     setLoadingTopic(false);
+  };
+
+  const viewVersion = async (v) => {
+    if (v === topicVersion) {
+      setViewingVersion(null);
+      loadSavedTopicPage();
+      return;
+    }
+    try {
+      const page = await getTopicPageByVersion(entry.id, v);
+      if (page) {
+        setTopicHTML(page.html);
+        setViewingVersion(v);
+        setTopicStatus(`正在查看 v${v}`);
+      }
+    } catch (e) { console.error(e); }
   };
 
   const addComment = () => {
@@ -193,20 +227,23 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       const commentText = comments.map(c => c.text).join('\n');
       const augmentedHistory = [...qaHistory, { question: `请根据以下批注修改专题页面:\n${commentText}`, answer: '' }];
       const data = await generateTopicPage(entry.id, augmentedHistory);
-      const html = data.html || '';
+      const html = injectTimestamp(data.html || '');
       setTopicHTML(html);
       const saved = await saveTopicPage(entry.id, html, qaHistory, []);
       setTopicPageId(saved.id);
       setTopicVersion(saved.version);
+      setTopicVersionCount(saved.version);
+      setLastUpdated(saved.created_at);
+      setViewingVersion(null);
       setComments([]);
       setTopicStatus(`v${saved.version} 已保存（已应用批注）`);
+      setTopicDirty(false);
     } catch (err) {
       setTopicStatus('应用批注失败');
     }
     setLoadingTopic(false);
   };
 
-  // Inline editing
   const startFieldEdit = (field) => {
     setEditForm({ title: entry.title, content: entry.content, subject: entry.subject, tags: [...(entry.tags || [])] });
     setEditingField(field);
@@ -235,7 +272,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
 
   return (
     <div style={{ height: '100%', background: '#0f1117', display: 'flex', flexDirection: 'column' }}>
-      {/* Header — inline editable */}
+      {/* Header */}
       <div style={{ padding: '14px 24px', borderBottom: '1px solid #2a2d35', background: '#161822' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           {editingField === 'title' ? (
@@ -250,7 +287,6 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: 22, padding: '0 4px' }}>×</button>
           </div>
         </div>
-
         <div style={{ fontSize: 12, color: '#888', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           {editingField === 'subject' ? (
             <input value={editForm.subject} onChange={e => setEditForm({ ...editForm, subject: e.target.value })}
@@ -279,7 +315,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         </div>
       </div>
 
-      {/* Tabs: Topic Page first */}
+      {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid #2a2d35', background: '#161822' }}>
         {[
           { id: 'topic', label: '📄 专题页' },
@@ -293,6 +329,9 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             {t.id === 'topic' && topicVersion > 0 && (
               <span style={{ fontSize: 10, marginLeft: 4, color: '#34a853' }}>v{topicVersion}</span>
             )}
+            {t.id === 'explore' && topicDirty && (
+              <span style={{ fontSize: 10, marginLeft: 4, color: '#fbbc05' }}>●</span>
+            )}
           </button>
         ))}
       </div>
@@ -304,6 +343,19 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
           <div style={{ padding: '6px 16px', borderBottom: '1px solid #2a2d35', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#161822', flexWrap: 'wrap', gap: 4 }}>
             <div style={{ fontSize: 11, color: '#888', display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>{topicStatus || (loadingTopic ? '生成中...' : '未生成')}</span>
+              {/* Version browser */}
+              {topicVersionCount > 1 && (
+                <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                  {Array.from({ length: topicVersionCount }, (_, i) => i + 1).map(v => (
+                    <button key={v} onClick={() => viewVersion(v)}
+                      style={{ padding: '1px 6px', borderRadius: 3, border: 'none', cursor: 'pointer', fontSize: 10,
+                        background: (viewingVersion === v || (!viewingVersion && v === topicVersion)) ? '#4285f4' : '#1c1f2e',
+                        color: (viewingVersion === v || (!viewingVersion && v === topicVersion)) ? '#fff' : '#666' }}>
+                      v{v}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 6 }}>
               <button onClick={() => setCommentMode(!commentMode)}
@@ -319,13 +371,25 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                   应用批注更新
                 </button>
               )}
-              <button onClick={handleRefreshTopic} disabled={loadingTopic}
-                style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: loadingTopic ? 'wait' : 'pointer',
-                  background: loadingTopic ? '#333' : '#4285f422', color: '#4285f4' }}>
-                {loadingTopic ? '更新中...' : '🔄 重新生成'}
+              <button onClick={topicDirty ? handleRefreshTopic : handleGenerateTopic}
+                disabled={loadingTopic || (!topicDirty && topicVersion > 0)}
+                style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11,
+                  cursor: (loadingTopic || (!topicDirty && topicVersion > 0)) ? 'default' : 'pointer',
+                  background: loadingTopic ? '#333' : topicDirty ? '#4285f4' : '#1c1f2e',
+                  color: loadingTopic ? '#666' : topicDirty ? '#fff' : '#555',
+                  opacity: (!topicDirty && topicVersion > 0 && !loadingTopic) ? 0.5 : 1 }}>
+                {loadingTopic ? '更新中...' : topicDirty ? '🔄 用新回答更新' : '🔄 重新生成'}
               </button>
             </div>
           </div>
+
+          {/* Viewing old version banner */}
+          {viewingVersion && viewingVersion !== topicVersion && (
+            <div style={{ padding: '6px 16px', background: '#fbbc0522', borderBottom: '1px solid #fbbc0544', fontSize: 12, color: '#fbbc05', display: 'flex', justifyContent: 'space-between' }}>
+              <span>正在查看历史版本 v{viewingVersion}（最新为 v{topicVersion}）</span>
+              <span onClick={() => viewVersion(topicVersion)} style={{ cursor: 'pointer', textDecoration: 'underline' }}>返回最新版</span>
+            </div>
+          )}
 
           {/* Comments panel */}
           {commentMode && (
@@ -340,7 +404,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
               <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
                 <input value={newComment} onChange={e => setNewComment(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') addComment(); }}
-                  placeholder="例如: 第二章需要扩充更多细节 / 删除重复段落 / 加入更多历史背景..."
+                  placeholder="例如: 第二章需要扩充更多细节..."
                   style={{ ...inputStyle, flex: 1, fontSize: 12 }} />
                 <button onClick={addComment} disabled={!newComment.trim()}
                   style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#fbbc05', color: '#000', cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>+</button>
@@ -354,7 +418,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
               正在自动生成专题页面...
             </div>
           ) : topicHTML ? (
-            <iframe ref={iframeRef} srcDoc={topicHTML} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="知识专题" />
+            <iframe srcDoc={topicHTML} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="知识专题" />
           ) : (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#666' }}>
               <div style={{ fontSize: 48 }}>📄</div>
@@ -367,7 +431,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       {/* Explore Tab */}
       {tab === 'explore' && (
         <div ref={qaRef} style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
-          {/* Content preview */}
+          {/* Content */}
           {editingField === 'content' ? (
             <div style={{ marginBottom: 16 }}>
               <textarea value={editForm.content} onChange={e => setEditForm({ ...editForm, content: e.target.value })}
@@ -439,15 +503,6 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-              <input value={newQuestion} onChange={e => setNewQuestion(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') addCustomQuestion(); }}
-                placeholder="添加自定义问题..."
-                style={{ ...inputStyle, flex: 1, fontSize: 12 }} />
-              <button onClick={addCustomQuestion} disabled={!newQuestion.trim()}
-                style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#34a853', color: '#fff', cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>+</button>
-            </div>
-
             {selectedQs.size > 0 && (
               <button onClick={handleBatchAsk} disabled={asking}
                 style={{ marginTop: 8, width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #4285f444',
@@ -457,20 +512,20 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             )}
           </div>
 
-          {/* Direct question */}
+          {/* Single question input (replaces both "add custom" and "direct ask") */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-            <input value={customQ} onChange={e => setCustomQ(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') handleAsk(customQ.trim()); }}
-              placeholder="直接提问..."
+            <input value={newQuestion} onChange={e => setNewQuestion(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') addCustomQuestion(); }}
+              placeholder="输入问题并提问..."
               style={{ ...inputStyle, flex: 1 }} />
-            <button onClick={() => handleAsk(customQ.trim())} disabled={asking || !customQ.trim()}
-              style={{ padding: '8px 14px', borderRadius: 6, border: 'none', cursor: asking ? 'wait' : 'pointer',
-                background: '#4285f4', color: '#fff', fontSize: 13, flexShrink: 0 }}>
+            <button onClick={addCustomQuestion} disabled={asking || !newQuestion.trim()}
+              style={{ padding: '8px 14px', borderRadius: 6, border: 'none', cursor: (asking || !newQuestion.trim()) ? 'default' : 'pointer',
+                background: '#4285f4', color: '#fff', fontSize: 13, flexShrink: 0, opacity: (asking || !newQuestion.trim()) ? 0.5 : 1 }}>
               提问
             </button>
           </div>
 
-          {/* Q&A History with formatted answers */}
+          {/* Q&A History */}
           {qaHistory.map((h, i) => (
             <div key={i} style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 13, color: '#4285f4', fontWeight: 500, marginBottom: 4 }}>❓ {h.question}</div>
@@ -484,13 +539,16 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             </div>
           ))}
 
-          {/* Update topic page with new Q&A */}
-          {qaHistory.length > 0 && topicHTML && (
-            <button onClick={handleRefreshTopic} disabled={loadingTopic}
+          {/* Update topic button — only enabled when dirty */}
+          {topicHTML && (
+            <button onClick={handleRefreshTopic}
+              disabled={loadingTopic || !topicDirty}
               style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #9c27b044',
-                background: loadingTopic ? '#333' : '#9c27b022', color: '#ce93d8', cursor: loadingTopic ? 'wait' : 'pointer',
-                fontSize: 13, marginBottom: 12 }}>
-              {loadingTopic ? '正在更新专题页面...' : '🔄 用新的问答更新专题页面'}
+                background: loadingTopic ? '#333' : topicDirty ? '#9c27b033' : '#1c1f2e',
+                color: topicDirty ? '#ce93d8' : '#555',
+                cursor: (loadingTopic || !topicDirty) ? 'default' : 'pointer',
+                fontSize: 13, marginBottom: 12, opacity: topicDirty ? 1 : 0.5 }}>
+              {loadingTopic ? '正在更新专题页面...' : topicDirty ? '🔄 用新的问答更新专题页面' : '✓ 专题页面已是最新'}
             </button>
           )}
         </div>
