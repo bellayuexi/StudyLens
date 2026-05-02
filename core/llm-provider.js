@@ -342,4 +342,25 @@ ${qaContext ? `相关问答:\n${qaContext}\n` : ''}
   return html;
 }
 
-module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap, generateSmartQuestions, generateTopicHTML };
+async function expandEntry(entry) {
+  const prompt = `你是一个学习辅导助手。请将以下知识点拆解为多个子知识点，用于深入分析。
+
+知识点标题: ${entry.title}
+学科分类: ${entry.subject}
+内容: ${entry.content}
+标签: ${(entry.tags || []).join(', ')}
+
+请拆解为5-8个子知识点，每个子知识点应该是该主题下的一个具体方面。
+例如"王安石变法"可以拆解为：背景、青苗法、免役法、市易法、保甲法、影响与评价等。
+
+返回JSON数组，每个元素: {"title": "子知识点标题", "content": "简要描述（50-100字）", "category": "背景/内容/影响/对比/评价"}
+只返回JSON，不要其他文字。`;
+
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 2048 });
+  const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').replace(/[""]/g, '"').replace(/['']/g, "'");
+  const match = cleaned.match(/\[[\s\S]*\]/);
+  if (!match) return [];
+  try { return JSON.parse(match[0]); } catch { return []; }
+}
+
+module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap, generateSmartQuestions, generateTopicHTML, expandEntry };

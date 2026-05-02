@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import TimelineView from './TimelineView.jsx';
 import IngestPanel from './IngestPanel.jsx';
 import EntryDetail from './EntryDetail.jsx';
@@ -20,6 +21,7 @@ const VIEWS = [
 ];
 
 export default function App() {
+  const navigate = useNavigate();
   const [allEntries, setAllEntries] = useState([]);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -132,7 +134,13 @@ export default function App() {
                   <div style={{ fontSize: 11, color: '#888', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {e.content}
                   </div>
-                  <div style={{ fontSize: 10, color: '#555', marginTop: 2 }}>{e.subject}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
+                    <span style={{ fontSize: 10, color: '#555' }}>{e.subject}</span>
+                    <span onClick={(ev) => { ev.stopPropagation(); navigate(`/deep/${e.id}`); }}
+                      style={{ fontSize: 10, color: '#4285f4', cursor: 'pointer', padding: '1px 6px', borderRadius: 4, background: '#4285f411' }}>
+                      🔬 深入
+                    </span>
+                  </div>
                 </div>
               ))}
             </div>

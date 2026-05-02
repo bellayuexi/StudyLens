@@ -80,4 +80,8 @@ function updateTopicPageQaHistory(pageId, qaHistory) {
   return wikiStorage.updateTopicPageQaHistory(pageId, qaHistory);
 }
 
-module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory };
+function getChildren(parentId) {
+  return wikiStorage.getChildren(parentId);
+}
+
+module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory, getChildren };

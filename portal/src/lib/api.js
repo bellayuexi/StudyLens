@@ -152,3 +152,22 @@ export async function updateTopicPageQaHistory(pageId, qaHistory) {
   });
   return res.json();
 }
+
+export async function getChildren(entryId) {
+  const res = await fetch(`${API}/api/entries/${entryId}/children`);
+  return res.json();
+}
+
+export async function expandEntry(entryId) {
+  const res = await fetch(`${API}/api/entries/${entryId}/expand`, { method: 'POST' });
+  return res.json();
+}
+
+export async function addChildEntry(parentId, data) {
+  const res = await fetch(`${API}/api/entries/${parentId}/children`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}

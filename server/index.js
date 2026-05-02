@@ -18,7 +18,7 @@ const upload = multer({ dest: uploadDir, limits: { fileSize: 20 * 1024 * 1024 } 
 // Get all entries + connections for graph
 app.get('/api/graph', (req, res) => {
   const b = req.query.backend || 'wiki';
-  const entries = storage.getAllEntries(b);
+  const entries = storage.getAllEntries(b).filter(e => !e.parent_id);
   const connections = storage.getAllConnections(b);
   res.json({ entries, connections, backend: b });
 });
@@ -388,6 +388,61 @@ app.put('/api/topic-pages/:pageId/qa-history', (req, res) => {
     const { qaHistory } = req.body;
     storage.updateTopicPageQaHistory(req.params.pageId, qaHistory || []);
     res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get children of an entry (for deep analysis)
+app.get('/api/entries/:id/children', (req, res) => {
+  try {
+    const children = storage.getChildren(req.params.id);
+    res.json({ children });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Expand an entry into sub-nodes using AI
+app.post('/api/entries/:id/expand', async (req, res) => {
+  try {
+    const entry = storage.getEntry(req.params.id);
+    if (!entry) return res.status(404).json({ error: 'entry not found' });
+    const subTopics = await llm.expandEntry(entry);
+    const children = [];
+    for (const sub of subTopics) {
+      const child = storage.addEntry({
+        title: sub.title,
+        content: sub.content,
+        subject: entry.subject,
+        tags: [sub.category, entry.title].filter(Boolean),
+        source_type: 'deep-analysis',
+        source_ref: entry.id,
+        parent_id: entry.id,
+      });
+      children.push(child);
+    }
+    res.json({ children });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Add a single child entry manually
+app.post('/api/entries/:id/children', (req, res) => {
+  try {
+    const { title, content, tags = [] } = req.body;
+    const parent = storage.getEntry(req.params.id);
+    if (!parent) return res.status(404).json({ error: 'parent not found' });
+    const child = storage.addEntry({
+      title, content,
+      subject: parent.subject,
+      tags,
+      source_type: 'deep-analysis',
+      source_ref: req.params.id,
+      parent_id: req.params.id,
+    });
+    res.json(child);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -120,6 +120,7 @@ subject: ${entry.subject}
 tags: ${JSON.stringify(entry.tags)}
 source_type: ${entry.source_type}
 source_ref: ${entry.source_ref}
+parent_id: ${entry.parent_id || ''}
 created_date: ${entry.created_date}
 created_at: ${entry.created_at}
 ---
@@ -150,6 +151,7 @@ function mdToEntry(content, filePath) {
     tags,
     source_type: meta.source_type || 'text',
     source_ref: meta.source_ref || '',
+    parent_id: meta.parent_id || '',
     created_date: meta.created_date || '',
     created_at: meta.created_at || '',
     _file: filePath,
@@ -160,11 +162,11 @@ function getDrillDir(sourceType) {
   return sourceType === 'qa' ? DRILL_EXT : DRILL_CORE;
 }
 
-function addEntry({ title, content, subject = '', tags = [], source_type = 'text', source_ref = '' }) {
+function addEntry({ title, content, subject = '', tags = [], source_type = 'text', source_ref = '', parent_id = '' }) {
   const id = uuidv4();
   const now = new Date();
   const entry = {
-    id, title, content, subject, tags, source_type, source_ref,
+    id, title, content, subject, tags, source_type, source_ref, parent_id,
     created_date: now.toISOString().slice(0, 10),
     created_at: now.toISOString(),
   };
@@ -334,4 +336,8 @@ function updateTopicPageQaHistory(pageId, qaHistory) {
   updateTopicPageField(pageId, 'qa_history', qaHistory);
 }
 
-module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory };
+function getChildren(parentId) {
+  return getAllEntries().filter(e => e.parent_id === parentId);
+}
+
+module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory, getChildren };
