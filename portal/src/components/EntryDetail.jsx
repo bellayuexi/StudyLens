@@ -42,6 +42,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setEditingField(null);
     setCommentMode(false);
     setAsking(false);
+    setLoadingQ(false);
 
     // Restore from cache immediately if available
     const cached = entryDataCacheRef.current[entry.id];
@@ -76,7 +77,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       loadSavedTopicPage();
     }
 
-    // Load cached questions if available
+    // Load cached questions if available, or derive from qa_history
     const cachedQs = questionsCacheRef.current[entry.id];
     if (cachedQs) {
       setSmartQuestions(cachedQs);
@@ -120,7 +121,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
 
   const loadSmartQuestions = async () => {
     const currentId = entry.id;
-    setLoadingQ(true);
+    if (entryIdRef.current === currentId) setLoadingQ(true);
     try {
       const data = await generateSmartQuestions(currentId);
       if (entryIdRef.current !== currentId) return;
@@ -129,7 +130,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       setSmartQuestions(qs);
       setSelectedQs(new Set(qs.map(q => q.id)));
     } catch (e) { console.error(e); }
-    setLoadingQ(false);
+    if (entryIdRef.current === currentId) setLoadingQ(false);
   };
 
   const toggleQ = (id) => {
