@@ -574,6 +574,21 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                   应用批注更新
                 </button>
               )}
+              {topicHTML && (
+                <button onClick={() => {
+                  const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${entry.title} - 专题页</title></head><body>${topicHTML}</body></html>`;
+                  const blob = new Blob([fullHtml], { type: 'text/html' });
+                  const a = document.createElement('a');
+                  a.href = URL.createObjectURL(blob);
+                  a.download = `${entry.title}_专题页_v${topicVersion}.html`;
+                  a.click();
+                  URL.revokeObjectURL(a.href);
+                }}
+                  style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: 'pointer',
+                    background: '#1c1f2e', color: '#888' }}>
+                  📥 导出HTML
+                </button>
+              )}
               <button onClick={topicDirty ? handleRefreshTopic : handleGenerateTopic}
                 disabled={loadingTopic || (!topicDirty && topicVersion > 0)}
                 style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11,
