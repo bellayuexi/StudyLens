@@ -76,6 +76,14 @@ app.post('/api/connections', (req, res) => {
   res.json(conn);
 });
 
+// Update entry
+app.put('/api/entries/:id', (req, res) => {
+  const { title, content, subject, tags } = req.body;
+  const entry = storage.updateEntry(req.params.id, { title, content, subject, tags });
+  if (!entry) return res.status(404).json({ error: 'Not found' });
+  res.json(entry);
+});
+
 // Delete entry
 app.delete('/api/entries/:id', (req, res) => {
   storage.deleteEntry(req.params.id);

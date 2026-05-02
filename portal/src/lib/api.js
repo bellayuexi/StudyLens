@@ -18,6 +18,15 @@ export async function deleteEntry(id) {
   await fetch(`${API}/api/entries/${id}`, { method: 'DELETE' });
 }
 
+export async function updateEntry(id, data) {
+  const res = await fetch(`${API}/api/entries/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
 export async function searchEntries(q) {
   const res = await fetch(`${API}/api/entries?q=${encodeURIComponent(q)}`);
   return res.json();

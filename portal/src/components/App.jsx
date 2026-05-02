@@ -200,6 +200,7 @@ export default function App() {
           onClose={() => setSelectedEntry(null)}
           onDeleted={() => { setSelectedEntry(null); loadGraph(); }}
           onNavigate={(entry) => setSelectedEntry(entry)}
+          onUpdated={loadGraph}
         />
       )}
     </div>

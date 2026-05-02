@@ -85,4 +85,11 @@ function deleteEntry(id) {
   d.prepare('DELETE FROM entries WHERE id = ?').run(id);
 }
 
-module.exports = { addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry };
+function updateEntry(id, { title, content, subject, tags }) {
+  const d = getDb();
+  d.prepare('UPDATE entries SET title = ?, content = ?, subject = ?, tags = ? WHERE id = ?')
+    .run(title, content, subject, JSON.stringify(tags), id);
+  return getEntry(id);
+}
+
+module.exports = { addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry };
