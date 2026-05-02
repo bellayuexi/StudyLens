@@ -29,6 +29,8 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [tagInput, setTagInput] = useState('');
+  const [includedQaIds, setIncludedQaIds] = useState([]);
+  const [collapsedCats, setCollapsedCats] = useState(new Set());
   const qaRef = useRef(null);
   const questionsCacheRef = useRef({});
   const entryIdRef = useRef(entry.id);
@@ -54,6 +56,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       setTopicVersionCount(cached.topicVersionCount || 0);
       setQaHistory(cached.qaHistory || []);
       setComments(cached.comments || []);
+      setIncludedQaIds(cached.includedQaIds || []);
       setLastUpdated(cached.lastUpdated || '');
       setTopicStatus(cached.topicStatus || '');
       setTopicDirty(cached.topicDirty || false);
@@ -76,6 +79,8 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       setTopicDirty(false);
       setLastUpdated('');
       setComments([]);
+      setIncludedQaIds([]);
+      setCollapsedCats(new Set());
       setTab('topic');
       setLoadingEntry(true);
       loadSavedTopicPage();
@@ -97,10 +102,10 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     if (!entry.id || loadingEntry) return;
     entryDataCacheRef.current[entry.id] = {
       topicHTML, topicPageId, topicVersion, topicVersionCount,
-      qaHistory,
+      qaHistory, includedQaIds,
       comments, lastUpdated, topicStatus, topicDirty, asking, loadingTopic,
     };
-  }, [topicHTML, topicPageId, topicVersion, topicVersionCount, qaHistory, comments, lastUpdated, topicStatus, topicDirty, asking, loadingTopic]);
+  }, [topicHTML, topicPageId, topicVersion, topicVersionCount, qaHistory, includedQaIds, comments, lastUpdated, topicStatus, topicDirty, asking, loadingTopic]);
 
   const loadSavedTopicPage = async () => {
     const currentId = entry.id;
@@ -113,6 +118,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         setTopicVersion(data.page.version);
         setTopicVersionCount(data.page.version);
         setComments(data.page.comments || []);
+        setIncludedQaIds(data.page.included_qa_ids || []);
         const qa = (data.page.qa_history || []).filter(h => h.answer);
         setQaHistory(qa);
         setLastUpdated(data.page.created_at);
@@ -305,6 +311,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         setViewingVersion(null);
         setTopicStatus(`v${saved.version} 已保存`);
         setTopicDirty(false);
+        setIncludedQaIds(qaIds);
       } catch (saveErr) {
         console.error('Save failed:', saveErr);
         if (entryIdRef.current === genEntryId) setTopicStatus('已生成（保存失败，请重试）');
@@ -350,6 +357,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         setViewingVersion(null);
         setTopicStatus(`v${saved.version} 已保存`);
         setTopicDirty(false);
+        setIncludedQaIds(qaIds);
       } catch (saveErr) {
         console.error('Save failed:', saveErr);
         if (entryIdRef.current === genEntryId) setTopicStatus('已更新（保存失败，请重试）');
@@ -505,9 +513,11 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             {t.id === 'topic' && topicVersion > 0 && (
               <span style={{ fontSize: 10, marginLeft: 4, color: '#34a853' }}>v{topicVersion}</span>
             )}
-            {t.id === 'explore' && topicDirty && (
-              <span style={{ fontSize: 10, marginLeft: 4, color: '#fbbc05' }}>●</span>
-            )}
+            {t.id === 'explore' && (() => {
+              const answered = qaHistory.filter(h => h.answer && !h.loading);
+              const newCount = answered.filter((h, i) => !includedQaIds.includes(h._qid || `qa_${i}`)).length;
+              return newCount > 0 ? <span style={{ fontSize: 10, marginLeft: 4, color: '#fbbc05' }}>+{newCount}</span> : null;
+            })()}
           </button>
         ))}
       </div>
@@ -694,6 +704,66 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             </div>
           )}
 
+          {/* Answered QAs grouped by category */}
+          {(() => {
+            const answered = qaHistory.filter(h => h.answer && !h.loading);
+            if (answered.length === 0) return null;
+            const groups = {};
+            answered.forEach((h, i) => {
+              const cat = h.category || (smartQuestions.find(q => q.question === h.question)?.category) || '其他';
+              if (!groups[cat]) groups[cat] = [];
+              groups[cat].push({ ...h, idx: i });
+            });
+            const newQaCount = answered.filter((h, i) => {
+              const qid = h._qid || `qa_${i}`;
+              return !includedQaIds.includes(qid);
+            }).length;
+            return (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+                    {answered.length} 个已回答问题
+                  </span>
+                  {topicHTML && newQaCount > 0 && (
+                    <button onClick={handleRefreshTopic} disabled={loadingTopic}
+                      style={{ padding: '4px 12px', borderRadius: 6, border: 'none', fontSize: 12,
+                        background: '#9c27b033', color: '#ce93d8', cursor: loadingTopic ? 'wait' : 'pointer' }}>
+                      {loadingTopic ? '更新中...' : `更新专题页 (+${newQaCount}个新回答)`}
+                    </button>
+                  )}
+                </div>
+                {Object.entries(groups).map(([cat, items]) => {
+                  const collapsed = collapsedCats.has(cat);
+                  return (
+                    <div key={cat} style={{ marginBottom: 8 }}>
+                      <div onClick={() => setCollapsedCats(prev => {
+                        const next = new Set(prev);
+                        collapsed ? next.delete(cat) : next.add(cat);
+                        return next;
+                      })}
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 6,
+                          background: '#161822', cursor: 'pointer', borderLeft: `3px solid ${QUESTION_COLORS[cat] || '#666'}` }}>
+                        <span style={{ fontSize: 12, color: '#888', transform: collapsed ? 'rotate(-90deg)' : 'rotate(0)', transition: 'transform 0.2s' }}>
+                          ▼
+                        </span>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: QUESTION_COLORS[cat] || '#aaa' }}>{cat}</span>
+                        <span style={{ fontSize: 11, color: '#666' }}>({items.length})</span>
+                      </div>
+                      {!collapsed && items.map(h => (
+                        <div key={h.idx} style={{ marginLeft: 16, marginTop: 6 }}>
+                          <div style={{ fontSize: 13, color: '#4285f4', fontWeight: 500, marginBottom: 3 }}>Q: {h.question}</div>
+                          <div style={{ fontSize: 13, color: '#ccc', background: '#1a1c28', padding: '8px 12px', borderRadius: 6, border: '1px solid #2a2d35' }}>
+                            {renderAnswer(h.answer)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           {/* Smart Questions */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
@@ -774,32 +844,13 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             </button>
           </div>
 
-          {/* Q&A History */}
-          {qaHistory.map((h, i) => (
-            <div key={i} style={{ marginBottom: 14 }}>
+          {/* Loading QAs */}
+          {qaHistory.filter(h => h.loading).map((h, i) => (
+            <div key={`loading_${i}`} style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 13, color: '#4285f4', fontWeight: 500, marginBottom: 4 }}>❓ {h.question}</div>
-              {h.loading ? (
-                <div style={{ fontSize: 12, color: '#888', padding: 8 }}>AI 正在思考...</div>
-              ) : (
-                <div style={{ fontSize: 13, color: '#ccc', background: '#161822', padding: '12px 16px', borderRadius: 8, border: '1px solid #2a2d35' }}>
-                  {renderAnswer(h.answer)}
-                </div>
-              )}
+              <div style={{ fontSize: 12, color: '#888', padding: 8 }}>AI 正在思考...</div>
             </div>
           ))}
-
-          {/* Update topic button — only enabled when dirty */}
-          {topicHTML && (
-            <button onClick={handleRefreshTopic}
-              disabled={loadingTopic || !topicDirty}
-              style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #9c27b044',
-                background: loadingTopic ? '#333' : topicDirty ? '#9c27b033' : '#1c1f2e',
-                color: topicDirty ? '#ce93d8' : '#555',
-                cursor: (loadingTopic || !topicDirty) ? 'default' : 'pointer',
-                fontSize: 13, marginBottom: 12, opacity: topicDirty ? 1 : 0.5 }}>
-              {loadingTopic ? '正在更新专题页面...' : topicDirty ? '🔄 用新的问答更新专题页面' : '✓ 专题页面已是最新'}
-            </button>
-          )}
         </div>
       )}
     </div>
