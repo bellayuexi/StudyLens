@@ -288,10 +288,11 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         return;
       }
       const html = injectTimestamp(data.html || '');
+      const qaIds = qaHistory.filter(h => h.answer && !h.loading).map((h, i) => h._qid || `qa_${i}`);
       setTopicHTML(html);
       setTab('topic');
       try {
-        const saved = await saveTopicPage(genEntryId, html, qaHistory, comments);
+        const saved = await saveTopicPage(genEntryId, html, qaHistory, comments, qaIds);
         if (entryIdRef.current !== genEntryId) {
           const c = entryDataCacheRef.current[genEntryId];
           if (c) { c.loadingTopic = false; c.topicPageId = saved.id; c.topicVersion = saved.version; c.topicVersionCount = saved.version; c.lastUpdated = saved.created_at; c.topicStatus = `v${saved.version} 已保存`; c.topicDirty = false; c.topicHTML = html; }
@@ -325,17 +326,18 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setLoadingTopic(true);
     setTopicStatus('正在更新...');
     try {
-      const data = await generateTopicPage(genEntryId, qaHistory);
+      const data = await generateTopicPage(genEntryId, qaHistory, topicHTML);
       const html = injectTimestamp(data.html || '');
+      const qaIds = qaHistory.filter(h => h.answer && !h.loading).map((h, i) => h._qid || `qa_${i}`);
       if (entryIdRef.current !== genEntryId) {
         const c = entryDataCacheRef.current[genEntryId];
         if (c) { c.loadingTopic = false; c.topicHTML = html; c.topicStatus = '已更新（后台完成）'; }
-        try { await saveTopicPage(genEntryId, html, qaHistory, comments); } catch {}
+        try { await saveTopicPage(genEntryId, html, qaHistory, comments, qaIds); } catch {}
         return;
       }
       setTopicHTML(html);
       try {
-        const saved = await saveTopicPage(genEntryId, html, qaHistory, comments);
+        const saved = await saveTopicPage(genEntryId, html, qaHistory, comments, qaIds);
         if (entryIdRef.current !== genEntryId) {
           const c = entryDataCacheRef.current[genEntryId];
           if (c) { c.loadingTopic = false; c.topicPageId = saved.id; c.topicVersion = saved.version; c.topicVersionCount = saved.version; c.lastUpdated = saved.created_at; c.topicStatus = `v${saved.version} 已保存`; c.topicDirty = false; c.topicHTML = html; }

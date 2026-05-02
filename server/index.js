@@ -339,7 +339,7 @@ app.post('/api/entries/:id/topic-page', async (req, res) => {
       const eTags = new Set(e.tags || []);
       return (entry.tags || []).some(t => eTags.has(t)) || e.subject === entry.subject;
     }).slice(0, 10);
-    const html = await llm.generateTopicHTML(entry, related, req.body.qaHistory || []);
+    const html = await llm.generateTopicHTML(entry, related, req.body.qaHistory || [], req.body.existingHTML || '');
     res.json({ html });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -351,9 +351,9 @@ const PORT = process.env.PORT || 3000;
 // Save topic page (creates new version)
 app.post('/api/entries/:id/topic-page/save', (req, res) => {
   try {
-    const { html, qaHistory, comments } = req.body;
+    const { html, qaHistory, comments, includedQaIds } = req.body;
     if (!html) return res.status(400).json({ error: 'html is required' });
-    const page = storage.saveTopicPage(req.params.id, html, qaHistory || [], comments || []);
+    const page = storage.saveTopicPage(req.params.id, html, qaHistory || [], comments || [], includedQaIds || []);
     res.json(page);
   } catch (err) {
     res.status(500).json({ error: err.message });

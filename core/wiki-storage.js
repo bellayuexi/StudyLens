@@ -270,14 +270,14 @@ function getTopicDir(entryId) {
   return dir;
 }
 
-function saveTopicPage(entryId, html, qaHistory = [], comments = []) {
+function saveTopicPage(entryId, html, qaHistory = [], comments = [], includedQaIds = []) {
   const dir = getTopicDir(entryId);
   const existing = getTopicPages(entryId);
   const version = existing.length > 0 ? existing[0].version + 1 : 1;
   const id = uuidv4();
   const now = new Date().toISOString();
 
-  const meta = { id, entry_id: entryId, version, comments, qa_history: qaHistory, created_at: now };
+  const meta = { id, entry_id: entryId, version, comments, qa_history: qaHistory, included_qa_ids: includedQaIds, created_at: now };
   const content = `---\n${JSON.stringify(meta, null, 2)}\n---\n\n${html}`;
   fs.writeFileSync(path.join(dir, `v${version}.md`), content, 'utf-8');
 

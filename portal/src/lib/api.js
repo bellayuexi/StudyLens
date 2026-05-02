@@ -102,20 +102,20 @@ export async function askEntryQuestion(entryId, question, history = []) {
   return res.json();
 }
 
-export async function generateTopicPage(entryId, qaHistory = []) {
+export async function generateTopicPage(entryId, qaHistory = [], existingHTML = '') {
   const res = await fetch(`${API}/api/entries/${entryId}/topic-page`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ qaHistory }),
+    body: JSON.stringify({ qaHistory, existingHTML }),
   });
   return res.json();
 }
 
-export async function saveTopicPage(entryId, html, qaHistory = [], comments = []) {
+export async function saveTopicPage(entryId, html, qaHistory = [], comments = [], includedQaIds = []) {
   const res = await fetch(`${API}/api/entries/${entryId}/topic-page/save`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ html, qaHistory, comments }),
+    body: JSON.stringify({ html, qaHistory, comments, includedQaIds }),
   });
   return res.json();
 }
