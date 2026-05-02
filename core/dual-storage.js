@@ -60,4 +60,20 @@ function updateEntry(id, data) {
   return entry;
 }
 
-module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry };
+function saveTopicPage(entryId, html, qaHistory, comments) {
+  return sqliteStorage.saveTopicPage(entryId, html, qaHistory, comments);
+}
+
+function getTopicPages(entryId) {
+  return sqliteStorage.getTopicPages(entryId);
+}
+
+function getLatestTopicPage(entryId) {
+  return sqliteStorage.getLatestTopicPage(entryId);
+}
+
+function updateTopicPageComments(pageId, comments) {
+  return sqliteStorage.updateTopicPageComments(pageId, comments);
+}
+
+module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments };

@@ -345,4 +345,40 @@ app.post('/api/entries/:id/topic-page', async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
+
+// Save topic page (creates new version)
+app.post('/api/entries/:id/topic-page/save', (req, res) => {
+  try {
+    const { html, qaHistory, comments } = req.body;
+    if (!html) return res.status(400).json({ error: 'html is required' });
+    const page = storage.saveTopicPage(req.params.id, html, qaHistory || [], comments || []);
+    res.json(page);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get all topic page versions for an entry
+app.get('/api/entries/:id/topic-pages', (req, res) => {
+  const pages = storage.getTopicPages(req.params.id);
+  res.json({ pages });
+});
+
+// Get latest topic page for an entry
+app.get('/api/entries/:id/topic-page/latest', (req, res) => {
+  const page = storage.getLatestTopicPage(req.params.id);
+  res.json({ page });
+});
+
+// Update comments on a topic page
+app.put('/api/topic-pages/:pageId/comments', (req, res) => {
+  try {
+    const { comments } = req.body;
+    storage.updateTopicPageComments(req.params.pageId, comments || []);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => console.log(`StudyGraph server running on http://localhost:${PORT}`));

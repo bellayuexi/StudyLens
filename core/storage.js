@@ -35,7 +35,27 @@ function getDb() {
       CREATE INDEX IF NOT EXISTS idx_entries_subject ON entries(subject);
       CREATE INDEX IF NOT EXISTS idx_conn_from ON connections(from_id);
       CREATE INDEX IF NOT EXISTS idx_conn_to ON connections(to_id);
+      CREATE TABLE IF NOT EXISTS topic_pages (
+        id TEXT PRIMARY KEY,
+        entry_id TEXT NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1,
+        html TEXT NOT NULL,
+        comments TEXT DEFAULT '[]',
+        qa_history TEXT DEFAULT '[]',
+        created_at TEXT NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_topic_entry ON topic_pages(entry_id);
     `);
+    // Migration: recreate topic_pages without FK if it has one
+    try {
+      const info = db.pragma('table_info(topic_pages)');
+      const fks = db.pragma('foreign_key_list(topic_pages)');
+      if (fks.length > 0) {
+        db.exec('DROP TABLE topic_pages');
+        db.exec(`CREATE TABLE topic_pages (id TEXT PRIMARY KEY, entry_id TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1, html TEXT NOT NULL, comments TEXT DEFAULT '[]', qa_history TEXT DEFAULT '[]', created_at TEXT NOT NULL)`);
+        db.exec('CREATE INDEX IF NOT EXISTS idx_topic_entry ON topic_pages(entry_id)');
+      }
+    } catch (_) {}
   }
   return db;
 }
@@ -92,4 +112,28 @@ function updateEntry(id, { title, content, subject, tags }) {
   return getEntry(id);
 }
 
-module.exports = { addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry };
+function saveTopicPage(entryId, html, qaHistory = [], comments = []) {
+  const d = getDb();
+  const existing = d.prepare('SELECT MAX(version) as maxV FROM topic_pages WHERE entry_id = ?').get(entryId);
+  const version = (existing?.maxV || 0) + 1;
+  const id = uuidv4();
+  d.prepare('INSERT INTO topic_pages (id, entry_id, version, html, comments, qa_history, created_at) VALUES (?,?,?,?,?,?,?)')
+    .run(id, entryId, version, html, JSON.stringify(comments), JSON.stringify(qaHistory), new Date().toISOString());
+  return { id, entry_id: entryId, version, html, comments, qa_history: qaHistory, created_at: new Date().toISOString() };
+}
+
+function getTopicPages(entryId) {
+  return getDb().prepare('SELECT * FROM topic_pages WHERE entry_id = ? ORDER BY version DESC').all(entryId)
+    .map(p => ({ ...p, comments: JSON.parse(p.comments), qa_history: JSON.parse(p.qa_history) }));
+}
+
+function getLatestTopicPage(entryId) {
+  const p = getDb().prepare('SELECT * FROM topic_pages WHERE entry_id = ? ORDER BY version DESC LIMIT 1').get(entryId);
+  return p ? { ...p, comments: JSON.parse(p.comments), qa_history: JSON.parse(p.qa_history) } : null;
+}
+
+function updateTopicPageComments(pageId, comments) {
+  getDb().prepare('UPDATE topic_pages SET comments = ? WHERE id = ?').run(JSON.stringify(comments), pageId);
+}
+
+module.exports = { addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments };

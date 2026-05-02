@@ -110,3 +110,31 @@ export async function generateTopicPage(entryId, qaHistory = []) {
   });
   return res.json();
 }
+
+export async function saveTopicPage(entryId, html, qaHistory = [], comments = []) {
+  const res = await fetch(`${API}/api/entries/${entryId}/topic-page/save`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ html, qaHistory, comments }),
+  });
+  return res.json();
+}
+
+export async function getTopicPages(entryId) {
+  const res = await fetch(`${API}/api/entries/${entryId}/topic-pages`);
+  return res.json();
+}
+
+export async function getLatestTopicPage(entryId) {
+  const res = await fetch(`${API}/api/entries/${entryId}/topic-page/latest`);
+  return res.json();
+}
+
+export async function updateTopicPageComments(pageId, comments) {
+  const res = await fetch(`${API}/api/topic-pages/${pageId}/comments`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ comments }),
+  });
+  return res.json();
+}

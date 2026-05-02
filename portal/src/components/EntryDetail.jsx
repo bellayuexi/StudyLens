@@ -1,14 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { deleteEntry, updateEntry, generateSmartQuestions, askEntryQuestion, generateTopicPage } from '../lib/api.js';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { deleteEntry, updateEntry, generateSmartQuestions, askEntryQuestion, generateTopicPage, saveTopicPage, getLatestTopicPage, updateTopicPageComments } from '../lib/api.js';
 
-const QUESTION_COLORS = { '概念': '#4285f4', '原因': '#ea4335', '影响': '#34a853', '对比': '#fbbc05', '思考': '#9c27b0' };
+const QUESTION_COLORS = { '概念': '#4285f4', '原因': '#ea4335', '影响': '#34a853', '对比': '#fbbc05', '思考': '#9c27b0', '自定义': '#ff6d00' };
 
 export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted, onNavigate, onUpdated }) {
-  const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({});
-  const [tagInput, setTagInput] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [tab, setTab] = useState('explore');
+  const [tab, setTab] = useState('topic');
   const [smartQuestions, setSmartQuestions] = useState([]);
   const [selectedQs, setSelectedQs] = useState(new Set());
   const [loadingQ, setLoadingQ] = useState(false);
@@ -19,18 +15,49 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const [qaHistory, setQaHistory] = useState([]);
   const [asking, setAsking] = useState(false);
   const [topicHTML, setTopicHTML] = useState('');
+  const [topicPageId, setTopicPageId] = useState(null);
+  const [topicVersion, setTopicVersion] = useState(0);
   const [loadingTopic, setLoadingTopic] = useState(false);
+  const [topicStatus, setTopicStatus] = useState('');
+  const [comments, setComments] = useState([]);
+  const [commentMode, setCommentMode] = useState(false);
+  const [newComment, setNewComment] = useState('');
+  const [editingField, setEditingField] = useState(null);
+  const [editForm, setEditForm] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [tagInput, setTagInput] = useState('');
   const qaRef = useRef(null);
+  const iframeRef = useRef(null);
 
   useEffect(() => {
     setSmartQuestions([]);
     setSelectedQs(new Set());
     setQaHistory([]);
     setTopicHTML('');
-    setTab('explore');
-    setEditing(false);
-    setEditingQIdx(null);
+    setTopicPageId(null);
+    setTopicVersion(0);
+    setTopicStatus('');
+    setComments([]);
+    setCommentMode(false);
+    setEditingField(null);
+    setTab('topic');
+    loadSavedTopicPage();
+    loadSmartQuestions();
   }, [entry.id]);
+
+  const loadSavedTopicPage = async () => {
+    try {
+      const data = await getLatestTopicPage(entry.id);
+      if (data.page) {
+        setTopicHTML(data.page.html);
+        setTopicPageId(data.page.id);
+        setTopicVersion(data.page.version);
+        setComments(data.page.comments || []);
+        setQaHistory(data.page.qa_history || []);
+        setTopicStatus(`v${data.page.version} 已保存`);
+      }
+    } catch (e) { console.error(e); }
+  };
 
   const loadSmartQuestions = async () => {
     setLoadingQ(true);
@@ -43,21 +70,15 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setLoadingQ(false);
   };
 
-  useEffect(() => { loadSmartQuestions(); }, [entry.id]);
-
-  // Auto-generate default topic page once smart questions are loaded
+  // Auto-generate topic page if none saved and questions loaded
   useEffect(() => {
-    if (smartQuestions.length > 0 && !topicHTML && !loadingTopic) {
+    if (smartQuestions.length > 0 && !topicHTML && !loadingTopic && topicVersion === 0) {
       handleGenerateTopic();
     }
   }, [smartQuestions]);
 
   const toggleQ = (id) => {
-    setSelectedQs(prev => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
+    setSelectedQs(prev => { const next = new Set(prev); next.has(id) ? next.delete(id) : next.add(id); return next; });
   };
 
   const deleteQ = (id) => {
@@ -114,89 +135,259 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
 
   const handleGenerateTopic = async () => {
     setLoadingTopic(true);
+    setTopicStatus('正在生成...');
     try {
       const data = await generateTopicPage(entry.id, qaHistory);
-      setTopicHTML(data.html || '');
-      if (tab !== 'explore') setTab('topic');
-    } catch (err) { console.error(err); }
+      const html = data.html || '';
+      setTopicHTML(html);
+      // Auto-save
+      const saved = await saveTopicPage(entry.id, html, qaHistory, comments);
+      setTopicPageId(saved.id);
+      setTopicVersion(saved.version);
+      setTopicStatus(`v${saved.version} 已保存`);
+      setTab('topic');
+    } catch (err) {
+      setTopicStatus('生成失败');
+      console.error(err);
+    }
     setLoadingTopic(false);
   };
 
   const handleRefreshTopic = async () => {
     setLoadingTopic(true);
+    setTopicStatus('正在更新...');
     try {
       const data = await generateTopicPage(entry.id, qaHistory);
-      setTopicHTML(data.html || '');
-    } catch (err) { console.error(err); }
+      const html = data.html || '';
+      setTopicHTML(html);
+      const saved = await saveTopicPage(entry.id, html, qaHistory, comments);
+      setTopicPageId(saved.id);
+      setTopicVersion(saved.version);
+      setTopicStatus(`v${saved.version} 已保存`);
+    } catch (err) {
+      setTopicStatus('更新失败');
+      console.error(err);
+    }
     setLoadingTopic(false);
   };
 
-  const startEdit = () => {
-    setForm({ title: entry.title, content: entry.content, subject: entry.subject, tags: [...(entry.tags || [])] });
-    setTagInput('');
-    setEditing(true);
+  const addComment = () => {
+    if (!newComment.trim()) return;
+    const updated = [...comments, { id: Date.now(), text: newComment.trim(), created: new Date().toISOString() }];
+    setComments(updated);
+    setNewComment('');
+    if (topicPageId) updateTopicPageComments(topicPageId, updated);
   };
 
-  const handleSave = async () => {
+  const removeComment = (cid) => {
+    const updated = comments.filter(c => c.id !== cid);
+    setComments(updated);
+    if (topicPageId) updateTopicPageComments(topicPageId, updated);
+  };
+
+  const handleApplyComments = async () => {
+    if (!comments.length) return;
+    setLoadingTopic(true);
+    setTopicStatus('根据批注更新中...');
+    try {
+      const commentText = comments.map(c => c.text).join('\n');
+      const augmentedHistory = [...qaHistory, { question: `请根据以下批注修改专题页面:\n${commentText}`, answer: '' }];
+      const data = await generateTopicPage(entry.id, augmentedHistory);
+      const html = data.html || '';
+      setTopicHTML(html);
+      const saved = await saveTopicPage(entry.id, html, qaHistory, []);
+      setTopicPageId(saved.id);
+      setTopicVersion(saved.version);
+      setComments([]);
+      setTopicStatus(`v${saved.version} 已保存（已应用批注）`);
+    } catch (err) {
+      setTopicStatus('应用批注失败');
+    }
+    setLoadingTopic(false);
+  };
+
+  // Inline editing
+  const startFieldEdit = (field) => {
+    setEditForm({ title: entry.title, content: entry.content, subject: entry.subject, tags: [...(entry.tags || [])] });
+    setEditingField(field);
+    setTagInput('');
+  };
+
+  const saveField = async () => {
     setSaving(true);
     try {
-      await updateEntry(entry.id, form);
-      setEditing(false);
+      await updateEntry(entry.id, editForm);
+      setEditingField(null);
       if (onUpdated) onUpdated();
     } finally { setSaving(false); }
   };
-
-  const addTag = () => {
-    const t = tagInput.trim();
-    if (t && !form.tags.includes(t)) setForm({ ...form, tags: [...form.tags, t] });
-    setTagInput('');
-  };
-
-  const removeTag = (tag) => setForm({ ...form, tags: form.tags.filter(t => t !== tag) });
 
   const handleDelete = async () => { await deleteEntry(entry.id); onDeleted(); };
 
   const inputStyle = { width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #2a2d45', background: '#1c1f2e', color: '#ddd', fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' };
 
+  const renderAnswer = (text) => {
+    if (!text) return null;
+    return text.split('\n').filter(Boolean).map((para, i) => (
+      <p key={i} style={{ margin: '6px 0', lineHeight: 1.8 }}>{para}</p>
+    ));
+  };
+
   return (
     <div style={{ height: '100%', background: '#0f1117', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
+      {/* Header — inline editable */}
       <div style={{ padding: '14px 24px', borderBottom: '1px solid #2a2d35', background: '#161822' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <h2 style={{ margin: 0, fontSize: 20, color: '#fff', flex: 1 }}>{entry.title}</h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: 22, padding: '0 4px' }}>×</button>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+          {editingField === 'title' ? (
+            <input value={editForm.title} onChange={e => setEditForm({ ...editForm, title: e.target.value })}
+              onBlur={saveField} onKeyDown={e => { if (e.key === 'Enter') saveField(); if (e.key === 'Escape') setEditingField(null); }}
+              autoFocus style={{ ...inputStyle, fontSize: 20, fontWeight: 600, flex: 1 }} />
+          ) : (
+            <h2 onClick={() => startFieldEdit('title')} style={{ margin: 0, fontSize: 20, color: '#fff', flex: 1, cursor: 'pointer' }} title="点击编辑">{entry.title}</h2>
+          )}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
+            <button onClick={handleDelete} style={{ background: '#d32f2f22', border: '1px solid #d32f2f44', color: '#ef5350', borderRadius: 6, cursor: 'pointer', fontSize: 11, padding: '4px 10px' }}>删除</button>
+            <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: 22, padding: '0 4px' }}>×</button>
+          </div>
         </div>
+
         <div style={{ fontSize: 12, color: '#888', display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-          {entry.subject && <span style={{ background: '#2a2d45', padding: '2px 10px', borderRadius: 10 }}>{entry.subject}</span>}
+          {editingField === 'subject' ? (
+            <input value={editForm.subject} onChange={e => setEditForm({ ...editForm, subject: e.target.value })}
+              onBlur={saveField} onKeyDown={e => { if (e.key === 'Enter') saveField(); if (e.key === 'Escape') setEditingField(null); }}
+              autoFocus style={{ ...inputStyle, width: 120, fontSize: 12, padding: '2px 8px' }} />
+          ) : (
+            entry.subject && <span onClick={() => startFieldEdit('subject')} style={{ background: '#2a2d45', padding: '2px 10px', borderRadius: 10, cursor: 'pointer' }} title="点击编辑">{entry.subject}</span>
+          )}
           <span style={{ background: '#1c1f2e', padding: '2px 10px', borderRadius: 10 }}>{entry.created_date}</span>
           {(entry.tags || []).map((t, i) => (
             <span key={i} style={{ background: '#1c1f2e', padding: '2px 8px', borderRadius: 10, fontSize: 11, color: '#777' }}>#{t}</span>
           ))}
+          {editingField === 'tags' ? (
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+              <input value={tagInput} onChange={e => setTagInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { const t = tagInput.trim(); if (t && !editForm.tags.includes(t)) setEditForm({ ...editForm, tags: [...editForm.tags, t] }); setTagInput(''); }
+                  if (e.key === 'Escape') { saveField(); }
+                }}
+                autoFocus placeholder="添加标签..." style={{ ...inputStyle, width: 80, fontSize: 11, padding: '2px 6px' }} />
+              <button onClick={saveField} style={{ fontSize: 10, color: '#34a853', background: 'none', border: 'none', cursor: 'pointer' }}>✓</button>
+            </div>
+          ) : (
+            <span onClick={() => startFieldEdit('tags')} style={{ fontSize: 11, color: '#4285f4', cursor: 'pointer' }}>+标签</span>
+          )}
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs: Topic Page first */}
       <div style={{ display: 'flex', borderBottom: '1px solid #2a2d35', background: '#161822' }}>
-        {[{ id: 'explore', label: '🔍 探索' }, { id: 'topic', label: '📄 专题页' }, { id: 'edit', label: '✏️ 编辑' }].map(t => (
-          <button key={t.id} onClick={() => { setTab(t.id); if (t.id === 'edit') startEdit(); }}
+        {[
+          { id: 'topic', label: '📄 专题页' },
+          { id: 'explore', label: '🔍 探索更多' },
+        ].map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)}
             style={{ flex: 1, padding: '10px 4px', border: 'none', cursor: 'pointer', fontSize: 13,
               background: tab === t.id ? '#2a2d45' : 'transparent', color: tab === t.id ? '#fff' : '#777',
               borderBottom: tab === t.id ? '2px solid #4285f4' : '2px solid transparent' }}>
             {t.label}
-            {t.id === 'topic' && topicHTML && <span style={{ fontSize: 10, marginLeft: 4, color: '#34a853' }}>●</span>}
+            {t.id === 'topic' && topicVersion > 0 && (
+              <span style={{ fontSize: 10, marginLeft: 4, color: '#34a853' }}>v{topicVersion}</span>
+            )}
           </button>
         ))}
       </div>
 
+      {/* Topic Page Tab */}
+      {tab === 'topic' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {/* Toolbar */}
+          <div style={{ padding: '6px 16px', borderBottom: '1px solid #2a2d35', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#161822', flexWrap: 'wrap', gap: 4 }}>
+            <div style={{ fontSize: 11, color: '#888', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>{topicStatus || (loadingTopic ? '生成中...' : '未生成')}</span>
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <button onClick={() => setCommentMode(!commentMode)}
+                style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: 'pointer',
+                  background: commentMode ? '#fbbc0544' : '#1c1f2e', color: commentMode ? '#fbbc05' : '#888' }}>
+                {commentMode ? '✎ 批注中' : '✎ 添加批注'}
+                {comments.length > 0 && <span style={{ marginLeft: 4, color: '#fbbc05' }}>({comments.length})</span>}
+              </button>
+              {comments.length > 0 && (
+                <button onClick={handleApplyComments} disabled={loadingTopic}
+                  style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: loadingTopic ? 'wait' : 'pointer',
+                    background: '#9c27b033', color: '#ce93d8' }}>
+                  应用批注更新
+                </button>
+              )}
+              <button onClick={handleRefreshTopic} disabled={loadingTopic}
+                style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: loadingTopic ? 'wait' : 'pointer',
+                  background: loadingTopic ? '#333' : '#4285f422', color: '#4285f4' }}>
+                {loadingTopic ? '更新中...' : '🔄 重新生成'}
+              </button>
+            </div>
+          </div>
+
+          {/* Comments panel */}
+          {commentMode && (
+            <div style={{ padding: '8px 16px', borderBottom: '1px solid #2a2d35', background: '#1a1c28' }}>
+              <div style={{ fontSize: 11, color: '#fbbc05', marginBottom: 6 }}>批注（输入修改建议，点击"应用批注更新"来更新专题页）</div>
+              {comments.map(c => (
+                <div key={c.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4, padding: '4px 8px', background: '#161822', borderRadius: 6, borderLeft: '2px solid #fbbc05' }}>
+                  <span style={{ flex: 1, fontSize: 12, color: '#ddd' }}>{c.text}</span>
+                  <span onClick={() => removeComment(c.id)} style={{ color: '#666', cursor: 'pointer', fontSize: 14, flexShrink: 0 }}>×</span>
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+                <input value={newComment} onChange={e => setNewComment(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') addComment(); }}
+                  placeholder="例如: 第二章需要扩充更多细节 / 删除重复段落 / 加入更多历史背景..."
+                  style={{ ...inputStyle, flex: 1, fontSize: 12 }} />
+                <button onClick={addComment} disabled={!newComment.trim()}
+                  style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#fbbc05', color: '#000', cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>+</button>
+              </div>
+            </div>
+          )}
+
+          {/* Content */}
+          {loadingTopic && !topicHTML ? (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
+              正在自动生成专题页面...
+            </div>
+          ) : topicHTML ? (
+            <iframe ref={iframeRef} srcDoc={topicHTML} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="知识专题" />
+          ) : (
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#666' }}>
+              <div style={{ fontSize: 48 }}>📄</div>
+              <div style={{ fontSize: 14 }}>正在等待智能问题生成...</div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Explore Tab */}
       {tab === 'explore' && (
         <div ref={qaRef} style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
-          {/* Content */}
-          <div style={{ fontSize: 14, lineHeight: 1.8, color: '#ddd', background: '#161822', padding: '14px 16px', borderRadius: 8, marginBottom: 16, border: '1px solid #2a2d35' }}>
-            {entry.content}
-          </div>
+          {/* Content preview */}
+          {editingField === 'content' ? (
+            <div style={{ marginBottom: 16 }}>
+              <textarea value={editForm.content} onChange={e => setEditForm({ ...editForm, content: e.target.value })}
+                rows={6} style={{ ...inputStyle, lineHeight: 1.8, resize: 'vertical' }} />
+              <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                <button onClick={saveField} disabled={saving} style={{ padding: '4px 12px', borderRadius: 4, border: 'none', background: '#34a853', color: '#fff', cursor: 'pointer', fontSize: 11 }}>
+                  {saving ? '...' : '保存'}
+                </button>
+                <button onClick={() => setEditingField(null)} style={{ padding: '4px 12px', borderRadius: 4, border: 'none', background: '#666', color: '#fff', cursor: 'pointer', fontSize: 11 }}>取消</button>
+              </div>
+            </div>
+          ) : (
+            <div onClick={() => startFieldEdit('content')}
+              style={{ fontSize: 14, lineHeight: 1.8, color: '#ddd', background: '#161822', padding: '14px 16px', borderRadius: 8, marginBottom: 16, border: '1px solid #2a2d35', cursor: 'pointer' }}
+              title="点击编辑">
+              {entry.content}
+            </div>
+          )}
 
-          {/* Smart Questions — editable, selectable */}
+          {/* Smart Questions */}
           <div style={{ marginBottom: 16 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>💡 深入学习</span>
@@ -237,12 +428,9 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                         onMouseLeave={ev => ev.currentTarget.style.background = '#161822'}>
                         <div style={{ fontSize: 13, color: '#ddd', paddingRight: 40 }}>{q.question}</div>
                         <span style={{ fontSize: 10, color: QUESTION_COLORS[q.category] || '#888' }}>{q.category}</span>
-                        <div style={{ position: 'absolute', right: 8, top: 8, display: 'flex', gap: 4 }}
-                          onClick={e => e.stopPropagation()}>
-                          <span onClick={() => { setEditingQIdx(q.id); setEditingQText(q.question); }}
-                            style={{ fontSize: 11, color: '#666', cursor: 'pointer' }} title="编辑">✎</span>
-                          <span onClick={() => deleteQ(q.id)}
-                            style={{ fontSize: 11, color: '#666', cursor: 'pointer' }} title="删除">×</span>
+                        <div style={{ position: 'absolute', right: 8, top: 8, display: 'flex', gap: 4 }} onClick={e => e.stopPropagation()}>
+                          <span onClick={() => { setEditingQIdx(q.id); setEditingQText(q.question); }} style={{ fontSize: 11, color: '#666', cursor: 'pointer' }}>✎</span>
+                          <span onClick={() => deleteQ(q.id)} style={{ fontSize: 11, color: '#666', cursor: 'pointer' }}>×</span>
                         </div>
                       </div>
                     )}
@@ -251,7 +439,6 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
               </div>
             )}
 
-            {/* Add custom question */}
             <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
               <input value={newQuestion} onChange={e => setNewQuestion(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') addCustomQuestion(); }}
@@ -261,7 +448,6 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                 style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#34a853', color: '#fff', cursor: 'pointer', fontSize: 12, flexShrink: 0 }}>+</button>
             </div>
 
-            {/* Batch ask selected */}
             {selectedQs.size > 0 && (
               <button onClick={handleBatchAsk} disabled={asking}
                 style={{ marginTop: 8, width: '100%', padding: '8px', borderRadius: 6, border: '1px solid #4285f444',
@@ -271,7 +457,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             )}
           </div>
 
-          {/* Custom question input */}
+          {/* Direct question */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
             <input value={customQ} onChange={e => setCustomQ(e.target.value)}
               onKeyDown={e => { if (e.key === 'Enter') handleAsk(customQ.trim()); }}
@@ -284,21 +470,21 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             </button>
           </div>
 
-          {/* Q&A History */}
+          {/* Q&A History with formatted answers */}
           {qaHistory.map((h, i) => (
             <div key={i} style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 13, color: '#4285f4', fontWeight: 500, marginBottom: 4 }}>❓ {h.question}</div>
               {h.loading ? (
                 <div style={{ fontSize: 12, color: '#888', padding: 8 }}>AI 正在思考...</div>
               ) : (
-                <div style={{ fontSize: 13, lineHeight: 1.8, color: '#ccc', background: '#161822', padding: '12px 16px', borderRadius: 8, border: '1px solid #2a2d35' }}>
-                  {h.answer}
+                <div style={{ fontSize: 13, color: '#ccc', background: '#161822', padding: '12px 16px', borderRadius: 8, border: '1px solid #2a2d35' }}>
+                  {renderAnswer(h.answer)}
                 </div>
               )}
             </div>
           ))}
 
-          {/* Refresh topic page after new Q&A */}
+          {/* Update topic page with new Q&A */}
           {qaHistory.length > 0 && topicHTML && (
             <button onClick={handleRefreshTopic} disabled={loadingTopic}
               style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #9c27b044',
@@ -306,90 +492,6 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                 fontSize: 13, marginBottom: 12 }}>
               {loadingTopic ? '正在更新专题页面...' : '🔄 用新的问答更新专题页面'}
             </button>
-          )}
-
-          {/* Actions */}
-          <div style={{ borderTop: '1px solid #2a2d35', paddingTop: 12, display: 'flex', gap: 8 }}>
-            <button onClick={() => { setTab('edit'); startEdit(); }}
-              style={{ padding: '6px 14px', background: '#4285f422', color: '#4285f4', border: '1px solid #4285f444', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>
-              编辑
-            </button>
-            <button onClick={handleDelete}
-              style={{ padding: '6px 14px', background: '#d32f2f22', color: '#ef5350', border: '1px solid #d32f2f44', borderRadius: 6, cursor: 'pointer', fontSize: 12 }}>
-              删除
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Tab */}
-      {tab === 'edit' && editing && (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 4 }}>标题</label>
-            <input value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} style={inputStyle} />
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 4 }}>学科分类</label>
-            <input value={form.subject} onChange={e => setForm({ ...form, subject: e.target.value })} style={inputStyle} />
-          </div>
-          <div style={{ marginBottom: 12 }}>
-            <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 4 }}>内容</label>
-            <textarea value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} rows={10}
-              style={{ ...inputStyle, lineHeight: 1.8, resize: 'vertical' }} />
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ fontSize: 11, color: '#888', display: 'block', marginBottom: 4 }}>标签</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
-              {form.tags.map((t, i) => (
-                <span key={i} style={{ background: '#2a2d45', padding: '2px 8px', borderRadius: 10, fontSize: 11, color: '#bbb', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                  #{t}
-                  <span onClick={() => removeTag(t)} style={{ cursor: 'pointer', color: '#ef5350', fontWeight: 700 }}>×</span>
-                </span>
-              ))}
-            </div>
-            <div style={{ display: 'flex', gap: 4 }}>
-              <input value={tagInput} onChange={e => setTagInput(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
-                placeholder="添加标签..." style={{ ...inputStyle, flex: 1 }} />
-              <button onClick={addTag} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#4285f4', color: '#fff', cursor: 'pointer', fontSize: 12 }}>+</button>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={handleSave} disabled={saving}
-              style={{ padding: '8px 20px', background: '#4285f4', color: '#fff', border: 'none', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>
-              {saving ? '保存中...' : '保存'}
-            </button>
-            <button onClick={() => { setEditing(false); setTab('explore'); }}
-              style={{ padding: '8px 20px', background: '#1c1f2e', color: '#aaa', border: '1px solid #2a2d45', borderRadius: 6, cursor: 'pointer', fontSize: 13 }}>
-              取消
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Topic Page Tab */}
-      {tab === 'topic' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          {loadingTopic && !topicHTML ? (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#888' }}>
-              正在自动生成专题页面...
-            </div>
-          ) : topicHTML ? (
-            <>
-              <div style={{ padding: '6px 16px', borderBottom: '1px solid #2a2d35', display: 'flex', justifyContent: 'flex-end', gap: 6, background: '#161822' }}>
-                <button onClick={handleRefreshTopic} disabled={loadingTopic}
-                  style={{ padding: '4px 12px', borderRadius: 4, border: 'none', background: loadingTopic ? '#333' : '#9c27b033', color: '#ce93d8', cursor: loadingTopic ? 'wait' : 'pointer', fontSize: 11 }}>
-                  {loadingTopic ? '更新中...' : '🔄 更新'}
-                </button>
-              </div>
-              <iframe srcDoc={topicHTML} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="知识专题" />
-            </>
-          ) : (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
-              <div style={{ fontSize: 48 }}>📄</div>
-              <div style={{ fontSize: 14, color: '#888' }}>正在等待智能问题生成...</div>
-            </div>
           )}
         </div>
       )}
