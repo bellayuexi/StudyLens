@@ -439,6 +439,7 @@ app.post('/api/entries/:id/expand', async (req, res) => {
     const topicPage = storage.getLatestTopicPage(req.params.id);
     const qaHistory = (topicPage && topicPage.qa_history) || [];
     const subTopics = await llm.expandEntry(entry, qaHistory);
+    console.log(`[expand] ${entry.title}: got ${subTopics.length} sub-topics`);
     const children = [];
     for (const sub of subTopics) {
       const child = storage.addEntry({
