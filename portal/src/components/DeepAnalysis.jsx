@@ -230,7 +230,23 @@ export default function DeepAnalysis() {
               )}
             </div>
             {parentTopicHTML ? (
-              <iframe srcDoc={parentTopicHTML} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="综述页面" />
+              <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <iframe srcDoc={parentTopicHTML} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="综述页面" />
+                {children.length > 0 && (
+                  <div style={{ padding: '8px 16px', borderTop: '1px solid #2a2d35', background: '#161822' }}>
+                    <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>子主题导航</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {children.map(c => (
+                        <span key={c.id} onClick={() => setSelectedChild(c)}
+                          style={{ padding: '3px 8px', borderRadius: 4, fontSize: 11, cursor: 'pointer',
+                            background: '#1c1f2e', color: '#aaa', borderLeft: `2px solid ${getCatColor(c.tags)}` }}>
+                          {c.title}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             ) : (
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div style={{ textAlign: 'center', color: '#444' }}>
