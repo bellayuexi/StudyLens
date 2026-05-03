@@ -4,6 +4,15 @@ import { deleteEntry, updateEntry, generateSmartQuestions, askEntryQuestion, gen
 
 const QUESTION_COLORS = { '概念': '#4285f4', '原因': '#ea4335', '影响': '#34a853', '对比': '#fbbc05', '思考': '#9c27b0', '自定义': '#ff6d00' };
 
+const styles = {
+  input: { width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #2a2d45', background: '#1c1f2e', color: '#ddd', fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' },
+  btnPrimary: { padding: '4px 12px', borderRadius: 4, border: 'none', background: '#34a853', color: '#fff', cursor: 'pointer', fontSize: 11 },
+  btnCancel: { padding: '4px 12px', borderRadius: 4, border: 'none', background: '#666', color: '#fff', cursor: 'pointer', fontSize: 11 },
+  btnSmall: { padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: 'pointer' },
+  panel: { background: '#161822', borderBottom: '1px solid #2a2d35' },
+  card: { background: '#161822', border: '1px solid #2a2d35', borderRadius: 8 },
+};
+
 export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted, onNavigate, onUpdated }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState('topic');
@@ -36,6 +45,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const [collapsedCats, setCollapsedCats] = useState(new Set());
   const [editingQaIdx, setEditingQaIdx] = useState(null);
   const [editingAnswer, setEditingAnswer] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
   const qaRef = useRef(null);
   const questionsCacheRef = useRef({});
   const entryIdRef = useRef(entry.id);
@@ -43,6 +53,45 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const askingCountRef = useRef(0);
   const entryDataCacheRef = useRef({});
   const [loadingEntry, setLoadingEntry] = useState(false);
+
+  const cacheableState = () => ({
+    topicHTML, topicPageId, topicVersion, topicVersionCount,
+    qaHistory, includedQaIds, comments, lastUpdated,
+    topicStatus, topicDirty, asking, loadingTopic,
+  });
+
+  const restoreCache = (cached) => {
+    setAsking(cached.asking || false);
+    setLoadingQ(false);
+    setLoadingTopic(cached.loadingTopic || false);
+    setTopicHTML(cached.topicHTML || '');
+    setTopicPageId(cached.topicPageId || null);
+    setTopicVersion(cached.topicVersion || 0);
+    setTopicVersionCount(cached.topicVersionCount || 0);
+    setQaHistory(cached.qaHistory || []);
+    setComments(cached.comments || []);
+    setIncludedQaIds(cached.includedQaIds || []);
+    setLastUpdated(cached.lastUpdated || '');
+    setTopicStatus(cached.topicStatus || '');
+    setTopicDirty(cached.topicDirty || false);
+    setViewingVersion(null);
+    setTab('topic');
+    setLoadingEntry(false);
+  };
+
+  const syncQaToServer = (updated, pageId = topicPageId) => {
+    if (!pageId) return;
+    const qaToSave = updated.filter(h => !h.loading).map(h => ({ question: h.question, answer: h.answer }));
+    updateTopicPageQaHistory(pageId, qaToSave).catch(e => {
+      console.error('QA sync failed:', e);
+      showError('QA保存失败');
+    });
+  };
+
+  const showError = (msg) => {
+    setErrorMsg(msg);
+    setTimeout(() => setErrorMsg(''), 4000);
+  };
 
   useEffect(() => {
     entryIdRef.current = entry.id;
@@ -52,22 +101,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     // Restore from cache immediately if available
     const cached = entryDataCacheRef.current[entry.id];
     if (cached) {
-      setAsking(cached.asking || false);
-      setLoadingQ(false);
-      setLoadingTopic(cached.loadingTopic || false);
-      setTopicHTML(cached.topicHTML || '');
-      setTopicPageId(cached.topicPageId || null);
-      setTopicVersion(cached.topicVersion || 0);
-      setTopicVersionCount(cached.topicVersionCount || 0);
-      setQaHistory(cached.qaHistory || []);
-      setComments(cached.comments || []);
-      setIncludedQaIds(cached.includedQaIds || []);
-      setLastUpdated(cached.lastUpdated || '');
-      setTopicStatus(cached.topicStatus || '');
-      setTopicDirty(cached.topicDirty || false);
-      setViewingVersion(null);
-      setTab('topic');
-      setLoadingEntry(false);
+      restoreCache(cached);
     } else {
       setAsking(false);
       setLoadingQ(false);
@@ -105,11 +139,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   // Cache current entry data when it changes
   useEffect(() => {
     if (!entry.id || loadingEntry) return;
-    entryDataCacheRef.current[entry.id] = {
-      topicHTML, topicPageId, topicVersion, topicVersionCount,
-      qaHistory, includedQaIds,
-      comments, lastUpdated, topicStatus, topicDirty, asking, loadingTopic,
-    };
+    entryDataCacheRef.current[entry.id] = cacheableState();
   }, [topicHTML, topicPageId, topicVersion, topicVersionCount, qaHistory, includedQaIds, comments, lastUpdated, topicStatus, topicDirty, asking, loadingTopic]);
 
   const loadSavedTopicPage = async () => {
@@ -130,7 +160,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         setTopicStatus(`v${data.page.version} 已保存`);
         setTopicDirty(false);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); showError('加载专题页失败'); }
     if (entryIdRef.current === currentId) setLoadingEntry(false);
   };
 
@@ -150,7 +180,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         setSmartQuestions(qs);
         setSelectedQs(new Set(qs.filter(q => !q.answered).map(q => q.id)));
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); showError('生成智能问题失败'); }
     if (entryIdRef.current === currentId) setLoadingQ(false);
   };
 
@@ -188,9 +218,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     try {
       const data = await askEntryQuestion(askingEntryId, question, history);
       if (entryIdRef.current !== askingEntryId) {
-        if (askingPageId) {
-          updateTopicPageQaHistory(askingPageId, [...history, { question, answer: data.answer }]).catch(() => {});
-        }
+        syncQaToServer([...history, { question, answer: data.answer }], askingPageId);
         setAsking(false);
         return;
       }
@@ -198,10 +226,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       setQaHistory(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = newItem;
-        if (askingPageId) {
-          const qaToSave = updated.filter(h => !h.loading).map(h => ({ question: h.question, answer: h.answer }));
-          updateTopicPageQaHistory(askingPageId, qaToSave).catch(() => {});
-        }
+        syncQaToServer(updated, askingPageId);
         return updated;
       });
       setTopicDirty(true);
@@ -234,10 +259,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       setQaHistory(prev => {
         const updated = [...prev];
         updated[idx] = { question, answer: data.answer, cards: data.suggestedCards || [], loading: false, _qid: qid };
-        if (topicPageId) {
-          const qaToSave = updated.filter(h => !h.loading).map(h => ({ question: h.question, answer: h.answer }));
-          updateTopicPageQaHistory(topicPageId, qaToSave).catch(() => {});
-        }
+        syncQaToServer(updated);
         return updated;
       });
       setTopicDirty(true);
@@ -255,10 +277,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setQaHistory(prev => {
       const updated = [...prev];
       updated[idx] = { ...updated[idx], answer: editingAnswer };
-      if (topicPageId) {
-        const qaToSave = updated.filter(h => !h.loading).map(h => ({ question: h.question, answer: h.answer }));
-        updateTopicPageQaHistory(topicPageId, qaToSave).catch(() => {});
-      }
+      syncQaToServer(updated);
       return updated;
     });
     setTopicDirty(true);
@@ -316,7 +335,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       // Persist incrementally
       if (batchPageId) {
         const allDone = [...baseHistory, ...Object.values(results).map(r => ({ question: r.question, answer: r.answer }))];
-        updateTopicPageQaHistory(batchPageId, allDone).catch(() => {});
+        syncQaToServer(allDone, batchPageId);
       }
     });
 
@@ -373,10 +392,10 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         setIncludedQaIds(qaIds);
       } catch (saveErr) {
         console.error('Save failed:', saveErr);
-        if (entryIdRef.current === genEntryId) setTopicStatus('已生成（保存失败，请重试）');
+        if (entryIdRef.current === genEntryId) { setTopicStatus('已生成（保存失败，请重试）'); showError('专题页保存失败'); }
       }
     } catch (err) {
-      if (entryIdRef.current === genEntryId) setTopicStatus('生成失败');
+      if (entryIdRef.current === genEntryId) { setTopicStatus('生成失败'); showError('专题页生成失败'); }
       console.error(err);
     }
     if (entryIdRef.current === genEntryId) {
@@ -424,10 +443,10 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         setIncludedQaIds(qaIds);
       } catch (saveErr) {
         console.error('Save failed:', saveErr);
-        if (entryIdRef.current === genEntryId) setTopicStatus('已更新（保存失败，请重试）');
+        if (entryIdRef.current === genEntryId) { setTopicStatus('已更新（保存失败，请重试）'); showError('专题页保存失败'); }
       }
     } catch (err) {
-      if (entryIdRef.current === genEntryId) setTopicStatus('更新失败');
+      if (entryIdRef.current === genEntryId) { setTopicStatus('更新失败'); showError('专题页更新失败'); }
     }
     if (entryIdRef.current === genEntryId) {
       setLoadingTopic(false);
@@ -450,7 +469,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         setViewingVersion(v);
         setTopicStatus(`正在查看 v${v}`);
       }
-    } catch (e) { console.error(e); }
+    } catch (e) { console.error(e); showError('加载版本失败'); }
   };
 
   const addComment = () => {
@@ -502,6 +521,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       setTopicDirty(false);
     } catch (err) {
       setTopicStatus('应用批注失败');
+      showError('应用批注失败');
     }
     setLoadingTopic(false);
   };
@@ -518,12 +538,14 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       await updateEntry(entry.id, editForm);
       setEditingField(null);
       if (onUpdated) onUpdated();
-    } finally { setSaving(false); }
+    } catch (e) { showError('保存失败'); } finally { setSaving(false); }
   };
 
-  const handleDelete = async () => { await deleteEntry(entry.id); onDeleted(); };
+  const handleDelete = async () => {
+    try { await deleteEntry(entry.id); onDeleted(); } catch (e) { showError('删除失败'); }
+  };
 
-  const inputStyle = { width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #2a2d45', background: '#1c1f2e', color: '#ddd', fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' };
+  const inputStyle = styles.input;
 
   const renderAnswer = (text) => {
     if (!text) return null;
@@ -533,8 +555,14 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   };
 
   return (
-    <div style={{ height: '100%', background: '#0f1117', display: 'flex', flexDirection: 'column' }}>
-      {/* Header */}
+    <div style={{ height: '100%', background: '#0f1117', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+      {/* Error toast */}
+      {errorMsg && (
+        <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 1000,
+          padding: '8px 20px', borderRadius: 8, background: '#d32f2f', color: '#fff', fontSize: 13, boxShadow: '0 4px 12px rgba(0,0,0,0.4)' }}>
+          {errorMsg}
+        </div>
+      )}
       <div style={{ padding: '14px 24px', borderBottom: '1px solid #2a2d35', background: '#161822' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           {editingField === 'title' ? (

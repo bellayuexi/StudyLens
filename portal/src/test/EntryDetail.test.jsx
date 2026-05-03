@@ -216,5 +216,191 @@ describe('EntryDetail Component', () => {
         expect(screen.getByText('王安石变法')).toBeInTheDocument();
       });
     });
+
+    it('shows delete button', () => {
+      renderDetail();
+      expect(screen.getByText('删除')).toBeInTheDocument();
+    });
+
+    it('calls onDeleted when delete button clicked', async () => {
+      const onDeleted = vi.fn();
+      api.deleteEntry.mockResolvedValue({});
+      renderDetail({ onDeleted });
+      fireEvent.click(screen.getByText('删除'));
+      await waitFor(() => {
+        expect(api.deleteEntry).toHaveBeenCalledWith('entry-1');
+        expect(onDeleted).toHaveBeenCalled();
+      });
+    });
+  });
+
+  // ============================
+  // F8: Tab Switching
+  // ============================
+  describe('F8: Tab Switching', () => {
+    it('defaults to topic tab', () => {
+      renderDetail();
+      expect(screen.getByText(/专题/)).toBeInTheDocument();
+    });
+
+    it('switches to explore tab on click', async () => {
+      renderDetail();
+      fireEvent.click(screen.getByText(/探索/));
+      await waitFor(() => {
+        expect(screen.getByText(/深入学习/)).toBeInTheDocument();
+      });
+    });
+
+    it('shows smart question generate button in explore tab', async () => {
+      renderDetail();
+      fireEvent.click(screen.getByText(/探索/));
+      await waitFor(() => {
+        expect(screen.getByText(/生成智能问题/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ============================
+  // F9: Comments / Annotations
+  // ============================
+  describe('F9: Comments', () => {
+    it('shows annotation button when topic page exists', async () => {
+      api.getLatestTopicPage.mockResolvedValue({
+        page: {
+          id: 'tp-1', version: 1, html: '<p>Topic content here</p>',
+          qa_history: [{ question: 'Q1', answer: 'A1' }],
+          comments: [], included_qa_ids: [], created_at: '2026-01-01',
+        },
+      });
+      renderDetail();
+      await waitFor(() => {
+        expect(screen.getByText(/添加批注/)).toBeInTheDocument();
+      });
+    });
+
+    it('toggles comment mode on button click', async () => {
+      api.getLatestTopicPage.mockResolvedValue({
+        page: {
+          id: 'tp-1', version: 1, html: '<p>Topic content here</p>',
+          qa_history: [{ question: 'Q1', answer: 'A1' }],
+          comments: [], included_qa_ids: [], created_at: '2026-01-01',
+        },
+      });
+      renderDetail();
+      await waitFor(() => {
+        expect(screen.getByText(/添加批注/)).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText(/添加批注/));
+      await waitFor(() => {
+        expect(screen.getByText(/批注中/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ============================
+  // F10: Batch Ask
+  // ============================
+  describe('F10: Batch Ask', () => {
+    it('shows batch ask button when smart questions are selected', async () => {
+      api.generateSmartQuestions.mockResolvedValue({
+        questions: [
+          { question: 'New question?', category: '概念' },
+        ],
+      });
+      renderDetail();
+      fireEvent.click(screen.getByText(/探索/));
+      await waitFor(() => {
+        expect(screen.getByText(/生成智能问题/)).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText(/生成智能问题/));
+      await waitFor(() => {
+        expect(screen.getByText('New question?')).toBeInTheDocument();
+      });
+      expect(screen.getByText(/批量提问选中的/)).toBeInTheDocument();
+    });
+  });
+
+  // ============================
+  // F11: Topic Page Version History
+  // ============================
+  describe('F11: Version History', () => {
+    it('shows version status when topic page has versions', async () => {
+      api.getLatestTopicPage.mockResolvedValue({
+        page: {
+          id: 'tp-1', version: 3, html: '<p>V3 content</p>',
+          qa_history: [{ question: 'Q1', answer: 'A1' }],
+          comments: [], included_qa_ids: [], created_at: '2026-01-01',
+        },
+      });
+      renderDetail();
+      await waitFor(() => {
+        expect(screen.getByText(/v3 已保存/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ============================
+  // F12: Custom Question Input
+  // ============================
+  describe('F12: Custom Question', () => {
+    it('shows add custom question input in explore tab', async () => {
+      renderDetail();
+      fireEvent.click(screen.getByText(/探索/));
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/添加自定义问题/)).toBeInTheDocument();
+      });
+    });
+
+    it('has add button that is disabled when input is empty', async () => {
+      renderDetail();
+      fireEvent.click(screen.getByText(/探索/));
+      await waitFor(() => {
+        const addBtn = screen.getByText('+添加');
+        expect(addBtn).toBeInTheDocument();
+        expect(addBtn).toHaveStyle('opacity: 0.5');
+      });
+    });
+  });
+
+  // ============================
+  // F13: Topic Page Export
+  // ============================
+  describe('F13: Export HTML', () => {
+    it('shows export button when topic page exists', async () => {
+      api.getLatestTopicPage.mockResolvedValue({
+        page: {
+          id: 'tp-1', version: 1, html: '<p>Topic content</p>',
+          qa_history: [{ question: 'Q1', answer: 'A1' }],
+          comments: [], included_qa_ids: [], created_at: '2026-01-01',
+        },
+      });
+      renderDetail();
+      await waitFor(() => {
+        expect(screen.getByText(/导出HTML/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ============================
+  // F14: Content Editing
+  // ============================
+  describe('F14: Content Display', () => {
+    it('shows entry content in topic tab', async () => {
+      renderDetail();
+      await waitFor(() => {
+        expect(screen.getByText(mockEntry.content)).toBeInTheDocument();
+      });
+    });
+
+    it('shows tags', () => {
+      renderDetail();
+      expect(screen.getByText('#政治制度')).toBeInTheDocument();
+      expect(screen.getByText('#经济发展')).toBeInTheDocument();
+    });
+
+    it('shows subject badge', () => {
+      renderDetail();
+      expect(screen.getByText('历史-北宋')).toBeInTheDocument();
+    });
   });
 });

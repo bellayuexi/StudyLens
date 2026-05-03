@@ -62,7 +62,14 @@ Run: `npm run test:portal`
 | F4: Answer Editing | 1 | Edit/regenerate button presence |
 | F5: Question Dedup | 1 | Answered question filtering logic |
 | F6: Deep Analysis Button | 1 | Hidden for child entries |
-| F7: Entry Info | 1 | Title rendering after load |
+| F7: Entry Edit & Delete | 3 | Title rendering, delete button, delete callback |
+| F8: Tab Switching | 3 | Default tab, switch to explore, smart question button |
+| F9: Comments | 2 | Annotation button, comment mode toggle |
+| F10: Batch Ask | 1 | Batch ask button with selected questions |
+| F11: Version History | 1 | Version status display |
+| F12: Custom Question | 2 | Input field, disabled add button |
+| F13: Export HTML | 1 | Export button presence |
+| F14: Content Display | 3 | Entry content, tags, subject badge |
 
 ### Running All Tests
 ```bash
