@@ -102,11 +102,11 @@ export async function askEntryQuestion(entryId, question, history = []) {
   return res.json();
 }
 
-export async function generateTopicPage(entryId, qaHistory = [], existingHTML = '') {
+export async function generateTopicPage(entryId, qaHistory = [], existingHTML = '', requirements = '') {
   const res = await fetch(`${API}/api/entries/${entryId}/topic-page`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ qaHistory, existingHTML }),
+    body: JSON.stringify({ qaHistory, existingHTML, requirements }),
   });
   return res.json();
 }

@@ -343,7 +343,7 @@ app.post('/api/entries/:id/topic-page', async (req, res) => {
       const eTags = new Set(e.tags || []);
       return (entry.tags || []).some(t => eTags.has(t)) || e.subject === entry.subject;
     }).slice(0, 10);
-    const html = await llm.generateTopicHTML(entry, related, req.body.qaHistory || [], req.body.existingHTML || '');
+    const html = await llm.generateTopicHTML(entry, related, req.body.qaHistory || [], req.body.existingHTML || '', req.body.requirements || '');
     res.json({ html });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -26,6 +26,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const [lastUpdated, setLastUpdated] = useState('');
   const [comments, setComments] = useState([]);
   const [commentMode, setCommentMode] = useState(false);
+  const [topicRequirements, setTopicRequirements] = useState('');
   const [newComment, setNewComment] = useState('');
   const [editingField, setEditingField] = useState(null);
   const [editForm, setEditForm] = useState({});
@@ -33,6 +34,8 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const [tagInput, setTagInput] = useState('');
   const [includedQaIds, setIncludedQaIds] = useState([]);
   const [collapsedCats, setCollapsedCats] = useState(new Set());
+  const [editingQaIdx, setEditingQaIdx] = useState(null);
+  const [editingAnswer, setEditingAnswer] = useState('');
   const qaRef = useRef(null);
   const questionsCacheRef = useRef({});
   const entryIdRef = useRef(entry.id);
@@ -248,6 +251,21 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setAsking(false);
   };
 
+  const handleSaveEditedAnswer = (idx) => {
+    setQaHistory(prev => {
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], answer: editingAnswer };
+      if (topicPageId) {
+        const qaToSave = updated.filter(h => !h.loading).map(h => ({ question: h.question, answer: h.answer }));
+        updateTopicPageQaHistory(topicPageId, qaToSave).catch(() => {});
+      }
+      return updated;
+    });
+    setTopicDirty(true);
+    setEditingQaIdx(null);
+    setEditingAnswer('');
+  };
+
   const handleBatchAsk = async () => {
     const selected = smartQuestions.filter(q => selectedQs.has(q.id));
     if (!selected.length) return;
@@ -323,7 +341,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setLoadingTopic(true);
     setTopicStatus('正在生成...');
     try {
-      const data = await generateTopicPage(genEntryId, qaHistory);
+      const data = await generateTopicPage(genEntryId, qaHistory, '', topicRequirements);
       if (!data.html || data.html.replace(/<[^>]*>/g, '').trim().length < 50) {
         if (entryIdRef.current === genEntryId) setTopicStatus('生成内容为空，请重试');
         setLoadingTopic(false);
@@ -374,7 +392,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setLoadingTopic(true);
     setTopicStatus('正在更新...');
     try {
-      const data = await generateTopicPage(genEntryId, qaHistory, topicHTML);
+      const data = await generateTopicPage(genEntryId, qaHistory, topicHTML, topicRequirements);
       if (!data.html || data.html.replace(/<[^>]*>/g, '').trim().length < 50) {
         if (entryIdRef.current === genEntryId) setTopicStatus('生成内容为空，请重试');
         setLoadingTopic(false);
@@ -448,6 +466,20 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setComments(updated);
     if (topicPageId) updateTopicPageComments(topicPageId, updated);
   };
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === 'inline-comment') {
+        const text = `【针对: "${e.data.selectedText.slice(0, 50)}"】${e.data.comment}`;
+        const updated = [...comments, { id: Date.now(), text, created: new Date().toISOString() }];
+        setComments(updated);
+        if (topicPageId) updateTopicPageComments(topicPageId, updated);
+        setCommentMode(true);
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [comments, topicPageId]);
 
   const handleApplyComments = async () => {
     if (!comments.length) return;
@@ -698,13 +730,39 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
               </div>
             </div>
           ) : topicHTML ? (
-            <iframe srcDoc={topicHTML} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="知识专题" />
+            <iframe srcDoc={topicHTML + `<script>
+document.addEventListener('mouseup', function(e) {
+  var sel = window.getSelection();
+  var text = sel.toString().trim();
+  var old = document.getElementById('_ann_btn');
+  if (old) old.remove();
+  if (!text) return;
+  var btn = document.createElement('div');
+  btn.id = '_ann_btn';
+  btn.textContent = '+ 添加批注';
+  btn.style.cssText = 'position:fixed;z-index:9999;padding:4px 10px;background:#fbbc05;color:#000;border-radius:4px;font-size:12px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
+  btn.style.left = e.clientX + 'px';
+  btn.style.top = (e.clientY - 30) + 'px';
+  btn.onclick = function() {
+    var comment = prompt('请输入批注（针对选中内容）:');
+    if (comment) window.parent.postMessage({ type: 'inline-comment', selectedText: text, comment: comment }, '*');
+    btn.remove();
+  };
+  document.body.appendChild(btn);
+});
+document.addEventListener('mousedown', function(e) {
+  if (e.target.id !== '_ann_btn') { var old = document.getElementById('_ann_btn'); if (old) old.remove(); }
+});
+<\/script>`} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="知识专题" />
           ) : (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#666' }}>
               <div style={{ fontSize: 48 }}>📄</div>
               {qaHistory.filter(h => h.answer && !h.loading).length > 0 ? (
                 <>
                   <div style={{ fontSize: 14 }}>尚未生成专题页</div>
+                  <input value={topicRequirements} onChange={e => setTopicRequirements(e.target.value)}
+                    placeholder="输入你对专题页的要求（可选，如：重点讲解背景原因）"
+                    style={{ width: 360, padding: '8px 12px', borderRadius: 6, border: '1px solid #2a2d45', background: '#1c1f2e', color: '#ddd', fontSize: 12, outline: 'none', fontFamily: 'inherit', textAlign: 'center' }} />
                   <button onClick={handleGenerateTopic} disabled={loadingTopic}
                     style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#4285f4', color: '#fff', cursor: 'pointer', fontSize: 14 }}>
                     {loadingTopic ? '生成中...' : '生成专题页'}
@@ -799,14 +857,33 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                         <div key={h.idx} style={{ marginLeft: 16, marginTop: 6 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                             <div style={{ fontSize: 13, color: '#4285f4', fontWeight: 500 }}>Q: {h.question}</div>
-                            <span onClick={() => handleRegenerate(h.idx)} title="重新生成答案"
-                              style={{ fontSize: 12, cursor: asking ? 'not-allowed' : 'pointer', color: '#888', padding: '2px 6px', borderRadius: 4, background: '#1c1f2e', opacity: asking ? 0.4 : 1 }}>
-                              🔄
-                            </span>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                              <span onClick={() => { setEditingQaIdx(h.idx); setEditingAnswer(h.answer); }} title="手动编辑答案"
+                                style={{ fontSize: 12, cursor: 'pointer', color: '#888', padding: '2px 6px', borderRadius: 4, background: '#1c1f2e' }}>
+                                ✏️
+                              </span>
+                              <span onClick={() => handleRegenerate(h.idx)} title="AI重新生成答案"
+                                style={{ fontSize: 12, cursor: asking ? 'not-allowed' : 'pointer', color: '#888', padding: '2px 6px', borderRadius: 4, background: '#1c1f2e', opacity: asking ? 0.4 : 1 }}>
+                                🔄
+                              </span>
+                            </div>
                           </div>
-                          <div style={{ fontSize: 13, color: '#ccc', background: '#1a1c28', padding: '8px 12px', borderRadius: 6, border: '1px solid #2a2d35' }}>
-                            {renderAnswer(h.answer)}
-                          </div>
+                          {editingQaIdx === h.idx ? (
+                            <div>
+                              <textarea value={editingAnswer} onChange={e => setEditingAnswer(e.target.value)}
+                                style={{ width: '100%', minHeight: 120, padding: '8px 12px', borderRadius: 6, border: '1px solid #4285f4', background: '#1a1c28', color: '#ddd', fontSize: 13, fontFamily: 'inherit', resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+                              <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
+                                <button onClick={() => handleSaveEditedAnswer(h.idx)}
+                                  style={{ padding: '4px 12px', borderRadius: 4, border: 'none', background: '#34a853', color: '#fff', fontSize: 12, cursor: 'pointer' }}>保存</button>
+                                <button onClick={() => { setEditingQaIdx(null); setEditingAnswer(''); }}
+                                  style={{ padding: '4px 12px', borderRadius: 4, border: 'none', background: '#333', color: '#aaa', fontSize: 12, cursor: 'pointer' }}>取消</button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div style={{ fontSize: 13, color: '#ccc', background: '#1a1c28', padding: '8px 12px', borderRadius: 6, border: '1px solid #2a2d35' }}>
+                              {renderAnswer(h.answer)}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -823,13 +900,14 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 {smartQuestions.length > 0 && (
                   <span onClick={() => {
-                    const allSelected = smartQuestions.every(q => selectedQs.has(q.id));
-                    setSelectedQs(allSelected ? new Set() : new Set(smartQuestions.map(q => q.id)));
+                    const unanswered = smartQuestions.filter(q => !qaHistory.some(h => h.question === q.question && h.answer && !h.loading));
+                    const allSelected = unanswered.every(q => selectedQs.has(q.id));
+                    setSelectedQs(allSelected ? new Set() : new Set(unanswered.map(q => q.id)));
                   }} style={{ fontSize: 11, color: '#4285f4', cursor: 'pointer' }}>
-                    {smartQuestions.every(q => selectedQs.has(q.id)) ? '取消全选' : '全选'}
+                    {smartQuestions.filter(q => !qaHistory.some(h => h.question === q.question && h.answer && !h.loading)).every(q => selectedQs.has(q.id)) ? '取消全选' : '全选'}
                   </span>
                 )}
-                {!loadingQ && <span onClick={() => { delete questionsCacheRef.current[entry.id]; loadSmartQuestions(); }} style={{ fontSize: 11, color: '#4285f4', cursor: 'pointer' }}>刷新</span>}
+                {!loadingQ && <span onClick={() => { delete questionsCacheRef.current[entry.id]; loadSmartQuestions(); }} style={{ fontSize: 11, color: '#4285f4', cursor: 'pointer' }}>重新生成问题</span>}
               </div>
             </div>
 
@@ -842,7 +920,14 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
               </button>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                {smartQuestions.map(q => (
+                {(() => {
+                  const unanswered = smartQuestions.filter(q => !qaHistory.some(h => h.question === q.question && h.answer && !h.loading));
+                  if (unanswered.length === 0) return (
+                    <div style={{ padding: 12, textAlign: 'center', color: '#666', fontSize: 12 }}>
+                      所有问题已回答完毕！点击「重新生成问题」获取新一批问题，或在下方添加自定义问题。
+                    </div>
+                  );
+                  return unanswered.map(q => (
                   <div key={q.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                     <input type="checkbox" checked={selectedQs.has(q.id)} onChange={() => toggleQ(q.id)}
                       style={{ marginTop: 10, accentColor: QUESTION_COLORS[q.category] || '#4285f4', flexShrink: 0 }} />
@@ -870,7 +955,8 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                       </div>
                     )}
                   </div>
-                ))}
+                ));
+                })()}
               </div>
             )}
 

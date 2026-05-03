@@ -318,7 +318,7 @@ ${existingSection}
   }
 }
 
-async function generateTopicHTML(entry, relatedEntries = [], qaHistory = [], existingHTML = '') {
+async function generateTopicHTML(entry, relatedEntries = [], qaHistory = [], existingHTML = '', requirements = '') {
   const related = relatedEntries.map(e => `【${e.title}】${e.content.slice(0, 100)}`).join('\n');
   const categories = {};
   qaHistory.filter(h => h.answer).forEach(h => {
@@ -353,6 +353,7 @@ ${isUpdate ? `当前专题页内容（需要在此基础上扩充和完善）:\n
 7. 页面宽度100%，无需滚动条样式
 8. 配色美观，使用渐变和阴影效果
 9. 【重要】上面的问答内容是学生深入探索的结果，必须将每个问答的核心答案完整融入专题页对应章节中，不可遗漏任何一个问答
+${requirements ? `10. 【用户特别要求】${requirements}` : ''}
 
 只返回HTML代码，不要包裹在代码块中。`;
 
