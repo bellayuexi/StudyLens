@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import EntryDetail from './EntryDetail.jsx';
 import { getChildren, expandEntry, addChildEntry, deleteEntry, updateEntry, getLatestTopicPage, generateTopicPage, saveTopicPage } from '../lib/api.js';
@@ -21,6 +21,7 @@ export default function DeepAnalysis() {
   const [parentEntry, setParentEntry] = useState(null);
   const [children, setChildren] = useState([]);
   const [selectedChild, setSelectedChild] = useState(null);
+  const childCacheRef = useRef({});
   const [expanding, setExpanding] = useState(false);
   const [leftWidth, setLeftWidth] = useState(340);
   const [dragging, setDragging] = useState(false);
@@ -311,6 +312,7 @@ function showPage(id) {
             onDeleted={() => { setSelectedChild(null); loadData(); }}
             onNavigate={(entry) => setSelectedChild(entry)}
             onUpdated={loadData}
+            sharedCacheRef={childCacheRef}
           />
         ) : (
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

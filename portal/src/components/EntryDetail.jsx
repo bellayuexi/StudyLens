@@ -13,7 +13,7 @@ const styles = {
   card: { background: '#161822', border: '1px solid #2a2d35', borderRadius: 8 },
 };
 
-export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted, onNavigate, onUpdated }) {
+export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted, onNavigate, onUpdated, sharedCacheRef }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState('topic');
   const [smartQuestions, setSmartQuestions] = useState([]);
@@ -58,7 +58,8 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const entryIdRef = useRef(entry.id);
   const bgTasksRef = useRef({});
   const askingCountRef = useRef(0);
-  const entryDataCacheRef = useRef({});
+  const _localCacheRef = useRef({});
+  const entryDataCacheRef = sharedCacheRef || _localCacheRef;
   const [loadingEntry, setLoadingEntry] = useState(false);
 
   const cacheableState = () => ({
