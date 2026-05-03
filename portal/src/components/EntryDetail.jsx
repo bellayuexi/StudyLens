@@ -382,8 +382,10 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
 
   const injectTimestamp = (html) => {
     const ts = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
-    const badge = `<div style="text-align:right;padding:8px 16px;font-size:11px;color:#666;border-bottom:1px solid #333;">最后更新: ${ts}</div>`;
-    return html.replace(/<body[^>]*>/, (m) => m + badge) || badge + html;
+    const badge = `<div data-timestamp style="text-align:right;padding:8px 16px;font-size:11px;color:#666;border-bottom:1px solid #333;">最后更新: ${ts}</div>`;
+    let cleaned = html.replace(/<div data-timestamp[^>]*>.*?<\/div>/g, '');
+    cleaned = cleaned.replace(/<div[^>]*>最后更新:.*?<\/div>/g, '');
+    return cleaned.replace(/<body[^>]*>/, (m) => m + badge) || badge + cleaned;
   };
 
   const handleGenerateTopic = async () => {
