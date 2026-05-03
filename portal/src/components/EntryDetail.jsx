@@ -489,16 +489,13 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   useEffect(() => {
     const handler = (e) => {
       if (e.data?.type === 'inline-comment') {
-        const text = `【针对: "${e.data.selectedText.slice(0, 50)}"】${e.data.comment}`;
-        const updated = [...comments, { id: Date.now(), text, created: new Date().toISOString() }];
-        setComments(updated);
-        if (topicPageId) updateTopicPageComments(topicPageId, updated);
         setCommentMode(true);
+        setNewComment(`【针对: "${e.data.selectedText.slice(0, 50)}"】`);
       }
     };
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
-  }, [comments, topicPageId]);
+  }, []);
 
   const handleApplyComments = async () => {
     if (!comments.length) return;
@@ -759,24 +756,32 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             </div>
           ) : topicHTML ? (
             <iframe srcDoc={topicHTML + `<script>
+document.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+var _ann_text = '';
 document.addEventListener('mouseup', function(e) {
-  var sel = window.getSelection();
-  var text = sel.toString().trim();
-  var old = document.getElementById('_ann_btn');
-  if (old) old.remove();
-  if (!text) return;
-  var btn = document.createElement('div');
-  btn.id = '_ann_btn';
-  btn.textContent = '+ 添加批注';
-  btn.style.cssText = 'position:fixed;z-index:9999;padding:4px 10px;background:#fbbc05;color:#000;border-radius:4px;font-size:12px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);';
-  btn.style.left = e.clientX + 'px';
-  btn.style.top = (e.clientY - 30) + 'px';
-  btn.onclick = function() {
-    var comment = prompt('请输入批注（针对选中内容）:');
-    if (comment) window.parent.postMessage({ type: 'inline-comment', selectedText: text, comment: comment }, '*');
-    btn.remove();
-  };
-  document.body.appendChild(btn);
+  setTimeout(function() {
+    var sel = window.getSelection();
+    var text = sel.toString().trim();
+    var old = document.getElementById('_ann_btn');
+    if (old) old.remove();
+    if (!text) return;
+    _ann_text = text;
+    var btn = document.createElement('div');
+    btn.id = '_ann_btn';
+    btn.textContent = '+ 添加批注';
+    btn.style.cssText = 'position:fixed;z-index:9999;padding:6px 14px;background:#fbbc05;color:#000;border-radius:6px;font-size:13px;cursor:pointer;box-shadow:0 2px 12px rgba(0,0,0,0.4);user-select:none;-webkit-user-select:none;';
+    var x = Math.min(e.clientX, window.innerWidth - 120);
+    var y = Math.max(e.clientY - 36, 4);
+    btn.style.left = x + 'px';
+    btn.style.top = y + 'px';
+    btn.onmousedown = function(ev) { ev.preventDefault(); ev.stopPropagation(); };
+    btn.onclick = function(ev) {
+      ev.stopPropagation();
+      window.parent.postMessage({ type: 'inline-comment', selectedText: _ann_text }, '*');
+      btn.remove();
+    };
+    document.body.appendChild(btn);
+  }, 10);
 });
 document.addEventListener('mousedown', function(e) {
   if (e.target.id !== '_ann_btn') { var old = document.getElementById('_ann_btn'); if (old) old.remove(); }
