@@ -122,9 +122,18 @@ export default function DeepAnalysis() {
           <div style={{ fontSize: 11, color: '#888', marginTop: 4 }}>深入分析 · {children.length} 个子节点</div>
         </div>
 
-        {/* Parent entry summary */}
-        <div style={{ padding: '10px 16px', borderBottom: '1px solid #2a2d35', fontSize: 12, color: '#aaa', maxHeight: 80, overflowY: 'auto' }}>
-          {parentEntry.content?.slice(0, 200)}
+        {/* Parent entry - click to show overview */}
+        <div onClick={() => setSelectedChild(null)}
+          style={{ padding: '10px 16px', borderBottom: '1px solid #2a2d35', cursor: 'pointer',
+            background: selectedChild === null ? '#2a2d45' : '#161822', transition: 'background 0.15s' }}
+          onMouseEnter={ev => { if (selectedChild !== null) ev.currentTarget.style.background = '#222640'; }}
+          onMouseLeave={ev => { if (selectedChild !== null) ev.currentTarget.style.background = '#161822'; }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: selectedChild === null ? '#4285f4' : '#aaa' }}>
+            📄 综述: {parentEntry.title}
+          </div>
+          <div style={{ fontSize: 11, color: '#666', marginTop: 2 }}>
+            {parentTopicVersion > 0 ? `v${parentTopicVersion} · 点击查看综述` : '点击查看综述'}
+          </div>
         </div>
 
         {/* Actions */}
