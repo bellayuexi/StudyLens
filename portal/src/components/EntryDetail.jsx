@@ -802,14 +802,23 @@ document.addEventListener('mousedown', function(e) {
                 </>
               ) : (
                 <>
-                  <div style={{ fontSize: 14 }}>需要先生成智能问题并获取答案</div>
-                  <div style={{ fontSize: 12, color: '#888', maxWidth: 360, textAlign: 'center' }}>
-                    请先到「探索更多」标签生成智能问题，批量提问获取答案后，再回来生成专题页
+                  <div style={{ fontSize: 14, marginBottom: 4 }}>选择一种方式开始学习</div>
+                  <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    <div onClick={() => setTab('explore')}
+                      style={{ width: 200, padding: '16px', borderRadius: 10, border: '1px solid #34a85344', background: '#34a85311', cursor: 'pointer', textAlign: 'center' }}>
+                      <div style={{ fontSize: 28, marginBottom: 8 }}>🔍</div>
+                      <div style={{ fontSize: 14, color: '#34a853', fontWeight: 600, marginBottom: 4 }}>智能问答探索</div>
+                      <div style={{ fontSize: 11, color: '#888' }}>AI生成问题，逐个回答后生成专题页</div>
+                    </div>
+                    {!entry.parent_id && (
+                      <div onClick={() => navigate(`/deep/${entry.id}`)}
+                        style={{ width: 200, padding: '16px', borderRadius: 10, border: '1px solid #9c27b044', background: '#9c27b011', cursor: 'pointer', textAlign: 'center' }}>
+                        <div style={{ fontSize: 28, marginBottom: 8 }}>🔬</div>
+                        <div style={{ fontSize: 14, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>深入分析</div>
+                        <div style={{ fontSize: 11, color: '#888' }}>拆解为子主题，逐个深入探索</div>
+                      </div>
+                    )}
                   </div>
-                  <button onClick={() => setTab('explore')}
-                    style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: '#34a853', color: '#fff', cursor: 'pointer', fontSize: 14 }}>
-                    去生成智能问题 →
-                  </button>
                 </>
               )}
             </div>
