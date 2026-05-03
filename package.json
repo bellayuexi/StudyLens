@@ -7,7 +7,10 @@
     "server": "node server/index.js",
     "portal": "cd portal && npx vite --port 3001",
     "dev": "concurrently \"npm run server\" \"npm run portal\"",
-    "setup": "npm install && cd portal && npm install"
+    "setup": "npm install && cd portal && npm install",
+    "test:api": "npx vitest run tests/",
+    "test:portal": "cd portal && npx vitest run",
+    "test": "npm run test:api && npm run test:portal"
   },
   "dependencies": {
     "better-sqlite3": "^11.0.0",
@@ -22,6 +25,8 @@
   },
   "devDependencies": {
     "concurrently": "^9.0.0",
-    "puppeteer": "^24.42.0"
+    "puppeteer": "^24.42.0",
+    "supertest": "^7.2.2",
+    "vitest": "^4.1.5"
   }
 }

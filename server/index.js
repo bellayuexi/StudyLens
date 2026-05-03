@@ -454,4 +454,8 @@ app.post('/api/entries/:id/children', (req, res) => {
   }
 });
 
-app.listen(PORT, () => console.log(`StudyGraph server running on http://localhost:${PORT}`));
+if (require.main === module) {
+  app.listen(PORT, () => console.log(`StudyGraph server running on http://localhost:${PORT}`));
+}
+
+module.exports = app;
