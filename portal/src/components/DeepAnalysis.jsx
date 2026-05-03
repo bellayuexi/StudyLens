@@ -113,12 +113,7 @@ export default function DeepAnalysis() {
     }
     const summaryHtml = parentTopicHTML || '<div style="padding:24px;color:#888">暂无综述</div>';
     const title = parentEntry?.title || '深入分析';
-    const navItems = [`<li><a href="#" onclick="showPage('summary');return false" style="color:#4285f4;text-decoration:none;padding:6px 12px;display:block;border-radius:4px" id="nav-summary">📄 综述</a></li>`]
-      .concat(pages.map((p, i) => `<li><a href="#" onclick="showPage('child-${i}');return false" style="color:#ccc;text-decoration:none;padding:6px 12px;display:block;border-radius:4px" id="nav-child-${i}">${p.title}</a></li>`))
-      .join('\n');
-    const pageFrames = [`<div id="page-summary" class="page-frame">${summaryHtml}</div>`]
-      .concat(pages.map((p, i) => `<div id="page-child-${i}" class="page-frame" style="display:none">${p.html}</div>`))
-      .join('\n');
+    const childNavItems = pages.map((p, i) => `<a href="#" onclick="showPage('child-${i}');return false" class="nav-item child" id="nav-child-${i}"><span class="dot"></span>${p.title}</a>`).join('\n');
     const exportHtml = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -126,39 +121,53 @@ export default function DeepAnalysis() {
 <title>${title} - 深入分析</title>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
-body { background: #0f1117; color: #e0e0e0; font-family: system-ui, -apple-system, sans-serif; display: flex; height: 100vh; overflow: hidden; }
-.sidebar { width: 240px; min-width: 240px; background: #161822; border-right: 1px solid #2a2d35; padding: 16px 8px; overflow-y: auto; }
-.sidebar h2 { font-size: 15px; padding: 8px 12px; margin-bottom: 12px; color: #fff; border-bottom: 1px solid #2a2d35; padding-bottom: 12px; }
-.sidebar ul { list-style: none; }
-.sidebar li { margin-bottom: 2px; }
-.sidebar a:hover, .sidebar a.active { background: #1c1f2e !important; color: #4285f4 !important; }
-.main-content { flex: 1; overflow-y: auto; }
-.page-frame { width: 100%; height: 100%; }
-.page-frame iframe { width: 100%; height: 100%; border: none; }
+body { background: #0f1117; color: #e0e0e0; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+.sidebar { width: 280px; min-width: 280px; background: linear-gradient(180deg, #161822 0%, #12141e 100%); border-right: 1px solid #2a2d3a; display: flex; flex-direction: column; }
+.sidebar-header { padding: 24px 20px 16px; border-bottom: 1px solid #2a2d3a; }
+.sidebar-header h2 { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+.sidebar-header .subtitle { font-size: 11px; color: #666; }
+.sidebar-nav { flex: 1; overflow-y: auto; padding: 12px 10px; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin-bottom: 2px; border-radius: 8px; color: #999; text-decoration: none; font-size: 13px; transition: all 0.15s; cursor: pointer; }
+.nav-item:hover { background: #1e2235; color: #ccc; }
+.nav-item.active { background: #1e2640; color: #64b5f6; font-weight: 600; }
+.nav-item.summary { font-size: 14px; font-weight: 600; padding: 12px 14px; margin-bottom: 8px; border-bottom: 1px solid #2a2d3a; border-radius: 8px 8px 0 0; }
+.nav-item.summary .icon { font-size: 16px; }
+.nav-item.child { padding-left: 28px; font-size: 12.5px; }
+.nav-item.child .dot { width: 6px; height: 6px; border-radius: 50%; background: #444; flex-shrink: 0; transition: background 0.15s; }
+.nav-item.child.active .dot { background: #64b5f6; }
+.nav-item.child:hover .dot { background: #888; }
+.nav-count { font-size: 10px; color: #555; padding: 4px 16px 8px; }
+.main-content { flex: 1; overflow: hidden; background: #0f1117; }
+.main-content iframe { width: 100%; height: 100%; border: none; background: #0f1117; }
 </style>
 </head>
 <body>
 <div class="sidebar">
+<div class="sidebar-header">
 <h2>${title}</h2>
-<ul>${navItems}</ul>
+<div class="subtitle">深入分析 · ${pages.length} 个子专题</div>
+</div>
+<div class="sidebar-nav">
+<a href="#" onclick="showPage('summary');return false" class="nav-item summary active" id="nav-summary"><span class="icon">📄</span>综述</a>
+<div class="nav-count">子专题</div>
+${childNavItems}
+</div>
 </div>
 <div class="main-content">
-${pages.map((p, i) => `<iframe id="frame-child-${i}" style="display:none;width:100%;height:100%;border:none" srcdoc="${p.html.replace(/"/g, '&quot;')}"></iframe>`).join('\n')}
-<iframe id="frame-summary" style="width:100%;height:100%;border:none" srcdoc="${summaryHtml.replace(/"/g, '&quot;')}"></iframe>
+${pages.map((p, i) => `<iframe id="frame-child-${i}" style="display:none" srcdoc="${p.html.replace(/"/g, '&quot;')}"></iframe>`).join('\n')}
+<iframe id="frame-summary" srcdoc="${summaryHtml.replace(/"/g, '&quot;')}"></iframe>
 </div>
 <script>
 var current = 'summary';
 function showPage(id) {
   document.getElementById('frame-' + current).style.display = 'none';
-  document.getElementById('nav-' + current).classList.remove('active');
-  document.getElementById('nav-' + current).style.color = '#ccc';
+  var oldNav = document.getElementById('nav-' + current);
+  oldNav.classList.remove('active');
   document.getElementById('frame-' + id).style.display = 'block';
-  document.getElementById('nav-' + id).classList.add('active');
-  document.getElementById('nav-' + id).style.color = '#4285f4';
+  var newNav = document.getElementById('nav-' + id);
+  newNav.classList.add('active');
   current = id;
 }
-document.getElementById('nav-summary').style.color = '#4285f4';
-document.getElementById('nav-summary').classList.add('active');
 </script>
 </body>
 </html>`;

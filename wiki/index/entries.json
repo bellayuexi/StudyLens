@@ -336,52 +336,32 @@
     "file": "drill\\extended\\历史-宋朝\\宋朝中央官制改革_a9546bd4.md"
   },
   {
-    "id": "ca770c05-3de0-44ae-8b61-f2b5da1962d0",
-    "title": "唐宋官制演变本质",
-    "subject": "历史-中国古代政治制度",
-    "source_type": "qa",
-    "file": "drill\\extended\\历史-中国古代政治制度\\唐宋官制演变本质_ca770c05.md"
-  },
-  {
-    "id": "b7cf0920-43e9-4d20-a28f-77d98d3be94d",
-    "title": "六部职能口诀",
-    "subject": "历史-唐朝",
-    "source_type": "qa",
-    "file": "drill\\extended\\历史-唐朝\\六部职能口诀_b7cf0920.md"
-  },
-  {
     "id": "244dc12d-e080-4a93-bfda-b8c52cd7189b",
-    "title": "青苗法",
-    "subject": "历史-北宋",
     "source_type": "deep-analysis",
     "file": "drill\\core\\历史-北宋\\青苗法_244dc12d.md"
   },
   {
     "id": "d8ede495-f3f4-417d-9b1b-a4932f373609",
-    "title": "募役法（免役法）",
-    "subject": "历史-北宋",
     "source_type": "deep-analysis",
     "file": "drill\\core\\历史-北宋\\募役法（免役法）_d8ede495.md"
   },
   {
     "id": "8a1653d8-7729-4010-8ee2-6ad3d9929294",
-    "title": "方田均税法",
-    "subject": "历史-北宋",
     "source_type": "deep-analysis",
     "file": "drill\\core\\历史-北宋\\方田均税法_8a1653d8.md"
   },
   {
     "id": "c3235e39-b88f-4cfa-94c7-858f775f9931",
-    "title": "保甲法与其他强兵措施",
-    "subject": "历史-北宋",
     "source_type": "deep-analysis",
-    "file": "drill\\core\\历史-北宋\\保甲法与强兵措施_c3235e39.md"
+    "file": "drill\\core\\历史-北宋\\保甲法与强兵措施_c3235e39.md",
+    "title": "将兵法",
+    "subject": "历史-北宋"
   },
   {
     "id": "4923c4f9-bd79-40aa-ba2e-d94a714f413f",
-    "title": "市易法与均输法",
-    "subject": "历史-北宋",
     "source_type": "deep-analysis",
-    "file": "drill\\core\\历史-北宋\\市易法与均输法_4923c4f9.md"
+    "file": "drill\\core\\历史-北宋\\市易法与均输法_4923c4f9.md",
+    "title": "育才措施",
+    "subject": "历史-北宋"
   }
 ]

@@ -8,6 +8,7 @@ coverage/
 portal/coverage/
 portal/dist/
 server.pid
+logs/
 wiki/drill/
 wiki/raw/
 wiki/topics/
