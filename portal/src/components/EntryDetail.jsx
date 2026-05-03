@@ -503,8 +503,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setTopicStatus('根据批注更新中...');
     try {
       const commentText = comments.map(c => c.text).join('\n');
-      const augmentedHistory = [...qaHistory, { question: `请根据以下批注修改专题页面:\n${commentText}`, answer: '' }];
-      const data = await generateTopicPage(entry.id, augmentedHistory);
+      const data = await generateTopicPage(entry.id, qaHistory, topicHTML, `请根据以下批注对现有页面做局部修改，保留原有内容结构和格式，仅针对批注内容进行调整:\n${commentText}`);
       const html = injectTimestamp(data.html || '');
       setTopicHTML(html);
       const saved = await saveTopicPage(entry.id, html, qaHistory, []);
