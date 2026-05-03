@@ -29,6 +29,34 @@ const DEFAULT_PROVIDERS = [
   },
 ];
 
+function extractJSON(text, { isArray = false, repairKeys } = {}) {
+  const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+  const pattern = isArray ? /\[[\s\S]*\]/ : /\{[\s\S]*\}/;
+  const match = cleaned.match(pattern);
+  if (!match) return null;
+  let raw = match[0];
+  try { return JSON.parse(raw); } catch (e1) {
+    raw = raw.replace(/,\s*([\]}])/g, '$1');
+    raw = raw.replace(/(?<=:\s*"[^"]*)\n/g, '\\n');
+    try { return JSON.parse(raw); } catch (e2) {
+      if (repairKeys) {
+        const items = [];
+        const q = '[““”„‟]';
+        const keyPattern = repairKeys.map(k => `${q}${k}${q}\\s*:\\s*${q}([^”“”„‟]+)${q}`).join('\\s*,\\s*');
+        const re = new RegExp(keyPattern, 'g');
+        let m;
+        while ((m = re.exec(raw)) !== null) {
+          const obj = {};
+          repairKeys.forEach((k, i) => { obj[k] = m[i + 1]; });
+          items.push(obj);
+        }
+        if (items.length > 0) return items;
+      }
+      return null;
+    }
+  }
+}
+
 function httpRequest(urlStr, options, body) {
   return new Promise((resolve, reject) => {
     const url = new URL(urlStr);
@@ -95,9 +123,9 @@ ${text}
 Return ONLY valid JSON array, no other text.`;
 
   const result = await callLLM([{ role: 'user', content: prompt }]);
-  const match = result.match(/\[[\s\S]*\]/);
-  if (!match) throw new Error('LLM did not return valid JSON array');
-  return JSON.parse(match[0]);
+  const parsed = extractJSON(result, { isArray: true });
+  if (!parsed) throw new Error('LLM did not return valid JSON array');
+  return parsed;
 }
 
 async function findConnections(newEntry, existingEntries) {
@@ -115,8 +143,7 @@ Only include genuinely related entries. Return empty array [] if none are relate
 Return ONLY valid JSON, no other text.`;
 
   const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 1024 });
-  const match = result.match(/\[[\s\S]*\]/);
-  return match ? JSON.parse(match[0]) : [];
+  return extractJSON(result, { isArray: true }) || [];
 }
 
 async function askQuestion(question, contextEntries = [], history = []) {
@@ -165,17 +192,10 @@ Return ONLY valid JSON, no other text. Do not wrap in code fences.`;
   messages.push({ role: 'user', content: question });
 
   const result = await callLLM(messages, { maxTokens: 4096 });
-  const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '');
-  const match = cleaned.match(/\{[\s\S]*\}/);
-  if (!match) throw new Error('LLM did not return valid JSON');
-  try {
-    return JSON.parse(match[0]);
-  } catch (e) {
-    const fixed = match[0].replace(/(?<=:\s*"[^"]*)\n/g, '\\n');
-    try { return JSON.parse(fixed); } catch {}
-    const ansMatch = match[0].match(/"answer"\s*:\s*"([\s\S]*?)"\s*,\s*"suggestedCards"/);
-    return { answer: ansMatch ? ansMatch[1].replace(/\\n/g, '\n') : result, suggestedCards: [] };
-  }
+  const parsed = extractJSON(result);
+  if (parsed) return parsed;
+  const ansMatch = result.match(/"answer"\s*:\s*"([\s\S]*?)"\s*,\s*"suggestedCards"/);
+  return { answer: ansMatch ? ansMatch[1].replace(/\\n/g, '\n') : result, suggestedCards: [] };
 }
 
 async function restructure(instruction, entries) {
@@ -200,8 +220,7 @@ Only include entries that actually need changes. Return ONLY valid JSON array, n
 If no changes are needed, return [].`;
 
   const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 4096 });
-  const match = result.match(/\[[\s\S]*\]/);
-  return match ? JSON.parse(match[0]) : [];
+  return extractJSON(result, { isArray: true }) || [];
 }
 
 async function buildQAMindMap(question, answer, cards, relatedEntries) {
@@ -264,19 +283,9 @@ Rules:
 - Return ONLY valid JSON, no other text.`;
 
   const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 4096, providers: [DEFAULT_PROVIDERS[0]] });
-  const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-  const match = cleaned.match(/\{[\s\S]*\}/);
-  if (!match) { console.warn('[buildQAMindMap] no JSON found'); return { type: 'tree', title: '', branches: [] }; }
-  let raw = match[0];
-  try { return JSON.parse(raw); } catch (e1) {
-    // Fix common issues: trailing commas, unescaped newlines in strings
-    raw = raw.replace(/,\s*([\]}])/g, '$1');
-    raw = raw.replace(/(?<=:\s*"[^"]*)\n/g, '\\n');
-    try { return JSON.parse(raw); } catch (e2) {
-      console.warn('[buildQAMindMap] parse error after fix:', e2.message, 'raw tail:', raw.slice(-100));
-      return { type: 'tree', title: '', branches: [] };
-    }
-  }
+  const parsed = extractJSON(result);
+  if (!parsed) { console.warn('[buildQAMindMap] no JSON found'); return { type: 'tree', title: '', branches: [] }; }
+  return parsed;
 }
 
 async function generateSmartQuestions(entry, existingQaHistory = []) {
@@ -303,19 +312,9 @@ ${existingSection}
 只返回JSON，不要其他文字。`;
 
   const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 1024 });
-  const stripped = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-  const match = stripped.match(/\[[\s\S]*\]/);
-  if (!match) { console.error('[smartQ] no match in LLM response:', result.slice(0, 200)); return []; }
-  try { return JSON.parse(match[0]); } catch (e1) {
-    // Repair: extract question/category pairs via regex
-    const items = [];
-    const re = /[“"]question[”"]\s*:\s*[“"]([^”"]*(?:[“"][^”"]*)*)[”"]\s*,\s*[“"]category[”"]\s*:\s*[“"]([^”"]*)[”"]/g;
-    let rm;
-    while ((rm = re.exec(match[0])) !== null) items.push({ question: rm[1], category: rm[2] });
-    if (items.length > 0) return items;
-    console.error("[smartQ] parse fail", e1.message);
-    return [];
-  }
+  const parsed = extractJSON(result, { isArray: true, repairKeys: ['question', 'category'] });
+  if (!parsed) { console.error('[smartQ] no match in LLM response:', result.slice(0, 200)); return []; }
+  return parsed;
 }
 
 const TOPIC_LOG_DIR = require('path').join(__dirname, '..', 'logs', 'topic-gen');
@@ -468,17 +467,8 @@ ${qaContext ? '参考学生已探索过的问题，确保子知识点覆盖这�
 只返回JSON，不要其他文字。`;
 
   const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 2048 });
-  const stripped = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-  const match = stripped.match(/\[[\s\S]*\]/);
-  if (!match) return [];
-  try { return JSON.parse(match[0]); } catch (e1) {
-    const items = [];
-    const re = /[“””]title[“””]\s*:\s*[“””]([^”””]+)[“””]\s*,\s*[“””]content[“””]\s*:\s*[“””]([^”””]+)[“””]\s*,\s*[“””]category[“””]\s*:\s*[“””]([^”””]+)[“””]/g;
-    let rm;
-    while ((rm = re.exec(match[0])) !== null) items.push({ title: rm[1], content: rm[2], category: rm[3] });
-    if (items.length > 0) return items;
-    return [];
-  }
+  const parsed = extractJSON(result, { isArray: true, repairKeys: ['title', 'content', 'category'] });
+  return parsed || [];
 }
 
-module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap, generateSmartQuestions, generateTopicHTML, expandEntry };
+module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap, generateSmartQuestions, generateTopicHTML, expandEntry, extractJSON };

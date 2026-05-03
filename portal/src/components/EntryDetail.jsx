@@ -67,6 +67,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     topicHTML, topicPageId, topicVersion, topicVersionCount, topicVersionList,
     qaHistory, includedQaIds, comments, lastUpdated,
     topicStatus, topicDirty, asking, loadingTopic,
+    smartQuestions, selectedQs: [...selectedQs], editMode, tab,
   });
 
   const restoreCache = (cached) => {
@@ -84,8 +85,11 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setLastUpdated(cached.lastUpdated || '');
     setTopicStatus(cached.topicStatus || '');
     setTopicDirty(cached.topicDirty || false);
+    setSmartQuestions(cached.smartQuestions || []);
+    setSelectedQs(new Set(cached.selectedQs || []));
+    setEditMode(cached.editMode || false);
+    setTab(cached.tab || 'topic');
     setViewingVersion(null);
-    setTab('topic');
     setLoadingEntry(false);
   };
 
@@ -136,14 +140,16 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       loadSavedTopicPage();
     }
 
-    // Load cached questions if available, or derive from qa_history
-    const cachedQs = questionsCacheRef.current[entry.id];
-    if (cachedQs) {
-      setSmartQuestions(cachedQs);
-      setSelectedQs(new Set(cachedQs.map(q => q.id)));
-    } else {
-      setSmartQuestions([]);
-      setSelectedQs(new Set());
+    // Load cached questions if available (for non-cache-restored paths)
+    if (!cached) {
+      const cachedQs = questionsCacheRef.current[entry.id];
+      if (cachedQs) {
+        setSmartQuestions(cachedQs);
+        setSelectedQs(new Set(cachedQs.map(q => q.id)));
+      } else {
+        setSmartQuestions([]);
+        setSelectedQs(new Set());
+      }
     }
   }, [entry.id]);
 
@@ -153,7 +159,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     const state = cacheableState();
     entryDataCacheRef.current[entry.id] = state;
     latestStateRef.current = { id: entry.id, state };
-  }, [topicHTML, topicPageId, topicVersion, topicVersionCount, qaHistory, includedQaIds, comments, lastUpdated, topicStatus, topicDirty, asking, loadingTopic]);
+  }, [entry.id, loadingEntry, topicHTML, topicPageId, topicVersion, topicVersionCount, qaHistory, includedQaIds, comments, lastUpdated, topicStatus, topicDirty, asking, loadingTopic, smartQuestions, selectedQs, editMode, tab]);
 
   // Save to cache on unmount
   useEffect(() => {

@@ -526,4 +526,47 @@ describe('EntryDetail Component', () => {
       });
     });
   });
+
+  // ============================
+  // F18: Cache Persistence (Regression: child state loss in DeepAnalysis)
+  // ============================
+  describe('F18: Cache Persistence', () => {
+    it('cacheableState includes smartQuestions, selectedQs, editMode, tab', async () => {
+      const cacheRef = { current: {} };
+      api.getLatestTopicPage.mockResolvedValue({
+        page: {
+          id: 'tp-1', version: 1, html: '<p>Topic</p>',
+          qa_history: [{ question: 'Q1', answer: 'A1' }],
+          comments: [], included_qa_ids: [], created_at: '2026-01-01',
+        },
+      });
+      renderDetail({ sharedCacheRef: cacheRef });
+      await waitFor(() => {
+        const cached = cacheRef.current['entry-1'];
+        expect(cached).toBeDefined();
+        expect(cached).toHaveProperty('smartQuestions');
+        expect(cached).toHaveProperty('selectedQs');
+        expect(cached).toHaveProperty('editMode');
+        expect(cached).toHaveProperty('tab');
+      });
+    });
+
+    it('restores from sharedCacheRef on remount', async () => {
+      const cacheRef = { current: {
+        'entry-1': {
+          topicHTML: '<p>Cached HTML</p>', topicPageId: 'tp-cached', topicVersion: 5,
+          topicVersionCount: 5, topicVersionList: [1, 5],
+          qaHistory: [{ question: 'Cached Q', answer: 'Cached A' }],
+          includedQaIds: [], comments: [], lastUpdated: '2026-01-01',
+          topicStatus: 'v5 已保存', topicDirty: false, asking: false, loadingTopic: false,
+          smartQuestions: [], selectedQs: [], editMode: false, tab: 'topic',
+        }
+      }};
+      renderDetail({ sharedCacheRef: cacheRef });
+      await waitFor(() => {
+        expect(screen.getByText(/v5 已保存/)).toBeInTheDocument();
+      });
+      expect(api.getLatestTopicPage).not.toHaveBeenCalled();
+    });
+  });
 });
