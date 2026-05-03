@@ -868,6 +868,13 @@ document.addEventListener('mousedown', function(e) {
                       {loadingTopic ? '更新中...' : `更新专题页 (+${newQaCount}个新回答)`}
                     </button>
                   )}
+                  {!topicHTML && (
+                    <button onClick={handleGenerateTopic} disabled={loadingTopic}
+                      style={{ padding: '4px 12px', borderRadius: 6, border: 'none', fontSize: 12,
+                        background: '#34a85333', color: '#34a853', cursor: loadingTopic ? 'wait' : 'pointer' }}>
+                      {loadingTopic ? '生成中...' : '生成专题页'}
+                    </button>
+                  )}
                 </div>
                 {Object.entries(groups).map(([cat, items]) => {
                   const collapsed = collapsedCats.has(cat);
@@ -957,7 +964,22 @@ document.addEventListener('mousedown', function(e) {
                   const unanswered = smartQuestions.filter(q => !qaHistory.some(h => h.question === q.question && h.answer && !h.loading));
                   if (unanswered.length === 0) return (
                     <div style={{ padding: 12, textAlign: 'center', color: '#666', fontSize: 12 }}>
-                      所有问题已回答完毕！点击「重新生成问题」获取新一批问题，或在下方添加自定义问题。
+                      所有问题已回答完毕！
+                      {topicHTML ? (
+                        newQaCount > 0 ? (
+                          <button onClick={handleRefreshTopic} disabled={loadingTopic}
+                            style={{ marginTop: 8, display: 'block', width: '100%', padding: '8px', borderRadius: 6, border: 'none', fontSize: 13,
+                              background: '#9c27b033', color: '#ce93d8', cursor: loadingTopic ? 'wait' : 'pointer' }}>
+                            {loadingTopic ? '更新中...' : `用新回答更新专题页`}
+                          </button>
+                        ) : <span> 点击「重新生成问题」获取新一批问题，或在下方添加自定义问题。</span>
+                      ) : (
+                        <button onClick={handleGenerateTopic} disabled={loadingTopic}
+                          style={{ marginTop: 8, display: 'block', width: '100%', padding: '8px', borderRadius: 6, border: 'none', fontSize: 13,
+                            background: '#34a85333', color: '#34a853', cursor: loadingTopic ? 'wait' : 'pointer' }}>
+                          {loadingTopic ? '生成中...' : '根据回答生成专题页'}
+                        </button>
+                      )}
                     </div>
                   );
                   return unanswered.map(q => (
