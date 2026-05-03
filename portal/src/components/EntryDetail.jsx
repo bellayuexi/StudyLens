@@ -214,6 +214,40 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setTimeout(() => qaRef.current?.scrollTo(0, qaRef.current.scrollHeight), 100);
   };
 
+  const handleRegenerate = async (idx) => {
+    const item = qaHistory[idx];
+    if (!item || item.loading) return;
+    const question = item.question;
+    const qid = item._qid;
+    setQaHistory(prev => {
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], answer: '', loading: true };
+      return updated;
+    });
+    setAsking(true);
+    try {
+      const history = qaHistory.filter((h, i) => i !== idx && !h.loading).map(h => ({ question: h.question, answer: h.answer }));
+      const data = await askEntryQuestion(entry.id, question, history);
+      setQaHistory(prev => {
+        const updated = [...prev];
+        updated[idx] = { question, answer: data.answer, cards: data.suggestedCards || [], loading: false, _qid: qid };
+        if (topicPageId) {
+          const qaToSave = updated.filter(h => !h.loading).map(h => ({ question: h.question, answer: h.answer }));
+          updateTopicPageQaHistory(topicPageId, qaToSave).catch(() => {});
+        }
+        return updated;
+      });
+      setTopicDirty(true);
+    } catch (err) {
+      setQaHistory(prev => {
+        const updated = [...prev];
+        updated[idx] = { question, answer: `错误: ${err.message}`, loading: false, _qid: qid };
+        return updated;
+      });
+    }
+    setAsking(false);
+  };
+
   const handleBatchAsk = async () => {
     const selected = smartQuestions.filter(q => selectedQs.has(q.id));
     if (!selected.length) return;
@@ -753,7 +787,13 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                       </div>
                       {!collapsed && items.map(h => (
                         <div key={h.idx} style={{ marginLeft: 16, marginTop: 6 }}>
-                          <div style={{ fontSize: 13, color: '#4285f4', fontWeight: 500, marginBottom: 3 }}>Q: {h.question}</div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                            <div style={{ fontSize: 13, color: '#4285f4', fontWeight: 500 }}>Q: {h.question}</div>
+                            <span onClick={() => handleRegenerate(h.idx)} title="重新生成答案"
+                              style={{ fontSize: 12, cursor: asking ? 'not-allowed' : 'pointer', color: '#888', padding: '2px 6px', borderRadius: 4, background: '#1c1f2e', opacity: asking ? 0.4 : 1 }}>
+                              🔄
+                            </span>
+                          </div>
                           <div style={{ fontSize: 13, color: '#ccc', background: '#1a1c28', padding: '8px 12px', borderRadius: 6, border: '1px solid #2a2d35' }}>
                             {renderAnswer(h.answer)}
                           </div>
