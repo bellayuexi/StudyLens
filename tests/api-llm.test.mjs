@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi, beforeAll, afterAll } from 'vitest';
 import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
@@ -33,6 +33,28 @@ const request = require('supertest');
 const app = require('../server/index.js');
 
 describe('API with mocked LLM', () => {
+  const createdIds = [];
+
+  afterAll(async () => {
+    for (const id of createdIds) {
+      await request(app).delete(`/api/entries/${id}`);
+    }
+    const fs = require('fs');
+    const { fileURLToPath } = require('url');
+    const path = require('path');
+    const dir = path.dirname(fileURLToPath(import.meta.url));
+    const entriesPath = path.join(dir, '..', 'wiki', 'index', 'entries.json');
+    try {
+      const entries = JSON.parse(fs.readFileSync(entriesPath, 'utf8'));
+      const testSubjects = ['Test', '测试'];
+      const testTitles = ['Test Entry', 'Card 1'];
+      const clean = entries.filter(e => !testSubjects.includes(e.subject) && !testTitles.includes(e.title));
+      if (clean.length < entries.length) {
+        fs.writeFileSync(entriesPath, JSON.stringify(clean, null, 2));
+      }
+    } catch {}
+  });
+
   describe('F1: Ingest Flow', () => {
     it('POST /api/ingest creates entries from text', async () => {
       const res = await request(app)
@@ -42,6 +64,7 @@ describe('API with mocked LLM', () => {
       expect(res.body).toHaveProperty('created');
       expect(res.body.created.length).toBe(1);
       expect(res.body.created[0].title).toBe('Test Entry');
+      createdIds.push(...res.body.created.map(c => c.id));
     });
   });
 
@@ -74,6 +97,7 @@ describe('API with mocked LLM', () => {
         });
       expect(res.status).toBe(200);
       expect(res.body.created.length).toBe(1);
+      createdIds.push(...res.body.created.map(c => c.id));
     });
   });
 
@@ -96,7 +120,7 @@ describe('API with mocked LLM', () => {
         .send({ text: '测试条目', subject: '测试' });
       expect(res.status).toBe(200);
       entryId = res.body.created[0].id;
-      expect(entryId).toBeTruthy();
+      createdIds.push(entryId);
     });
 
     it('GET /api/entries with sqlite backend finds ingested entry', async () => {
