@@ -43,7 +43,9 @@ describe('API with mocked LLM', () => {
     const { fileURLToPath } = require('url');
     const path = require('path');
     const dir = path.dirname(fileURLToPath(import.meta.url));
-    const entriesPath = path.join(dir, '..', 'wiki', 'index', 'entries.json');
+    const wikiBase = path.join(dir, '..', 'wiki');
+    // Clean wiki index entries
+    const entriesPath = path.join(wikiBase, 'index', 'entries.json');
     try {
       const entries = JSON.parse(fs.readFileSync(entriesPath, 'utf8'));
       const testSubjects = ['Test', '测试'];
@@ -53,6 +55,11 @@ describe('API with mocked LLM', () => {
         fs.writeFileSync(entriesPath, JSON.stringify(clean, null, 2));
       }
     } catch {}
+    // Clean wiki drill test directories
+    for (const d of ['wiki/drill/core/test', 'wiki/drill/core/测试', 'wiki/drill/extended/Test']) {
+      const p = path.join(dir, '..', d);
+      if (fs.existsSync(p)) fs.rmSync(p, { recursive: true });
+    }
   });
 
   describe('F1: Ingest Flow', () => {
