@@ -327,10 +327,10 @@ async function generateTopicHTML(entry, relatedEntries = [], qaHistory = [], exi
     categories[cat].push(h);
   });
   const qaContext = Object.entries(categories).map(([cat, items]) =>
-    `【${cat}类问题】\n` + items.map(h => `Q: ${h.question}\nA: ${h.answer}`).join('\n\n')
+    `【${cat}类问题】\n` + items.map(h => `Q: ${h.question}\nA: ${(h.answer || '').slice(0, 800)}`).join('\n\n')
   ).join('\n\n---\n\n');
   const isUpdate = !!existingHTML;
-  const existingText = isUpdate ? existingHTML.replace(/<[^>]+>/g, ' ').slice(0, 3000) : '';
+  const existingText = isUpdate ? existingHTML.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 5000) : '';
 
   const prompt = `你是一个教育内容设计师。基于以下知识点和相关资料，${isUpdate ? '更新并扩充' : '生成'}一个美观的HTML专题页面。
 
@@ -357,13 +357,13 @@ ${requirements ? `10. 【用户特别要求】${requirements}` : ''}
 
 只返回HTML代码，不要包裹在代码块中。`;
 
-  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 8192 });
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 16384 });
   let html = result.replace(/```html\s*/g, '').replace(/```\s*/g, '').trim();
   if (!html.includes('<html') && !html.includes('<!DOCTYPE')) {
     html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="background:#0f1117;color:#e0e0e0;font-family:system-ui;padding:24px">${html}</body></html>`;
   }
   if (html.replace(/<[^>]*>/g, '').trim().length < 50) {
-    const retry = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 8192 });
+    const retry = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 16384 });
     let retryHtml = retry.replace(/```html\s*/g, '').replace(/```\s*/g, '').trim();
     if (!retryHtml.includes('<html') && !retryHtml.includes('<!DOCTYPE')) {
       retryHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="background:#0f1117;color:#e0e0e0;font-family:system-ui;padding:24px">${retryHtml}</body></html>`;
