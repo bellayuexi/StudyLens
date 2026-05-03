@@ -324,12 +324,17 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setTopicStatus('正在生成...');
     try {
       const data = await generateTopicPage(genEntryId, qaHistory);
-      if (entryIdRef.current !== genEntryId) {
-        const c = entryDataCacheRef.current[genEntryId];
-        if (c) { c.loadingTopic = false; c.topicHTML = html; c.topicStatus = '已生成（后台完成）'; }
+      if (!data.html || data.html.replace(/<[^>]*>/g, '').trim().length < 50) {
+        if (entryIdRef.current === genEntryId) setTopicStatus('生成内容为空，请重试');
+        setLoadingTopic(false);
         return;
       }
-      const html = injectTimestamp(data.html || '');
+      if (entryIdRef.current !== genEntryId) {
+        const c = entryDataCacheRef.current[genEntryId];
+        if (c) { c.loadingTopic = false; c.topicHTML = data.html; c.topicStatus = '已生成（后台完成）'; }
+        return;
+      }
+      const html = injectTimestamp(data.html);
       const qaIds = qaHistory.filter(h => h.answer && !h.loading).map((h, i) => h._qid || `qa_${i}`);
       setTopicHTML(html);
       setTab('topic');
@@ -370,7 +375,12 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setTopicStatus('正在更新...');
     try {
       const data = await generateTopicPage(genEntryId, qaHistory, topicHTML);
-      const html = injectTimestamp(data.html || '');
+      if (!data.html || data.html.replace(/<[^>]*>/g, '').trim().length < 50) {
+        if (entryIdRef.current === genEntryId) setTopicStatus('生成内容为空，请重试');
+        setLoadingTopic(false);
+        return;
+      }
+      const html = injectTimestamp(data.html);
       const qaIds = qaHistory.filter(h => h.answer && !h.loading).map((h, i) => h._qid || `qa_${i}`);
       if (entryIdRef.current !== genEntryId) {
         const c = entryDataCacheRef.current[genEntryId];

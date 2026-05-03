@@ -361,6 +361,16 @@ ${isUpdate ? `当前专题页内容（需要在此基础上扩充和完善）:\n
   if (!html.includes('<html') && !html.includes('<!DOCTYPE')) {
     html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="background:#0f1117;color:#e0e0e0;font-family:system-ui;padding:24px">${html}</body></html>`;
   }
+  if (html.replace(/<[^>]*>/g, '').trim().length < 50) {
+    const retry = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 8192 });
+    let retryHtml = retry.replace(/```html\s*/g, '').replace(/```\s*/g, '').trim();
+    if (!retryHtml.includes('<html') && !retryHtml.includes('<!DOCTYPE')) {
+      retryHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="background:#0f1117;color:#e0e0e0;font-family:system-ui;padding:24px">${retryHtml}</body></html>`;
+    }
+    if (retryHtml.replace(/<[^>]*>/g, '').trim().length > html.replace(/<[^>]*>/g, '').trim().length) {
+      html = retryHtml;
+    }
+  }
   return html;
 }
 
