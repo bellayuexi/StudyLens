@@ -126,8 +126,14 @@ export async function getTopicPages(entryId) {
 }
 
 export async function getTopicPageByVersion(entryId, version) {
-  const data = await getTopicPages(entryId);
-  return (data.pages || []).find(p => p.version === version) || null;
+  const res = await fetch(`${API}/api/entries/${entryId}/topic-page/version/${version}`);
+  const data = await res.json();
+  return data.page || null;
+}
+
+export async function deleteTopicPageVersion(entryId, version) {
+  const res = await fetch(`${API}/api/entries/${entryId}/topic-page/${version}`, { method: 'DELETE' });
+  return res.json();
 }
 
 export async function getLatestTopicPage(entryId) {

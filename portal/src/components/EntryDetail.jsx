@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { deleteEntry, updateEntry, generateSmartQuestions, askEntryQuestion, generateTopicPage, saveTopicPage, getLatestTopicPage, getTopicPages, getTopicPageByVersion, updateTopicPageComments, updateTopicPageQaHistory } from '../lib/api.js';
+import { deleteEntry, updateEntry, generateSmartQuestions, askEntryQuestion, generateTopicPage, saveTopicPage, getLatestTopicPage, getTopicPages, getTopicPageByVersion, updateTopicPageComments, updateTopicPageQaHistory, deleteTopicPageVersion } from '../lib/api.js';
 
 const QUESTION_COLORS = { '概念': '#4285f4', '原因': '#ea4335', '影响': '#34a853', '对比': '#fbbc05', '思考': '#9c27b0', '自定义': '#ff6d00' };
 
@@ -29,6 +29,8 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const [topicVersion, setTopicVersion] = useState(0);
   const [topicVersionCount, setTopicVersionCount] = useState(0);
   const [viewingVersion, setViewingVersion] = useState(null);
+  const [mergeMode, setMergeMode] = useState(false);
+  const [mergeSelection, setMergeSelection] = useState([]);
   const [loadingTopic, setLoadingTopic] = useState(false);
   const [topicStatus, setTopicStatus] = useState('');
   const [topicDirty, setTopicDirty] = useState(false);
@@ -472,6 +474,53 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     } catch (e) { console.error(e); showError('加载版本失败'); }
   };
 
+  const handleDeleteVersion = async (v) => {
+    if (v === topicVersion && !viewingVersion) return;
+    try {
+      await deleteTopicPageVersion(entry.id, v);
+      const newCount = topicVersionCount - 1;
+      setTopicVersionCount(newCount);
+      if (viewingVersion === v) {
+        setViewingVersion(null);
+        loadSavedTopicPage();
+      }
+      if (v === topicVersion) {
+        loadSavedTopicPage();
+      }
+      setTopicStatus(`v${v} 已删除`);
+    } catch (e) { showError('删除失败'); }
+  };
+
+  const handleMergeVersions = async (v1, v2) => {
+    try {
+      const page1 = await getTopicPageByVersion(entry.id, v1);
+      const page2 = await getTopicPageByVersion(entry.id, v2);
+      if (!page1 || !page2) { showError('版本加载失败'); return; }
+      setLoadingTopic(true);
+      setTopicStatus(`合并 v${v1} 和 v${v2} 中...`);
+      const mergedQa = [...(page1.qa_history || [])];
+      (page2.qa_history || []).forEach(qa => {
+        if (!mergedQa.some(q => q.question === qa.question)) mergedQa.push(qa);
+      });
+      const data = await generateTopicPage(entry.id, mergedQa, page1.html, `请合并以下两个版本的专题页内容。版本1是基础，版本2有补充内容需要融入。保留两个版本中所有有价值的内容。\n\n版本2核心内容:\n${page2.html.replace(/<[^>]*>/g, ' ').slice(0, 3000)}`);
+      const html = data.html || '';
+      if (html.replace(/<[^>]*>/g, '').trim().length < 50) {
+        setTopicStatus('合并生成内容为空，请重试');
+        setLoadingTopic(false);
+        return;
+      }
+      setTopicHTML(html);
+      const saved = await saveTopicPage(entry.id, html, mergedQa, []);
+      setTopicPageId(saved.id);
+      setTopicVersion(saved.version);
+      setTopicVersionCount(saved.version);
+      setLastUpdated(saved.created_at);
+      setViewingVersion(null);
+      setTopicStatus(`v${saved.version} 已保存（合并自 v${v1}+v${v2}）`);
+      setLoadingTopic(false);
+    } catch (e) { showError('合并失败'); setLoadingTopic(false); }
+  };
+
   const addComment = () => {
     if (!newComment.trim()) return;
     const updated = [...comments, { id: Date.now(), text: newComment.trim(), created: new Date().toISOString() }];
@@ -664,13 +713,35 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
               {topicVersionCount > 1 && (
                 <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                   {Array.from({ length: topicVersionCount }, (_, i) => i + 1).map(v => (
-                    <button key={v} onClick={() => viewVersion(v)}
-                      style={{ padding: '1px 6px', borderRadius: 3, border: 'none', cursor: 'pointer', fontSize: 10,
-                        background: (viewingVersion === v || (!viewingVersion && v === topicVersion)) ? '#4285f4' : '#1c1f2e',
-                        color: (viewingVersion === v || (!viewingVersion && v === topicVersion)) ? '#fff' : '#666' }}>
+                    <button key={v} onClick={() => mergeMode ? (() => {
+                      const sel = mergeSelection.includes(v) ? mergeSelection.filter(x => x !== v) : [...mergeSelection, v].slice(-2);
+                      setMergeSelection(sel);
+                    })() : viewVersion(v)}
+                      style={{ padding: '1px 6px', borderRadius: 3, border: mergeMode && mergeSelection.includes(v) ? '1px solid #fbbc05' : 'none', cursor: 'pointer', fontSize: 10,
+                        background: mergeMode ? (mergeSelection.includes(v) ? '#fbbc0533' : '#1c1f2e') : (viewingVersion === v || (!viewingVersion && v === topicVersion)) ? '#4285f4' : '#1c1f2e',
+                        color: mergeMode ? (mergeSelection.includes(v) ? '#fbbc05' : '#666') : (viewingVersion === v || (!viewingVersion && v === topicVersion)) ? '#fff' : '#666' }}>
                       v{v}
                     </button>
                   ))}
+                  {viewingVersion && !mergeMode && (
+                    <button onClick={() => handleDeleteVersion(viewingVersion)}
+                      style={{ padding: '1px 6px', borderRadius: 3, border: 'none', cursor: 'pointer', fontSize: 10, background: '#ea433533', color: '#ea4335' }}
+                      title={`删除 v${viewingVersion}`}>
+                      ✕
+                    </button>
+                  )}
+                  <button onClick={() => { setMergeMode(!mergeMode); setMergeSelection([]); }}
+                    style={{ padding: '1px 6px', borderRadius: 3, border: 'none', cursor: 'pointer', fontSize: 10,
+                      background: mergeMode ? '#fbbc0533' : '#1c1f2e', color: mergeMode ? '#fbbc05' : '#666' }}>
+                    {mergeMode ? '取消合并' : '合并'}
+                  </button>
+                  {mergeMode && mergeSelection.length === 2 && (
+                    <button onClick={() => { handleMergeVersions(mergeSelection[0], mergeSelection[1]); setMergeMode(false); setMergeSelection([]); }}
+                      disabled={loadingTopic}
+                      style={{ padding: '1px 8px', borderRadius: 3, border: 'none', cursor: 'pointer', fontSize: 10, background: '#34a85333', color: '#34a853' }}>
+                      合并 v{mergeSelection[0]}+v{mergeSelection[1]}
+                    </button>
+                  )}
                 </div>
               )}
             </div>

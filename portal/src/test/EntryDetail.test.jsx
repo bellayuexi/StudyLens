@@ -16,6 +16,7 @@ vi.mock('../lib/api.js', () => ({
   getTopicPageByVersion: vi.fn(),
   updateTopicPageComments: vi.fn(),
   updateTopicPageQaHistory: vi.fn(),
+  deleteTopicPageVersion: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
 import EntryDetail from '../components/EntryDetail.jsx';
@@ -469,6 +470,52 @@ describe('EntryDetail Component', () => {
           expect.stringContaining('Existing topic content'),
           expect.stringContaining('批注')
         );
+      });
+    });
+  });
+
+  // ============================
+  // F17: Version Delete & Merge
+  // ============================
+  describe('F17: Version Delete & Merge', () => {
+    const multiVersionPage = {
+      id: 'tp-1', version: 3, html: '<p>V3 content with enough text for validation</p>',
+      qa_history: [{ question: 'Q1', answer: 'A1' }],
+      comments: [], included_qa_ids: [], created_at: '2026-01-01',
+    };
+
+    it('shows merge button when multiple versions exist', async () => {
+      api.getLatestTopicPage.mockResolvedValue({ page: multiVersionPage });
+      renderDetail();
+      await waitFor(() => {
+        expect(screen.getByText('合并')).toBeInTheDocument();
+      });
+    });
+
+    it('shows delete button when viewing old version', async () => {
+      api.getLatestTopicPage.mockResolvedValue({ page: multiVersionPage });
+      api.getTopicPageByVersion.mockResolvedValue({
+        ...multiVersionPage, version: 1, html: '<p>V1 content</p>',
+      });
+      renderDetail();
+      await waitFor(() => {
+        expect(screen.getByText('v1')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('v1'));
+      await waitFor(() => {
+        expect(screen.getByTitle(/删除 v1/)).toBeInTheDocument();
+      });
+    });
+
+    it('enters merge mode and shows selection UI', async () => {
+      api.getLatestTopicPage.mockResolvedValue({ page: multiVersionPage });
+      renderDetail();
+      await waitFor(() => {
+        expect(screen.getByText('合并')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('合并'));
+      await waitFor(() => {
+        expect(screen.getByText('取消合并')).toBeInTheDocument();
       });
     });
   });

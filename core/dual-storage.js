@@ -84,4 +84,12 @@ function getChildren(parentId) {
   return wikiStorage.getChildren(parentId);
 }
 
-module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory, getChildren };
+function deleteTopicPageVersion(entryId, version) {
+  return wikiStorage.deleteTopicPageVersion(entryId, version);
+}
+
+function getTopicPageByVersion(entryId, version) {
+  return wikiStorage.getTopicPageByVersion(entryId, version);
+}
+
+module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory, getChildren, deleteTopicPageVersion, getTopicPageByVersion };

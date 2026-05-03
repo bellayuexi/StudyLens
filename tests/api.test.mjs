@@ -125,6 +125,38 @@ describe('StudyGraph API', () => {
   });
 
   // ============================
+  // F2b: Topic Page Version Delete & Get
+  // ============================
+  describe('F2b: Topic Page Version Management', () => {
+    it('DELETE /api/entries/:id/topic-page/:version returns ok', async () => {
+      const res = await request(app).delete('/api/entries/test-del-id/topic-page/999');
+      expect(res.status).toBe(200);
+    });
+
+    it('DELETE /api/entries/:id/topic-page/invalid returns 400', async () => {
+      const res = await request(app).delete('/api/entries/test-id/topic-page/abc');
+      expect(res.status).toBe(400);
+    });
+
+    it('GET /api/entries/:id/topic-page/version/:version returns page or null', async () => {
+      const res = await request(app).get('/api/entries/nonexistent/topic-page/version/1');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('page');
+    });
+
+    it('save then delete a version', async () => {
+      await request(app)
+        .post('/api/entries/test-ver-del/topic-page/save')
+        .send({ html: '<p>Delete me</p>' });
+      const delRes = await request(app).delete('/api/entries/test-ver-del/topic-page/1');
+      expect(delRes.status).toBe(200);
+      expect(delRes.body.ok).toBe(true);
+      const getRes = await request(app).get('/api/entries/test-ver-del/topic-page/version/1');
+      expect(getRes.body.page).toBeFalsy();
+    });
+  });
+
+  // ============================
   // F3: Ingest
   // ============================
   describe('F3: Ingest API', () => {

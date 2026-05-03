@@ -397,6 +397,29 @@ app.put('/api/topic-pages/:pageId/qa-history', (req, res) => {
   }
 });
 
+// Delete a specific topic page version
+app.delete('/api/entries/:id/topic-page/:version', (req, res) => {
+  try {
+    const version = parseInt(req.params.version, 10);
+    if (!version) return res.status(400).json({ error: 'invalid version' });
+    const ok = storage.deleteTopicPageVersion(req.params.id, version);
+    res.json({ ok });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get a specific topic page version
+app.get('/api/entries/:id/topic-page/version/:version', (req, res) => {
+  try {
+    const version = parseInt(req.params.version, 10);
+    const page = storage.getTopicPageByVersion(req.params.id, version);
+    res.json({ page });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get children of an entry (for deep analysis)
 app.get('/api/entries/:id/children', (req, res) => {
   try {

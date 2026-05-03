@@ -86,9 +86,14 @@ export default function DeepAnalysis() {
         category: c.tags?.find(t => Object.keys(CATEGORY_COLORS).some(k => t.includes(k))) || '子主题',
       }));
       const data = await generateTopicPage(entryId, childQa, parentTopicHTML);
+      const rawHtml = data.html || '';
+      if (rawHtml.replace(/<[^>]*>/g, '').trim().length < 50) {
+        setUpdatingSummary(false);
+        return;
+      }
       const ts = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
       const badge = `<div style="text-align:right;padding:8px 16px;font-size:11px;color:#666;border-bottom:1px solid #333;">综述更新: ${ts}</div>`;
-      const html = (data.html || '').replace(/<body[^>]*>/, (m) => m + badge) || badge + (data.html || '');
+      const html = rawHtml.replace(/<body[^>]*>/, (m) => m + badge) || badge + rawHtml;
       setParentTopicHTML(html);
       const saved = await saveTopicPage(entryId, html, childQa);
       setParentTopicVersion(saved.version);

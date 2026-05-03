@@ -336,8 +336,21 @@ function updateTopicPageQaHistory(pageId, qaHistory) {
   updateTopicPageField(pageId, 'qa_history', qaHistory);
 }
 
+function deleteTopicPageVersion(entryId, version) {
+  const dir = path.join(TOPICS_DIR, entryId.slice(0, 8));
+  const filePath = path.join(dir, `v${version}.md`);
+  if (!fs.existsSync(filePath)) return false;
+  fs.unlinkSync(filePath);
+  return true;
+}
+
+function getTopicPageByVersion(entryId, version) {
+  const pages = getTopicPages(entryId);
+  return pages.find(p => p.version === version) || null;
+}
+
 function getChildren(parentId) {
   return getAllEntries().filter(e => e.parent_id === parentId);
 }
 
-module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory, getChildren };
+module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory, getChildren, deleteTopicPageVersion, getTopicPageByVersion };
