@@ -318,32 +318,75 @@ ${existingSection}
   }
 }
 
-async function generateTopicHTML(entry, relatedEntries = [], qaHistory = [], existingHTML = '', requirements = '') {
+const TOPIC_LOG_DIR = require('path').join(__dirname, '..', 'logs', 'topic-gen');
+require('fs').mkdirSync(TOPIC_LOG_DIR, { recursive: true });
+
+function logTopicGen(label, data) {
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const logPath = require('path').join(TOPIC_LOG_DIR, `${ts}_${label}.json`);
+  require('fs').writeFileSync(logPath, JSON.stringify(data, null, 2), 'utf-8');
+  console.log(`[topic-gen] ${label}: prompt=${data.promptLength} chars, qaContext=${data.qaContextLength} chars, existingText=${data.existingTextLength} chars, result=${data.resultLength} chars`);
+}
+
+async function generateTopicHTML(entry, relatedEntries = [], qaHistory = [], existingHTML = '', requirements = '', mode = '') {
   const related = relatedEntries.map(e => `【${e.title}】${e.content.slice(0, 100)}`).join('\n');
-  const categories = {};
-  qaHistory.filter(h => h.answer).forEach(h => {
-    const cat = h.category || '其他';
-    if (!categories[cat]) categories[cat] = [];
-    categories[cat].push(h);
-  });
-  const qaContext = Object.entries(categories).map(([cat, items]) =>
-    `【${cat}类问题】\n` + items.map(h => `Q: ${h.question}\nA: ${(h.answer || '').slice(0, 800)}`).join('\n\n')
-  ).join('\n\n---\n\n');
-  const isUpdate = !!existingHTML;
+
+  // Mode-based prompt construction:
+  // 'annotation' - existing HTML + annotation text only, no QA
+  // 'merge' - existing HTML + merge instructions, no QA
+  // 'incremental' - existing HTML + only new QA items
+  // 'regenerate' - ignore existing HTML, fresh generation with QA
+  // '' (default) - legacy behavior: all QA + existing HTML
+
+  const skipQA = mode === 'annotation' || mode === 'merge';
+  const skipExisting = mode === 'regenerate';
+
+  let qaContext = '';
+  if (!skipQA && qaHistory.length > 0) {
+    const categories = {};
+    qaHistory.filter(h => h.answer).forEach(h => {
+      const cat = h.category || '其他';
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(h);
+    });
+    qaContext = Object.entries(categories).map(([cat, items]) =>
+      `【${cat}类问题】\n` + items.map(h => `Q: ${h.question}\nA: ${(h.answer || '').slice(0, 800)}`).join('\n\n')
+    ).join('\n\n---\n\n');
+  }
+
+  const isUpdate = !skipExisting && !!existingHTML;
   const existingText = isUpdate ? existingHTML.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').slice(0, 5000) : '';
 
-  const prompt = `你是一个教育内容设计师。基于以下知识点和相关资料，${isUpdate ? '更新并扩充' : '生成'}一个美观的HTML专题页面。
+  let taskDescription, contentSection, requirementsList;
 
-主题知识点:
-标题: ${entry.title}
-学科: ${entry.subject}
-内容: ${entry.content}
-
-${related ? `相关知识点:\n${related}\n` : ''}
-${qaContext ? `=== 核心问答内容（必须全部融入专题页） ===\n${qaContext}\n` : ''}
-${isUpdate ? `当前专题页内容（需要在此基础上扩充和完善）:\n${existingText}\n请在现有内容的基础上扩充，保留原有结构，将新的问答内容融入对应章节。` : ''}
-
-要求：
+  if (mode === 'annotation') {
+    const annotationHTML = existingHTML.slice(0, 15000);
+    taskDescription = '根据用户批注对现有专题页面做局部修改';
+    contentSection = `当前专题页完整HTML（必须在此基础上做最小化修改）:\n${annotationHTML}\n`;
+    requirementsList = `要求：
+1. 【最重要】仅根据用户批注做最小化局部修改，严格保留原有的所有内容、章节结构、CSS样式、颜色、强调效果
+2. 直接输出修改后的完整HTML页面，保持原有的内联CSS和所有样式不变
+3. 不要删除任何批注未提及的内容
+4. 不要改变任何未涉及部分的格式、颜色、渐变、阴影等视觉效果
+5. 只修改批注明确要求修改的部分
+6. 【用户批注】${requirements}`;
+  } else if (mode === 'merge') {
+    taskDescription = '合并多个版本的专题页内容';
+    contentSection = `基础版本内容:\n${existingText}\n`;
+    requirementsList = `要求：
+1. 合并两个版本的内容，保留所有有价值的信息
+2. 生成完整的HTML页面（含内联CSS），适合iframe嵌入
+3. 深色主题（背景 #0f1117，文字 #e0e0e0）
+4. 分章节展示，结构清晰
+5. 中文内容，适合中学生阅读
+6. 页面宽度100%，配色美观，使用渐变和阴影效果
+7. 【合并要求】${requirements}`;
+  } else {
+    taskDescription = `基于以下知识点和相关资料，${isUpdate ? '更新并扩充' : '生成'}一个美观的HTML专题页面`;
+    contentSection = '';
+    if (qaContext) contentSection += `=== 核心问答内容（必须全部融入专题页） ===\n${qaContext}\n`;
+    if (isUpdate) contentSection += `当前专题页内容（需要在此基础上扩充和完善）:\n${existingText}\n请在现有内容的基础上扩充，保留原有结构，将新的问答内容融入对应章节。\n`;
+    requirementsList = `要求：
 1. 生成完整的HTML页面（含内联CSS），适合iframe嵌入
 2. 深色主题（背景 #0f1117，文字 #e0e0e0）
 3. 分章节展示：导语→背景→核心内容→影响/意义→总结
@@ -352,10 +395,31 @@ ${isUpdate ? `当前专题页内容（需要在此基础上扩充和完善）:\n
 6. 使用你自己的知识补充完整内容，不要局限于提供的材料
 7. 页面宽度100%，无需滚动条样式
 8. 配色美观，使用渐变和阴影效果
-9. 【重要】上面的问答内容是学生深入探索的结果，必须将每个问答的核心答案完整融入专题页对应章节中，不可遗漏任何一个问答
-${requirements ? `10. 【用户特别要求】${requirements}` : ''}
+${qaContext ? '9. 【重要】上面的问答内容是学生深入探索的结果，必须将每个问答的核心答案完整融入专题页对应章节中，不可遗漏任何一个问答\n' : ''}${requirements ? `10. 【用户特别要求】${requirements}` : ''}`;
+  }
+
+  const prompt = `你是一个教育内容设计师。${taskDescription}。
+
+主题知识点:
+标题: ${entry.title}
+学科: ${entry.subject}
+内容: ${entry.content}
+
+${related && !skipQA ? `相关知识点:\n${related}\n` : ''}
+${contentSection}
+${requirementsList}
 
 只返回HTML代码，不要包裹在代码块中。`;
+
+  const logData = {
+    entryTitle: entry.title, entrySubject: entry.subject,
+    mode: mode || 'default', isUpdate, requirements: (requirements || '').slice(0, 200),
+    relatedLength: related.length, qaContextLength: qaContext.length,
+    existingTextLength: existingText.length, promptLength: prompt.length,
+    qaCount: qaHistory.filter(h => h.answer).length,
+    existingHTMLLength: existingHTML.length,
+  };
+  console.log(`[topic-gen] START: "${entry.title}" mode=${mode || 'default'} isUpdate=${isUpdate} prompt=${prompt.length} chars`);
 
   const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 16384 });
   let html = result.replace(/```html\s*/g, '').replace(/```\s*/g, '').trim();
@@ -363,6 +427,10 @@ ${requirements ? `10. 【用户特别要求】${requirements}` : ''}
     html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="background:#0f1117;color:#e0e0e0;font-family:system-ui;padding:24px">${html}</body></html>`;
   }
   if (html.replace(/<[^>]*>/g, '').trim().length < 50) {
+    console.log(`[topic-gen] RETRY: first result too short (${html.replace(/<[^>]*>/g, '').trim().length} chars text)`);
+    logData.firstResultLength = html.length;
+    logData.firstResultTextLength = html.replace(/<[^>]*>/g, '').trim().length;
+    logData.firstResultPreview = html.slice(0, 500);
     const retry = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 16384 });
     let retryHtml = retry.replace(/```html\s*/g, '').replace(/```\s*/g, '').trim();
     if (!retryHtml.includes('<html') && !retryHtml.includes('<!DOCTYPE')) {
@@ -371,7 +439,12 @@ ${requirements ? `10. 【用户特别要求】${requirements}` : ''}
     if (retryHtml.replace(/<[^>]*>/g, '').trim().length > html.replace(/<[^>]*>/g, '').trim().length) {
       html = retryHtml;
     }
+    logData.retried = true;
+    logData.retryResultTextLength = retryHtml.replace(/<[^>]*>/g, '').trim().length;
   }
+  logData.resultLength = html.length;
+  logData.resultTextLength = html.replace(/<[^>]*>/g, '').trim().length;
+  logTopicGen(isUpdate ? 'update' : 'generate', logData);
   return html;
 }
 

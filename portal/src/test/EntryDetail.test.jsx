@@ -414,23 +414,26 @@ describe('EntryDetail Component', () => {
       await waitFor(() => {
         expect(screen.getByText('智能问答探索')).toBeInTheDocument();
       });
-      expect(screen.getByText('深入分析')).toBeInTheDocument();
+      expect(screen.getByText('手工输入需求')).toBeInTheDocument();
     });
 
     it('shows description for each learning path', async () => {
       renderDetail();
       await waitFor(() => {
         expect(screen.getByText(/AI生成问题/)).toBeInTheDocument();
-        expect(screen.getByText(/拆解为子主题/)).toBeInTheDocument();
+        expect(screen.getByText(/输入你的学习需求/)).toBeInTheDocument();
       });
     });
 
-    it('hides deep analysis choice for child entries', async () => {
-      renderDetail({ entry: { ...mockEntry, parent_id: 'parent-1' } });
+    it('shows custom requirements input when clicking manual option', async () => {
+      renderDetail();
       await waitFor(() => {
-        expect(screen.getByText('智能问答探索')).toBeInTheDocument();
+        expect(screen.getByText('手工输入需求')).toBeInTheDocument();
       });
-      expect(screen.queryByText('深入分析')).toBeNull();
+      fireEvent.click(screen.getByText('手工输入需求'));
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/描述你的学习需求/)).toBeInTheDocument();
+      });
     });
 
     it('clicking explore choice switches to explore tab', async () => {
@@ -466,9 +469,10 @@ describe('EntryDetail Component', () => {
       await waitFor(() => {
         expect(api.generateTopicPage).toHaveBeenCalledWith(
           'entry-1',
-          expect.any(Array),
-          expect.stringContaining('Existing topic content'),
-          expect.stringContaining('批注')
+          [],
+          '<p>Existing topic content</p>',
+          '需要补充更多细节',
+          'annotation'
         );
       });
     });
@@ -486,6 +490,7 @@ describe('EntryDetail Component', () => {
 
     it('shows merge button when multiple versions exist', async () => {
       api.getLatestTopicPage.mockResolvedValue({ page: multiVersionPage });
+      api.getTopicPages.mockResolvedValue({ pages: [{ version: 1 }, { version: 2 }, { version: 3 }] });
       renderDetail();
       await waitFor(() => {
         expect(screen.getByText('合并')).toBeInTheDocument();
@@ -494,6 +499,7 @@ describe('EntryDetail Component', () => {
 
     it('shows delete button when viewing old version', async () => {
       api.getLatestTopicPage.mockResolvedValue({ page: multiVersionPage });
+      api.getTopicPages.mockResolvedValue({ pages: [{ version: 1 }, { version: 2 }, { version: 3 }] });
       api.getTopicPageByVersion.mockResolvedValue({
         ...multiVersionPage, version: 1, html: '<p>V1 content</p>',
       });
@@ -509,6 +515,7 @@ describe('EntryDetail Component', () => {
 
     it('enters merge mode and shows selection UI', async () => {
       api.getLatestTopicPage.mockResolvedValue({ page: multiVersionPage });
+      api.getTopicPages.mockResolvedValue({ pages: [{ version: 1 }, { version: 2 }, { version: 3 }] });
       renderDetail();
       await waitFor(() => {
         expect(screen.getByText('合并')).toBeInTheDocument();

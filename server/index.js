@@ -226,8 +226,8 @@ app.post('/api/ingest/url', async (req, res) => {
 
 // Update entry
 app.put('/api/entries/:id', (req, res) => {
-  const { title, content, subject, tags } = req.body;
-  const entry = storage.updateEntry(req.params.id, { title, content, subject, tags });
+  const { title, content, subject, tags, sort_order } = req.body;
+  const entry = storage.updateEntry(req.params.id, { title, content, subject, tags, sort_order });
   if (!entry) return res.status(404).json({ error: 'Not found' });
   res.json(entry);
 });
@@ -343,7 +343,7 @@ app.post('/api/entries/:id/topic-page', async (req, res) => {
       const eTags = new Set(e.tags || []);
       return (entry.tags || []).some(t => eTags.has(t)) || e.subject === entry.subject;
     }).slice(0, 10);
-    const html = await llm.generateTopicHTML(entry, related, req.body.qaHistory || [], req.body.existingHTML || '', req.body.requirements || '');
+    const html = await llm.generateTopicHTML(entry, related, req.body.qaHistory || [], req.body.existingHTML || '', req.body.requirements || '', req.body.mode || '');
     res.json({ html });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -357,6 +357,7 @@ app.post('/api/entries/:id/topic-page/save', (req, res) => {
   try {
     const { html, qaHistory, comments, includedQaIds } = req.body;
     if (!html) return res.status(400).json({ error: 'html is required' });
+    if (html.replace(/<[^>]*>/g, '').trim().length < 50) return res.status(400).json({ error: 'content too short' });
     const page = storage.saveTopicPage(req.params.id, html, qaHistory || [], comments || [], includedQaIds || []);
     res.json(page);
   } catch (err) {
@@ -476,6 +477,14 @@ app.post('/api/entries/:id/children', (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+const portalDist = path.join(__dirname, '..', 'portal', 'dist');
+if (fs.existsSync(portalDist)) {
+  app.use(express.static(portalDist));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(portalDist, 'index.html'));
+  });
+}
 
 if (require.main === module) {
   app.listen(PORT, () => console.log(`StudyGraph server running on http://localhost:${PORT}`));

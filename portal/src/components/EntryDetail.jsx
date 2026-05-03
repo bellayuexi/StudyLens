@@ -28,12 +28,17 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const [topicPageId, setTopicPageId] = useState(null);
   const [topicVersion, setTopicVersion] = useState(0);
   const [topicVersionCount, setTopicVersionCount] = useState(0);
+  const [topicVersionList, setTopicVersionList] = useState([]);
   const [viewingVersion, setViewingVersion] = useState(null);
   const [mergeMode, setMergeMode] = useState(false);
   const [mergeSelection, setMergeSelection] = useState([]);
+  const [customReqMode, setCustomReqMode] = useState(false);
+  const [customReqText, setCustomReqText] = useState('');
   const [loadingTopic, setLoadingTopic] = useState(false);
   const [topicStatus, setTopicStatus] = useState('');
   const [topicDirty, setTopicDirty] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const iframeRef = useRef(null);
   const [lastUpdated, setLastUpdated] = useState('');
   const [comments, setComments] = useState([]);
   const [commentMode, setCommentMode] = useState(false);
@@ -57,7 +62,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const [loadingEntry, setLoadingEntry] = useState(false);
 
   const cacheableState = () => ({
-    topicHTML, topicPageId, topicVersion, topicVersionCount,
+    topicHTML, topicPageId, topicVersion, topicVersionCount, topicVersionList,
     qaHistory, includedQaIds, comments, lastUpdated,
     topicStatus, topicDirty, asking, loadingTopic,
   });
@@ -70,6 +75,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setTopicPageId(cached.topicPageId || null);
     setTopicVersion(cached.topicVersion || 0);
     setTopicVersionCount(cached.topicVersionCount || 0);
+    setTopicVersionList(cached.topicVersionList || []);
     setQaHistory(cached.qaHistory || []);
     setComments(cached.comments || []);
     setIncludedQaIds(cached.includedQaIds || []);
@@ -115,6 +121,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       setTopicPageId(null);
       setTopicVersion(0);
       setTopicVersionCount(0);
+      setTopicVersionList([]);
       setViewingVersion(null);
       setTopicStatus('');
       setTopicDirty(false);
@@ -162,6 +169,9 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         setTopicStatus(`v${data.page.version} 已保存`);
         setTopicDirty(false);
       }
+      const pagesData = await getTopicPages(currentId);
+      if (entryIdRef.current !== currentId) return;
+      setTopicVersionList((pagesData.pages || []).map(p => p.version).sort((a, b) => a - b));
     } catch (e) { console.error(e); showError('加载专题页失败'); }
     if (entryIdRef.current === currentId) setLoadingEntry(false);
   };
@@ -381,12 +391,13 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         const saved = await saveTopicPage(genEntryId, html, qaHistory, comments, qaIds);
         if (entryIdRef.current !== genEntryId) {
           const c = entryDataCacheRef.current[genEntryId];
-          if (c) { c.loadingTopic = false; c.topicPageId = saved.id; c.topicVersion = saved.version; c.topicVersionCount = saved.version; c.lastUpdated = saved.created_at; c.topicStatus = `v${saved.version} 已保存`; c.topicDirty = false; c.topicHTML = html; }
+          if (c) { c.loadingTopic = false; c.topicPageId = saved.id; c.topicVersion = saved.version; c.topicVersionCount = saved.version; c.topicVersionList = [...(c.topicVersionList || []).filter(v => v !== saved.version), saved.version].sort((a,b)=>a-b); c.lastUpdated = saved.created_at; c.topicStatus = `v${saved.version} 已保存`; c.topicDirty = false; c.topicHTML = html; }
           return;
         }
         setTopicPageId(saved.id);
         setTopicVersion(saved.version);
         setTopicVersionCount(saved.version);
+        setTopicVersionList(prev => [...prev.filter(v => v !== saved.version), saved.version].sort((a,b)=>a-b));
         setLastUpdated(saved.created_at);
         setViewingVersion(null);
         setTopicStatus(`v${saved.version} 已保存`);
@@ -432,12 +443,13 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         const saved = await saveTopicPage(genEntryId, html, qaHistory, comments, qaIds);
         if (entryIdRef.current !== genEntryId) {
           const c = entryDataCacheRef.current[genEntryId];
-          if (c) { c.loadingTopic = false; c.topicPageId = saved.id; c.topicVersion = saved.version; c.topicVersionCount = saved.version; c.lastUpdated = saved.created_at; c.topicStatus = `v${saved.version} 已保存`; c.topicDirty = false; c.topicHTML = html; }
+          if (c) { c.loadingTopic = false; c.topicPageId = saved.id; c.topicVersion = saved.version; c.topicVersionCount = saved.version; c.topicVersionList = [...(c.topicVersionList || []).filter(v => v !== saved.version), saved.version].sort((a,b)=>a-b); c.lastUpdated = saved.created_at; c.topicStatus = `v${saved.version} 已保存`; c.topicDirty = false; c.topicHTML = html; }
           return;
         }
         setTopicPageId(saved.id);
         setTopicVersion(saved.version);
         setTopicVersionCount(saved.version);
+        setTopicVersionList(prev => [...prev.filter(v => v !== saved.version), saved.version].sort((a,b)=>a-b));
         setLastUpdated(saved.created_at);
         setViewingVersion(null);
         setTopicStatus(`v${saved.version} 已保存`);
@@ -475,17 +487,24 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   };
 
   const handleDeleteVersion = async (v) => {
-    if (v === topicVersion && !viewingVersion) return;
     try {
       await deleteTopicPageVersion(entry.id, v);
-      const newCount = topicVersionCount - 1;
-      setTopicVersionCount(newCount);
-      if (viewingVersion === v) {
+      const pagesData = await getTopicPages(entry.id);
+      const versions = (pagesData.pages || []).map(p => p.version).sort((a, b) => a - b);
+      setTopicVersionList(versions);
+      if (versions.length > 0) {
+        const maxV = versions[versions.length - 1];
+        setTopicVersionCount(maxV);
+        if (v === topicVersion || viewingVersion === v) {
+          setViewingVersion(null);
+          loadSavedTopicPage();
+        }
+      } else {
+        setTopicVersionCount(0);
+        setTopicHTML('');
+        setTopicPageId(null);
+        setTopicVersion(0);
         setViewingVersion(null);
-        loadSavedTopicPage();
-      }
-      if (v === topicVersion) {
-        loadSavedTopicPage();
       }
       setTopicStatus(`v${v} 已删除`);
     } catch (e) { showError('删除失败'); }
@@ -502,7 +521,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       (page2.qa_history || []).forEach(qa => {
         if (!mergedQa.some(q => q.question === qa.question)) mergedQa.push(qa);
       });
-      const data = await generateTopicPage(entry.id, mergedQa, page1.html, `请合并以下两个版本的专题页内容。版本1是基础，版本2有补充内容需要融入。保留两个版本中所有有价值的内容。\n\n版本2核心内容:\n${page2.html.replace(/<[^>]*>/g, ' ').slice(0, 3000)}`);
+      const data = await generateTopicPage(entry.id, mergedQa, page1.html, `请合并以下两个版本的专题页内容。版本1是基础，版本2有补充内容需要融入。保留两个版本中所有有价值的内容。\n\n版本2核心内容:\n${page2.html.replace(/<[^>]*>/g, ' ').slice(0, 3000)}`, 'merge');
       const html = data.html || '';
       if (html.replace(/<[^>]*>/g, '').trim().length < 50) {
         setTopicStatus('合并生成内容为空，请重试');
@@ -552,13 +571,20 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setTopicStatus('根据批注更新中...');
     try {
       const commentText = comments.map(c => c.text).join('\n');
-      const data = await generateTopicPage(entry.id, qaHistory, topicHTML, `请根据以下批注对现有页面做局部修改，保留原有内容结构和格式，仅针对批注内容进行调整:\n${commentText}`);
-      const html = injectTimestamp(data.html || '');
+      const data = await generateTopicPage(entry.id, [], topicHTML, commentText, 'annotation');
+      const rawHtml = data.html || '';
+      if (rawHtml.replace(/<[^>]*>/g, '').trim().length < 100) {
+        setTopicStatus('生成内容过短，未保存。请重试');
+        setLoadingTopic(false);
+        return;
+      }
+      const html = injectTimestamp(rawHtml);
       setTopicHTML(html);
       const saved = await saveTopicPage(entry.id, html, qaHistory, []);
       setTopicPageId(saved.id);
       setTopicVersion(saved.version);
       setTopicVersionCount(saved.version);
+      setTopicVersionList(prev => [...prev.filter(v => v !== saved.version), saved.version].sort((a,b)=>a-b));
       setLastUpdated(saved.created_at);
       setViewingVersion(null);
       setComments([]);
@@ -569,6 +595,88 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       showError('应用批注失败');
     }
     setLoadingTopic(false);
+  };
+
+  const toggleEditMode = () => {
+    const next = !editMode;
+    setEditMode(next);
+    if (iframeRef.current) {
+      try {
+        const doc = iframeRef.current.contentDocument || iframeRef.current.contentWindow.document;
+        doc.body.contentEditable = next ? 'true' : 'false';
+        doc.body.style.cursor = next ? 'text' : 'default';
+        doc.body.style.outline = 'none';
+        if (next) {
+          const style = doc.createElement('style');
+          style.id = '_edit_style';
+          style.textContent = `
+            ._del_btn { display:none; position:absolute; top:4px; right:4px; background:#ea4335; color:#fff; border:none; border-radius:4px; padding:2px 8px; font-size:11px; cursor:pointer; z-index:9999; }
+            [data-edit-hover] { position:relative !important; outline: 1px dashed #34a85344 !important; }
+            [data-edit-hover]:hover { outline: 1px dashed #34a853 !important; }
+            [data-edit-hover]:hover > ._del_btn { display:block; }
+          `;
+          doc.head.appendChild(style);
+          doc.querySelectorAll('section, [class*="card"], [class*="section"], [class*="block"], [class*="chapter"], [class*="module"]').forEach(el => {
+            el.setAttribute('data-edit-hover', '');
+            const btn = doc.createElement('button');
+            btn.className = '_del_btn';
+            btn.textContent = '× 删除此区块';
+            btn.onclick = (e) => { e.stopPropagation(); el.remove(); };
+            el.appendChild(btn);
+          });
+          if (doc.querySelectorAll('[data-edit-hover]').length === 0) {
+            doc.body.querySelectorAll(':scope > div').forEach(el => {
+              if (el.textContent.trim().length > 20) {
+                el.setAttribute('data-edit-hover', '');
+                const btn = doc.createElement('button');
+                btn.className = '_del_btn';
+                btn.textContent = '× 删除此区块';
+                btn.onclick = (e) => { e.stopPropagation(); el.remove(); };
+                el.appendChild(btn);
+              }
+            });
+          }
+        } else {
+          const style = doc.getElementById('_edit_style');
+          if (style) style.remove();
+          doc.querySelectorAll('._del_btn').forEach(b => b.remove());
+          doc.querySelectorAll('[data-edit-hover]').forEach(el => el.removeAttribute('data-edit-hover'));
+        }
+      } catch {}
+    }
+  };
+
+  const handleSaveDirectEdit = async () => {
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    try {
+      const doc = iframe.contentDocument || iframe.contentWindow.document;
+      doc.querySelectorAll('._del_btn').forEach(b => b.remove());
+      doc.querySelectorAll('[data-edit-hover]').forEach(el => el.removeAttribute('data-edit-hover'));
+      const editStyle = doc.getElementById('_edit_style');
+      if (editStyle) editStyle.remove();
+      doc.body.contentEditable = 'false';
+      const editedHTML = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
+      const cleanHTML = editedHTML.replace(/<script[\s\S]*?<\/script>/gi, '');
+      if (cleanHTML.replace(/<[^>]*>/g, '').trim().length < 50) {
+        showError('编辑后内容过短，未保存');
+        return;
+      }
+      const html = injectTimestamp(cleanHTML);
+      setTopicHTML(html);
+      const saved = await saveTopicPage(entry.id, html, qaHistory, []);
+      setTopicPageId(saved.id);
+      setTopicVersion(saved.version);
+      setTopicVersionCount(saved.version);
+      setTopicVersionList(prev => [...prev.filter(v => v !== saved.version), saved.version].sort((a, b) => a - b));
+      setLastUpdated(saved.created_at);
+      setViewingVersion(null);
+      setTopicStatus(`v${saved.version} 已保存（手工编辑）`);
+      setTopicDirty(false);
+      setEditMode(false);
+    } catch (err) {
+      showError('保存失败');
+    }
   };
 
   const startFieldEdit = (field) => {
@@ -710,26 +818,26 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             <div style={{ fontSize: 11, color: '#888', display: 'flex', alignItems: 'center', gap: 8 }}>
               <span>{topicStatus || (loadingTopic ? '生成中...' : '未生成')}</span>
               {/* Version browser */}
-              {topicVersionCount > 1 && (
-                <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                  {Array.from({ length: topicVersionCount }, (_, i) => i + 1).map(v => (
-                    <button key={v} onClick={() => mergeMode ? (() => {
-                      const sel = mergeSelection.includes(v) ? mergeSelection.filter(x => x !== v) : [...mergeSelection, v].slice(-2);
-                      setMergeSelection(sel);
-                    })() : viewVersion(v)}
-                      style={{ padding: '1px 6px', borderRadius: 3, border: mergeMode && mergeSelection.includes(v) ? '1px solid #fbbc05' : 'none', cursor: 'pointer', fontSize: 10,
-                        background: mergeMode ? (mergeSelection.includes(v) ? '#fbbc0533' : '#1c1f2e') : (viewingVersion === v || (!viewingVersion && v === topicVersion)) ? '#4285f4' : '#1c1f2e',
-                        color: mergeMode ? (mergeSelection.includes(v) ? '#fbbc05' : '#666') : (viewingVersion === v || (!viewingVersion && v === topicVersion)) ? '#fff' : '#666' }}>
-                      v{v}
-                    </button>
+              {topicVersionList.length > 1 && (
+                <div style={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                  {topicVersionList.map(v => (
+                    <span key={v} style={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                      <button onClick={() => mergeMode ? (() => {
+                        const sel = mergeSelection.includes(v) ? mergeSelection.filter(x => x !== v) : [...mergeSelection, v].slice(-2);
+                        setMergeSelection(sel);
+                      })() : viewVersion(v)}
+                        style={{ padding: '1px 6px', borderRadius: 3, border: mergeMode && mergeSelection.includes(v) ? '1px solid #fbbc05' : 'none', cursor: 'pointer', fontSize: 10,
+                          background: mergeMode ? (mergeSelection.includes(v) ? '#fbbc0533' : '#1c1f2e') : (viewingVersion === v || (!viewingVersion && v === topicVersion)) ? '#4285f4' : '#1c1f2e',
+                          color: mergeMode ? (mergeSelection.includes(v) ? '#fbbc05' : '#666') : (viewingVersion === v || (!viewingVersion && v === topicVersion)) ? '#fff' : '#666' }}>
+                        v{v}
+                      </button>
+                      {!mergeMode && (viewingVersion === v || (!viewingVersion && v === topicVersion)) && topicVersionList.length > 1 && (
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteVersion(v); }}
+                          style={{ padding: '0 3px', borderRadius: 2, border: 'none', cursor: 'pointer', fontSize: 9, background: 'transparent', color: '#ea4335', lineHeight: 1 }}
+                          title={`删除 v${v}`}>✕</button>
+                      )}
+                    </span>
                   ))}
-                  {viewingVersion && !mergeMode && (
-                    <button onClick={() => handleDeleteVersion(viewingVersion)}
-                      style={{ padding: '1px 6px', borderRadius: 3, border: 'none', cursor: 'pointer', fontSize: 10, background: '#ea433533', color: '#ea4335' }}
-                      title={`删除 v${viewingVersion}`}>
-                      ✕
-                    </button>
-                  )}
                   <button onClick={() => { setMergeMode(!mergeMode); setMergeSelection([]); }}
                     style={{ padding: '1px 6px', borderRadius: 3, border: 'none', cursor: 'pointer', fontSize: 10,
                       background: mergeMode ? '#fbbc0533' : '#1c1f2e', color: mergeMode ? '#fbbc05' : '#666' }}>
@@ -774,19 +882,45 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                   📥 导出HTML
                 </button>
               )}
+              {topicHTML && !editMode && (
+                <button onClick={toggleEditMode}
+                  style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: 'pointer',
+                    background: '#1c1f2e', color: '#888' }}>
+                  ✏️ 直接编辑
+                </button>
+              )}
+              {editMode && (
+                <>
+                  <button onClick={handleSaveDirectEdit}
+                    style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: 'pointer',
+                      background: '#34a853', color: '#fff' }}>
+                    💾 保存编辑
+                  </button>
+                  <button onClick={() => { setEditMode(false); }}
+                    style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: 'pointer',
+                      background: '#ea4335', color: '#fff' }}>
+                    取消编辑
+                  </button>
+                </>
+              )}
               <button onClick={topicDirty ? handleRefreshTopic : handleGenerateTopic}
-                disabled={loadingTopic || (!topicDirty && topicVersion > 0)}
+                disabled={loadingTopic}
                 style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11,
-                  cursor: (loadingTopic || (!topicDirty && topicVersion > 0)) ? 'default' : 'pointer',
+                  cursor: loadingTopic ? 'default' : 'pointer',
                   background: loadingTopic ? '#333' : topicDirty ? '#4285f4' : '#1c1f2e',
-                  color: loadingTopic ? '#666' : topicDirty ? '#fff' : '#555',
-                  opacity: (!topicDirty && topicVersion > 0 && !loadingTopic) ? 0.5 : 1 }}>
+                  color: loadingTopic ? '#666' : topicDirty ? '#fff' : '#888',
+                  opacity: loadingTopic ? 0.5 : 1 }}>
                 {loadingTopic ? '更新中...' : topicDirty ? '🔄 用新回答更新' : '🔄 重新生成'}
               </button>
             </div>
           </div>
 
           {/* Viewing old version banner */}
+          {editMode && (
+            <div style={{ padding: '6px 16px', background: '#34a85322', borderBottom: '1px solid #34a85344', fontSize: 12, color: '#34a853', display: 'flex', justifyContent: 'space-between' }}>
+              <span>✏️ 编辑模式 — 直接在页面上点击并修改内容，完成后点击"保存编辑"</span>
+            </div>
+          )}
           {viewingVersion && viewingVersion !== topicVersion && (
             <div style={{ padding: '6px 16px', background: '#fbbc0522', borderBottom: '1px solid #fbbc0544', fontSize: 12, color: '#fbbc05', display: 'flex', justifyContent: 'space-between' }}>
               <span>正在查看历史版本 v{viewingVersion}（最新为 v{topicVersion}）</span>
@@ -856,7 +990,14 @@ document.addEventListener('mouseup', function(e) {
 document.addEventListener('mousedown', function(e) {
   if (e.target.id !== '_ann_btn') { var old = document.getElementById('_ann_btn'); if (old) old.remove(); }
 });
-<\/script>`} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="知识专题" />
+<\/script>`} ref={iframeRef} onLoad={() => {
+              if (editMode && iframeRef.current) {
+                const doc = iframeRef.current.contentDocument || iframeRef.current.contentWindow.document;
+                doc.body.contentEditable = 'true';
+                doc.body.style.outline = 'none';
+                doc.body.style.cursor = 'text';
+              }
+            }} style={{ flex: 1, border: editMode ? '2px solid #34a853' : 'none', background: '#0f1117' }} title="知识专题" />
           ) : (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#666' }}>
               <div style={{ fontSize: 48 }}>📄</div>
@@ -873,7 +1014,7 @@ document.addEventListener('mousedown', function(e) {
                 </>
               ) : (
                 <>
-                  <div style={{ fontSize: 14, marginBottom: 4 }}>选择一种方式开始学习</div>
+                  <div style={{ fontSize: 14, marginBottom: 4 }}>选择一种方式来定制你的专题页</div>
                   <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
                     <div onClick={() => setTab('explore')}
                       style={{ width: 200, padding: '16px', borderRadius: 10, border: '1px solid #34a85344', background: '#34a85311', cursor: 'pointer', textAlign: 'center' }}>
@@ -881,15 +1022,43 @@ document.addEventListener('mousedown', function(e) {
                       <div style={{ fontSize: 14, color: '#34a853', fontWeight: 600, marginBottom: 4 }}>智能问答探索</div>
                       <div style={{ fontSize: 11, color: '#888' }}>AI生成问题，逐个回答后生成专题页</div>
                     </div>
-                    {!entry.parent_id && (
-                      <div onClick={() => navigate(`/deep/${entry.id}`)}
-                        style={{ width: 200, padding: '16px', borderRadius: 10, border: '1px solid #9c27b044', background: '#9c27b011', cursor: 'pointer', textAlign: 'center' }}>
-                        <div style={{ fontSize: 28, marginBottom: 8 }}>🔬</div>
-                        <div style={{ fontSize: 14, color: '#ce93d8', fontWeight: 600, marginBottom: 4 }}>深入分析</div>
-                        <div style={{ fontSize: 11, color: '#888' }}>拆解为子主题，逐个深入探索</div>
-                      </div>
-                    )}
+                    <div onClick={() => setCustomReqMode(true)}
+                      style={{ width: 200, padding: '16px', borderRadius: 10, border: '1px solid #fbbc0544', background: '#fbbc0511', cursor: 'pointer', textAlign: 'center' }}>
+                      <div style={{ fontSize: 28, marginBottom: 8 }}>✏️</div>
+                      <div style={{ fontSize: 14, color: '#fbbc05', fontWeight: 600, marginBottom: 4 }}>手工输入需求</div>
+                      <div style={{ fontSize: 11, color: '#888' }}>输入你的学习需求，直接生成专题页</div>
+                    </div>
                   </div>
+                  {customReqMode && (
+                    <div style={{ marginTop: 16, width: '100%', maxWidth: 420 }}>
+                      <textarea value={customReqText} onChange={e => setCustomReqText(e.target.value)}
+                        placeholder="描述你的学习需求，例如：我想重点了解王安石变法的背景和各项具体政策的内容..."
+                        style={{ ...styles.input, minHeight: 80, resize: 'vertical', marginBottom: 8 }} />
+                      <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+                        <button onClick={() => { setCustomReqMode(false); setCustomReqText(''); }}
+                          style={styles.btnCancel}>取消</button>
+                        <button disabled={!customReqText.trim() || loadingTopic} onClick={async () => {
+                          setLoadingTopic(true); setTopicStatus('生成中...');
+                          try {
+                            const data = await generateTopicPage(entry.id, [], '', customReqText.trim());
+                            if (data.html && data.html.replace(/<[^>]*>/g, '').trim().length >= 50) {
+                              setTopicHTML(data.html);
+                              const saved = await saveTopicPage(entry.id, data.html, [], [], []);
+                              setTopicPageId(saved.id); setTopicVersion(saved.version);
+                              setTopicVersionCount(saved.version);
+                              setTopicVersionList(prev => [...prev, saved.version]);
+                              setLastUpdated(saved.created_at);
+                              setTopicStatus(`v${saved.version} 已保存`); setTopicDirty(false);
+                              setCustomReqMode(false); setCustomReqText('');
+                            } else {
+                              setTopicStatus('生成内容为空，请重试');
+                            }
+                          } catch (e) { showError('生成失败'); }
+                          setLoadingTopic(false);
+                        }} style={styles.btnPrimary}>{loadingTopic ? '生成中...' : '生成专题页'}</button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
@@ -984,6 +1153,15 @@ document.addEventListener('mousedown', function(e) {
                               <span onClick={() => handleRegenerate(h.idx)} title="AI重新生成答案"
                                 style={{ fontSize: 12, cursor: asking ? 'not-allowed' : 'pointer', color: '#888', padding: '2px 6px', borderRadius: 4, background: '#1c1f2e', opacity: asking ? 0.4 : 1 }}>
                                 🔄
+                              </span>
+                              <span onClick={() => {
+                                const updated = qaHistory.filter((_, i) => i !== h.idx);
+                                setQaHistory(updated);
+                                setTopicDirty(true);
+                                if (topicPageId) updateTopicPageQaHistory(topicPageId, updated);
+                              }} title="删除此问答"
+                                style={{ fontSize: 12, cursor: 'pointer', color: '#ea4335', padding: '2px 6px', borderRadius: 4, background: '#1c1f2e' }}>
+                                🗑
                               </span>
                             </div>
                           </div>

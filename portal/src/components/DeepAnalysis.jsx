@@ -28,6 +28,8 @@ export default function DeepAnalysis() {
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
   const [parentTopicHTML, setParentTopicHTML] = useState('');
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
   const [parentTopicVersion, setParentTopicVersion] = useState(0);
   const [updatingSummary, setUpdatingSummary] = useState(false);
 
@@ -38,7 +40,7 @@ export default function DeepAnalysis() {
       setParentEntry(entry);
     }
     const childRes = await getChildren(entryId);
-    setChildren(childRes.children || []);
+    setChildren((childRes.children || []).sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999)));
     try {
       const topicData = await getLatestTopicPage(entryId);
       if (topicData.page) {
@@ -80,12 +82,10 @@ export default function DeepAnalysis() {
   const handleUpdateSummary = async () => {
     setUpdatingSummary(true);
     try {
-      const childQa = children.map(c => ({
-        question: c.title,
-        answer: c.content,
-        category: c.tags?.find(t => Object.keys(CATEGORY_COLORS).some(k => t.includes(k))) || '子主题',
-      }));
-      const data = await generateTopicPage(entryId, childQa, parentTopicHTML);
+      const childSummaries = children.map(c => `【${c.title}】${c.content}`).join('\n');
+      const requirements = `请根据以下子知识点的摘要，在现有综述的基础上做补充和完善。保持综述的概括性和整体结构不变，只在相关章节中融入新的信息：\n${childSummaries}`;
+      const mode = parentTopicHTML ? 'annotation' : '';
+      const data = await generateTopicPage(entryId, [], parentTopicHTML || '', requirements, mode);
       const rawHtml = data.html || '';
       if (rawHtml.replace(/<[^>]*>/g, '').trim().length < 50) {
         setUpdatingSummary(false);
@@ -95,10 +95,93 @@ export default function DeepAnalysis() {
       const badge = `<div style="text-align:right;padding:8px 16px;font-size:11px;color:#666;border-bottom:1px solid #333;">综述更新: ${ts}</div>`;
       const html = rawHtml.replace(/<body[^>]*>/, (m) => m + badge) || badge + rawHtml;
       setParentTopicHTML(html);
-      const saved = await saveTopicPage(entryId, html, childQa);
+      const saved = await saveTopicPage(entryId, html, []);
       setParentTopicVersion(saved.version);
     } catch (e) { console.error(e); }
     setUpdatingSummary(false);
+  };
+
+  const handleExport = async () => {
+    const pages = [];
+    // Fetch all child topic pages
+    for (const child of children) {
+      try {
+        const res = await getLatestTopicPage(child.id);
+        if (res?.page?.html) pages.push({ title: child.title, html: res.page.html });
+        else pages.push({ title: child.title, html: `<div style="padding:24px;color:#888">暂无专题页</div>` });
+      } catch { pages.push({ title: child.title, html: `<div style="padding:24px;color:#888">加载失败</div>` }); }
+    }
+    const summaryHtml = parentTopicHTML || '<div style="padding:24px;color:#888">暂无综述</div>';
+    const title = parentEntry?.title || '深入分析';
+    const navItems = [`<li><a href="#" onclick="showPage('summary');return false" style="color:#4285f4;text-decoration:none;padding:6px 12px;display:block;border-radius:4px" id="nav-summary">📄 综述</a></li>`]
+      .concat(pages.map((p, i) => `<li><a href="#" onclick="showPage('child-${i}');return false" style="color:#ccc;text-decoration:none;padding:6px 12px;display:block;border-radius:4px" id="nav-child-${i}">${p.title}</a></li>`))
+      .join('\n');
+    const pageFrames = [`<div id="page-summary" class="page-frame">${summaryHtml}</div>`]
+      .concat(pages.map((p, i) => `<div id="page-child-${i}" class="page-frame" style="display:none">${p.html}</div>`))
+      .join('\n');
+    const exportHtml = `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>${title} - 深入分析</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0f1117; color: #e0e0e0; font-family: system-ui, -apple-system, sans-serif; display: flex; height: 100vh; overflow: hidden; }
+.sidebar { width: 240px; min-width: 240px; background: #161822; border-right: 1px solid #2a2d35; padding: 16px 8px; overflow-y: auto; }
+.sidebar h2 { font-size: 15px; padding: 8px 12px; margin-bottom: 12px; color: #fff; border-bottom: 1px solid #2a2d35; padding-bottom: 12px; }
+.sidebar ul { list-style: none; }
+.sidebar li { margin-bottom: 2px; }
+.sidebar a:hover, .sidebar a.active { background: #1c1f2e !important; color: #4285f4 !important; }
+.main-content { flex: 1; overflow-y: auto; }
+.page-frame { width: 100%; height: 100%; }
+.page-frame iframe { width: 100%; height: 100%; border: none; }
+</style>
+</head>
+<body>
+<div class="sidebar">
+<h2>${title}</h2>
+<ul>${navItems}</ul>
+</div>
+<div class="main-content">
+${pages.map((p, i) => `<iframe id="frame-child-${i}" style="display:none;width:100%;height:100%;border:none" srcdoc="${p.html.replace(/"/g, '&quot;')}"></iframe>`).join('\n')}
+<iframe id="frame-summary" style="width:100%;height:100%;border:none" srcdoc="${summaryHtml.replace(/"/g, '&quot;')}"></iframe>
+</div>
+<script>
+var current = 'summary';
+function showPage(id) {
+  document.getElementById('frame-' + current).style.display = 'none';
+  document.getElementById('nav-' + current).classList.remove('active');
+  document.getElementById('nav-' + current).style.color = '#ccc';
+  document.getElementById('frame-' + id).style.display = 'block';
+  document.getElementById('nav-' + id).classList.add('active');
+  document.getElementById('nav-' + id).style.color = '#4285f4';
+  current = id;
+}
+document.getElementById('nav-summary').style.color = '#4285f4';
+document.getElementById('nav-summary').classList.add('active');
+</script>
+</body>
+</html>`;
+    const blob = new Blob([exportHtml], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `${title}_深入分析.html`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
+  const handleDrop = async (fromIdx, toIdx) => {
+    if (fromIdx === toIdx) return;
+    const reordered = [...children];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    setChildren(reordered);
+    for (let i = 0; i < reordered.length; i++) {
+      if (reordered[i].sort_order !== i) {
+        reordered[i].sort_order = i;
+        updateEntry(reordered[i].id, { sort_order: i }).catch(() => {});
+      }
+    }
   };
 
   const categories = {};
@@ -176,24 +259,27 @@ export default function DeepAnalysis() {
               暂无子节点，点击「AI自动拆解」或「手动添加」开始
             </div>
           ) : (
-            Object.entries(categories).map(([cat, items]) => (
-              <div key={cat} style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, color: '#888', padding: '4px 0', borderBottom: `1px solid ${getCatColor(items[0]?.tags)}33` }}>
-                  {cat} ({items.length})
-                </div>
-                {items.map(c => (
-                  <div key={c.id} onClick={() => setSelectedChild(c)}
-                    style={{ padding: '8px 10px', marginTop: 4, borderRadius: 6, cursor: 'pointer',
-                      background: selectedChild?.id === c.id ? '#2a2d45' : '#1c1f2e',
-                      borderLeft: `3px solid ${getCatColor(c.tags)}`, transition: 'background 0.15s' }}
-                    onMouseEnter={ev => { if (selectedChild?.id !== c.id) ev.currentTarget.style.background = '#222640'; }}
-                    onMouseLeave={ev => { if (selectedChild?.id !== c.id) ev.currentTarget.style.background = '#1c1f2e'; }}>
+            children.map((c, idx) => (
+              <div key={c.id} draggable
+                onDragStart={() => setDragIdx(idx)}
+                onDragOver={e => { e.preventDefault(); setDragOverIdx(idx); }}
+                onDragEnd={() => { if (dragIdx !== null && dragOverIdx !== null) handleDrop(dragIdx, dragOverIdx); setDragIdx(null); setDragOverIdx(null); }}
+                onClick={() => setSelectedChild(c)}
+                style={{ padding: '8px 10px', marginTop: 4, borderRadius: 6, cursor: 'grab',
+                  background: dragOverIdx === idx ? '#2a2d55' : selectedChild?.id === c.id ? '#2a2d45' : '#1c1f2e',
+                  borderLeft: `3px solid ${getCatColor(c.tags)}`, transition: 'background 0.15s',
+                  opacity: dragIdx === idx ? 0.5 : 1 }}
+                onMouseEnter={ev => { if (selectedChild?.id !== c.id && dragIdx === null) ev.currentTarget.style.background = '#222640'; }}
+                onMouseLeave={ev => { if (selectedChild?.id !== c.id && dragIdx === null) ev.currentTarget.style.background = '#1c1f2e'; }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ color: '#555', fontSize: 10, cursor: 'grab' }}>⠿</span>
+                  <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 13, fontWeight: 500 }}>{c.title}</div>
                     <div style={{ fontSize: 11, color: '#888', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {c.content}
                     </div>
                   </div>
-                ))}
+                </div>
               </div>
             ))
           )}
@@ -225,14 +311,21 @@ export default function DeepAnalysis() {
                 📄 {parentEntry.title} — 综述
                 {parentTopicVersion > 0 && <span style={{ fontSize: 11, color: '#34a853', marginLeft: 6 }}>v{parentTopicVersion}</span>}
               </div>
-              {children.length > 0 && (
-                <button onClick={handleUpdateSummary} disabled={updatingSummary}
+              <div style={{ display: 'flex', gap: 6 }}>
+                {children.length > 0 && (
+                  <button onClick={handleUpdateSummary} disabled={updatingSummary}
+                    style={{ padding: '5px 14px', borderRadius: 6, border: 'none', fontSize: 12,
+                      background: updatingSummary ? '#333' : '#9c27b033', color: updatingSummary ? '#666' : '#ce93d8',
+                      cursor: updatingSummary ? 'wait' : 'pointer' }}>
+                    {updatingSummary ? '更新中...' : '🔄 用子节点内容更新综述'}
+                  </button>
+                )}
+                <button onClick={handleExport}
                   style={{ padding: '5px 14px', borderRadius: 6, border: 'none', fontSize: 12,
-                    background: updatingSummary ? '#333' : '#9c27b033', color: updatingSummary ? '#666' : '#ce93d8',
-                    cursor: updatingSummary ? 'wait' : 'pointer' }}>
-                  {updatingSummary ? '更新中...' : '🔄 用子节点内容更新综述'}
+                    background: '#1565c033', color: '#64b5f6', cursor: 'pointer' }}>
+                  📥 导出HTML
                 </button>
-              )}
+              </div>
             </div>
             {parentTopicHTML ? (
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>

@@ -121,6 +121,7 @@ tags: ${JSON.stringify(entry.tags)}
 source_type: ${entry.source_type}
 source_ref: ${entry.source_ref}
 parent_id: ${entry.parent_id || ''}
+sort_order: ${entry.sort_order !== undefined ? entry.sort_order : ''}
 created_date: ${entry.created_date}
 created_at: ${entry.created_at}
 ---
@@ -154,6 +155,7 @@ function mdToEntry(content, filePath) {
     parent_id: meta.parent_id || '',
     created_date: meta.created_date || '',
     created_at: meta.created_at || '',
+    sort_order: meta.sort_order !== undefined ? parseInt(meta.sort_order, 10) : undefined,
     _file: filePath,
   };
 }
@@ -240,24 +242,33 @@ function deleteEntry(id) {
   saveConnections(conns);
 }
 
-function updateEntry(id, { title, content, subject, tags }) {
+function updateEntry(id, data) {
   const entry = getEntry(id);
   if (!entry) return null;
   const oldTags = entry.tags || [];
-  const updated = { ...entry, title, content, subject, tags };
+  const updated = { ...entry };
+  if (data.title !== undefined) updated.title = data.title;
+  if (data.content !== undefined) updated.content = data.content;
+  if (data.subject !== undefined) updated.subject = data.subject;
+  if (data.tags !== undefined) updated.tags = data.tags;
+  if (data.sort_order !== undefined) updated.sort_order = data.sort_order;
   delete updated._file;
   if (entry._file && fs.existsSync(entry._file)) {
     fs.writeFileSync(entry._file, entryToMd(updated), 'utf-8');
   }
   const index = getEntryIndex();
   const idx = index.findIndex(e => e.id === id);
-  if (idx >= 0) { index[idx].title = title; index[idx].subject = subject; }
+  if (idx >= 0) {
+    if (data.title !== undefined) index[idx].title = data.title;
+    if (data.subject !== undefined) index[idx].subject = data.subject;
+  }
   saveEntryIndex(index);
 
-  const removedTags = oldTags.filter(t => !tags.includes(t));
-  const addedTags = tags.filter(t => !oldTags.includes(t));
+  const newTags = updated.tags || [];
+  const removedTags = oldTags.filter(t => !newTags.includes(t));
+  const addedTags = newTags.filter(t => !oldTags.includes(t));
   if (removedTags.length > 0) removeFromTagIndex(id, removedTags);
-  if (addedTags.length > 0) addToTagIndex(id, title, subject, addedTags);
+  if (addedTags.length > 0) addToTagIndex(id, updated.title, updated.subject, addedTags);
 
   return updated;
 }
@@ -350,7 +361,7 @@ function getTopicPageByVersion(entryId, version) {
 }
 
 function getChildren(parentId) {
-  return getAllEntries().filter(e => e.parent_id === parentId);
+  return getAllEntries().filter(e => e.parent_id === parentId).sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
 }
 
 module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory, getChildren, deleteTopicPageVersion, getTopicPageByVersion };
