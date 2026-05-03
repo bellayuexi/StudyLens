@@ -64,6 +64,23 @@ describe('API with mocked LLM', () => {
     if (fs.existsSync(rawDir)) {
       for (const f of fs.readdirSync(rawDir)) fs.unlinkSync(path.join(rawDir, f));
     }
+    // Clean wiki/topics test directories
+    const topicsDir = path.join(dir, '..', 'wiki', 'topics');
+    if (fs.existsSync(topicsDir)) {
+      const validEntries = new Set(JSON.parse(fs.readFileSync(entriesPath, 'utf8')).map(e => e.id));
+      for (const d of fs.readdirSync(topicsDir)) {
+        const isReal = [...validEntries].some(id => id.startsWith(d));
+        if (!isReal) fs.rmSync(path.join(topicsDir, d), { recursive: true });
+      }
+    }
+    // Clean test tag files
+    const tagsDir = path.join(dir, '..', 'wiki', 'index', 'tags');
+    if (fs.existsSync(tagsDir)) {
+      for (const f of ['tag1.json', 'test.json']) {
+        const p = path.join(tagsDir, f);
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+      }
+    }
   });
 
   describe('F1: Ingest Flow', () => {
