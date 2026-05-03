@@ -55,10 +55,14 @@ describe('API with mocked LLM', () => {
         fs.writeFileSync(entriesPath, JSON.stringify(clean, null, 2));
       }
     } catch {}
-    // Clean wiki drill test directories
+    // Clean wiki drill test directories and raw files
     for (const d of ['wiki/drill/core/test', 'wiki/drill/core/测试', 'wiki/drill/extended/Test']) {
       const p = path.join(dir, '..', d);
       if (fs.existsSync(p)) fs.rmSync(p, { recursive: true });
+    }
+    const rawDir = path.join(dir, '..', 'wiki', 'raw');
+    if (fs.existsSync(rawDir)) {
+      for (const f of fs.readdirSync(rawDir)) fs.unlinkSync(path.join(rawDir, f));
     }
   });
 
