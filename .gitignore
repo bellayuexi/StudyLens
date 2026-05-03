@@ -4,3 +4,10 @@ portal/node_modules/
 screenshots/
 uploads/
 data/
+coverage/
+portal/coverage/
+portal/dist/
+server.pid
+wiki/drill/
+wiki/raw/
+wiki/topics/

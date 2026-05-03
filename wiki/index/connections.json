@@ -173,5 +173,68 @@
     "to_id": "c3c0db2a-2f4a-4a82-a3b1-627595eb80b6",
     "relation": "直接解释了六部所属的三省六部制结构，六部隶属尚书省",
     "created_at": "2026-05-02T06:14:58.297Z"
+  },
+  {
+    "id": "74629de1-c899-446c-a58a-36b9d6f1ec00",
+    "from_id": "165418aa-8d39-48bf-8443-196dc2fe20ce",
+    "to_id": "01ccc5c8-9a60-4038-9ef8-81476cca1908",
+    "relation": "related",
+    "created_at": "2026-05-03T05:02:15.848Z"
+  },
+  {
+    "id": "2f9332d1-3fde-4c02-855e-30c430020d95",
+    "from_id": "748a5eae-2bb2-44eb-b087-91a4ac9195fc",
+    "to_id": "62ff90f5-c256-4f1a-a128-a0bc96b3a55b",
+    "relation": "related",
+    "created_at": "2026-05-03T05:03:07.731Z"
+  },
+  {
+    "id": "a1e0332f-6d85-449b-823e-485b8b698e1a",
+    "from_id": "b62f3a5c-0dcb-4b33-9b4e-5cf8991c9e37",
+    "to_id": "526dcca9-dcf0-42f5-ab21-b7640bccb27c",
+    "relation": "related",
+    "created_at": "2026-05-03T05:03:19.024Z"
+  },
+  {
+    "id": "b6cb5b36-184e-43d8-9f07-44eb730e341e",
+    "from_id": "aafe50c9-ab48-41d4-b5ee-e04ef8e4eaf6",
+    "to_id": "1bf513e2-2711-451e-83f5-39af5203b898",
+    "relation": "related",
+    "created_at": "2026-05-03T05:03:58.262Z"
+  },
+  {
+    "id": "5690ae72-7738-4b89-8af2-b73c43560f38",
+    "from_id": "a072dcd8-1360-459b-bebd-2ab3c2ef2bcd",
+    "to_id": "709b19b4-c436-4f4c-8047-bc2578017438",
+    "relation": "related",
+    "created_at": "2026-05-03T05:04:09.320Z"
+  },
+  {
+    "id": "a0670a47-7f1b-4695-9f00-c65e62dcec95",
+    "from_id": "426f3014-3de2-42e6-94c2-865ecb473c6d",
+    "to_id": "feab8145-602b-4983-a045-a01fb91f5c59",
+    "relation": "related",
+    "created_at": "2026-05-03T05:04:21.923Z"
+  },
+  {
+    "id": "524e5045-4543-48c1-aa79-4fa37822bf57",
+    "from_id": "0b992c24-7798-4afa-9c1d-4d0d5995b04e",
+    "to_id": "7d2d064b-aa38-4fad-86c4-73ced7b5a7eb",
+    "relation": "related",
+    "created_at": "2026-05-03T05:05:10.807Z"
+  },
+  {
+    "id": "d321bd50-38b8-43b9-82d7-bdb8ae13434d",
+    "from_id": "249d3a42-2f9e-4c58-8877-222437808a7a",
+    "to_id": "706e8351-aa73-4f22-8e06-565af43d5beb",
+    "relation": "related",
+    "created_at": "2026-05-03T05:05:48.971Z"
+  },
+  {
+    "id": "de760119-5799-4b9b-94b3-5a9a1a6bc40b",
+    "from_id": "58003719-f583-49d6-9b23-98b8ea62631f",
+    "to_id": "f0ca099e-6daf-48c2-8dca-0f900d528c2c",
+    "relation": "related",
+    "created_at": "2026-05-03T05:05:59.342Z"
   }
 ]

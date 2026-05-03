@@ -348,5 +348,453 @@
     "subject": "历史-唐朝",
     "source_type": "qa",
     "file": "drill\\extended\\历史-唐朝\\六部职能口诀_b7cf0920.md"
+  },
+  {
+    "id": "064e5111-d4ed-4c2d-a251-ca4883db6540",
+    "title": "变法背景",
+    "subject": "历史-北宋",
+    "source_type": "deep-analysis",
+    "file": "drill\\core\\历史-北宋\\变法背景_064e5111.md"
+  },
+  {
+    "id": "244dc12d-e080-4a93-bfda-b8c52cd7189b",
+    "title": "青苗法",
+    "subject": "历史-北宋",
+    "source_type": "deep-analysis",
+    "file": "drill\\core\\历史-北宋\\青苗法_244dc12d.md"
+  },
+  {
+    "id": "d8ede495-f3f4-417d-9b1b-a4932f373609",
+    "title": "募役法（免役法）",
+    "subject": "历史-北宋",
+    "source_type": "deep-analysis",
+    "file": "drill\\core\\历史-北宋\\募役法（免役法）_d8ede495.md"
+  },
+  {
+    "id": "8a1653d8-7729-4010-8ee2-6ad3d9929294",
+    "title": "方田均税法",
+    "subject": "历史-北宋",
+    "source_type": "deep-analysis",
+    "file": "drill\\core\\历史-北宋\\方田均税法_8a1653d8.md"
+  },
+  {
+    "id": "c3235e39-b88f-4cfa-94c7-858f775f9931",
+    "title": "保甲法与其他强兵措施",
+    "subject": "历史-北宋",
+    "source_type": "deep-analysis",
+    "file": "drill\\core\\历史-北宋\\保甲法与强兵措施_c3235e39.md"
+  },
+  {
+    "id": "4923c4f9-bd79-40aa-ba2e-d94a714f413f",
+    "title": "市易法与均输法",
+    "subject": "历史-北宋",
+    "source_type": "deep-analysis",
+    "file": "drill\\core\\历史-北宋\\市易法与均输法_4923c4f9.md"
+  },
+  {
+    "id": "89ac9734-97b3-43a2-98eb-a3877512449c",
+    "title": "反对派与变法失败",
+    "subject": "历史-北宋",
+    "source_type": "deep-analysis",
+    "file": "drill\\core\\历史-北宋\\反对派与变法失败_89ac9734.md"
+  },
+  {
+    "id": "4a70fbf2-c196-43b1-ab58-90ab92231e28",
+    "title": "历史评价",
+    "subject": "历史-北宋",
+    "source_type": "deep-analysis",
+    "file": "drill\\core\\历史-北宋\\历史评价_4a70fbf2.md"
+  },
+  {
+    "id": "af040a93-3ff9-497c-99f8-bc7fc55e2f4f",
+    "title": "富国方面的措施",
+    "subject": "历史-北宋",
+    "source_type": "deep-analysis",
+    "file": "drill\\core\\历史-北宋\\富国方面的措施_af040a93.md"
+  },
+  {
+    "id": "53a31145-5944-4959-81bd-51e0796c74b5",
+    "title": "强兵方面的措施",
+    "subject": "历史-北宋",
+    "source_type": "deep-analysis",
+    "file": "drill\\core\\历史-北宋\\强兵方面的措施_53a31145.md"
+  },
+  {
+    "id": "8d3e83f2-6b5b-4dad-a86d-8ad337915e8d",
+    "title": "取士方面的措施",
+    "subject": "历史-北宋",
+    "source_type": "deep-analysis",
+    "file": "drill\\core\\历史-北宋\\取士方面的措施_8d3e83f2.md"
+  },
+  {
+    "id": "20f4db15-84be-47b8-8952-61a3e4d214fb",
+    "title": "其他措施",
+    "subject": "历史-北宋",
+    "source_type": "deep-analysis",
+    "file": "drill\\core\\历史-北宋\\其他措施_20f4db15.md"
+  },
+  {
+    "id": "3bf46fb4-4715-441d-a0c3-4698ceb176cd",
+    "title": "王安石变法",
+    "subject": "历史-北宋",
+    "source_type": "text",
+    "file": "drill\\core\\历史-北宋\\王安石变法_3bf46fb4.md"
+  },
+  {
+    "id": "2a81a11b-661f-4bad-b298-0c988fafa4f2",
+    "title": "Card 1",
+    "subject": "Test",
+    "source_type": "qa",
+    "file": "drill\\extended\\Test\\Card_1_2a81a11b.md"
+  },
+  {
+    "id": "7e75d908-724e-4f39-a6e6-49282877aa12",
+    "title": "条目A",
+    "subject": "测试",
+    "source_type": "text",
+    "file": "drill\\core\\测试\\条目A_7e75d908.md"
+  },
+  {
+    "id": "0066a67d-5dc0-4fa7-bb90-09ae1d797c58",
+    "title": "条目B",
+    "subject": "测试",
+    "source_type": "text",
+    "file": "drill\\core\\测试\\条目B_0066a67d.md"
+  },
+  {
+    "id": "fd64b73a-cef2-4083-b688-5586da4254c7",
+    "title": "父条目测试",
+    "subject": "测试",
+    "source_type": "text",
+    "file": "drill\\core\\测试\\父条目测试_fd64b73a.md"
+  },
+  {
+    "id": "5e05eb0f-fd39-4926-bcb3-10037b7eb1aa",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_5e05eb0f.md"
+  },
+  {
+    "id": "ed71ecfa-222c-4e8c-a9f9-84c711b9517b",
+    "title": "Card 1",
+    "subject": "Test",
+    "source_type": "qa",
+    "file": "drill\\extended\\Test\\Card_1_ed71ecfa.md"
+  },
+  {
+    "id": "6493cbe8-8c2f-45a3-86f1-7bd82206bcad",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_6493cbe8.md"
+  },
+  {
+    "id": "3400da94-c24a-4cd6-81fa-5bdd8eecd010",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_3400da94.md"
+  },
+  {
+    "id": "d677ce79-e838-4285-831c-a54c1d096e32",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_d677ce79.md"
+  },
+  {
+    "id": "ae2674b4-6eda-4b34-9095-b03b6365c625",
+    "title": "Card 1",
+    "subject": "Test",
+    "source_type": "qa",
+    "file": "drill\\extended\\Test\\Card_1_ae2674b4.md"
+  },
+  {
+    "id": "d8069ea2-9848-464e-b5a4-550541296d15",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_d8069ea2.md"
+  },
+  {
+    "id": "d0d150c0-e527-4857-9509-b508a63e0ecb",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_d0d150c0.md"
+  },
+  {
+    "id": "5f617dae-3181-4e0e-a6f2-d7da576ae23e",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_5f617dae.md"
+  },
+  {
+    "id": "07019d31-3658-4c37-bc2d-e85b4203e33c",
+    "title": "Card 1",
+    "subject": "Test",
+    "source_type": "qa",
+    "file": "drill\\extended\\Test\\Card_1_07019d31.md"
+  },
+  {
+    "id": "c153a3c8-1b2c-4c5a-9ea5-f0a602f005fa",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_c153a3c8.md"
+  },
+  {
+    "id": "49c9cbd7-ad4a-43ce-a77e-ae582c19dd32",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_49c9cbd7.md"
+  },
+  {
+    "id": "139ccc13-fba1-4aad-b06e-379e41cafec7",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_139ccc13.md"
+  },
+  {
+    "id": "099138c1-ab2f-4093-9789-ac13228923ef",
+    "title": "Card 1",
+    "subject": "Test",
+    "source_type": "qa",
+    "file": "drill\\extended\\Test\\Card_1_099138c1.md"
+  },
+  {
+    "id": "ad116b21-5865-41c8-a325-518769cd5c9d",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_ad116b21.md"
+  },
+  {
+    "id": "3801551c-0f9e-45e7-b5b6-40c1f5e7ef84",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_3801551c.md"
+  },
+  {
+    "id": "56004216-099b-4c11-883e-a16fabd78cca",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_56004216.md"
+  },
+  {
+    "id": "909f68bc-3daa-45f2-bb5e-0d45496b35f7",
+    "title": "Card 1",
+    "subject": "Test",
+    "source_type": "qa",
+    "file": "drill\\extended\\Test\\Card_1_909f68bc.md"
+  },
+  {
+    "id": "1d31968e-1127-4c31-961f-c2ad66649fba",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_1d31968e.md"
+  },
+  {
+    "id": "e63661b4-866a-4b76-81ca-b1e4f0ff2f22",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_e63661b4.md"
+  },
+  {
+    "id": "0a7edeed-ca83-4e9f-b3c1-7cf24bdcd31e",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_0a7edeed.md"
+  },
+  {
+    "id": "5d37ce88-0b18-4e7f-8a81-ef884337a338",
+    "title": "Card 1",
+    "subject": "Test",
+    "source_type": "qa",
+    "file": "drill\\extended\\Test\\Card_1_5d37ce88.md"
+  },
+  {
+    "id": "8b84f601-17ac-42c7-851f-e214447d584d",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_8b84f601.md"
+  },
+  {
+    "id": "54bb31df-cc54-44b0-a963-88aa002275c2",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_54bb31df.md"
+  },
+  {
+    "id": "f5599290-3cc7-4acb-812f-f9df768eb028",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_f5599290.md"
+  },
+  {
+    "id": "aeb4b18a-7426-4024-898a-16eaa0efcdad",
+    "title": "Card 1",
+    "subject": "Test",
+    "source_type": "qa",
+    "file": "drill\\extended\\Test\\Card_1_aeb4b18a.md"
+  },
+  {
+    "id": "7df52ea9-15aa-4989-bd8f-2accadc213c1",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_7df52ea9.md"
+  },
+  {
+    "id": "81a70686-d1b4-4917-b92a-a207f7466032",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_81a70686.md"
+  },
+  {
+    "id": "ad001c9f-61a4-4e9e-835d-ce07009e33e2",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_ad001c9f.md"
+  },
+  {
+    "id": "7ed8c87c-3fbf-419b-a9a1-41a93c5a880a",
+    "title": "Card 1",
+    "subject": "Test",
+    "source_type": "qa",
+    "file": "drill\\extended\\Test\\Card_1_7ed8c87c.md"
+  },
+  {
+    "id": "52e78397-08ac-4840-8245-64d4bdfeaf01",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_52e78397.md"
+  },
+  {
+    "id": "80324863-12b1-4ef0-b4a9-2b12f8b19c5e",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_80324863.md"
+  },
+  {
+    "id": "179300b5-3310-49b5-aba2-4797b682859f",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_179300b5.md"
+  },
+  {
+    "id": "20305702-8f9a-40e0-ad82-3b9e2e86fc4f",
+    "title": "Card 1",
+    "subject": "Test",
+    "source_type": "qa",
+    "file": "drill\\extended\\Test\\Card_1_20305702.md"
+  },
+  {
+    "id": "79c870c7-77f7-4369-9c1b-633d7d15b2b0",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_79c870c7.md"
+  },
+  {
+    "id": "fbe1e5e6-1742-465c-8fd0-1f2292325ebf",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_fbe1e5e6.md"
+  },
+  {
+    "id": "3d9dbe8f-6b62-4350-af51-fc12a984645a",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_3d9dbe8f.md"
+  },
+  {
+    "id": "cc611f54-29b8-482b-8467-0f382c5a16ac",
+    "title": "Card 1",
+    "subject": "Test",
+    "source_type": "qa",
+    "file": "drill\\extended\\Test\\Card_1_cc611f54.md"
+  },
+  {
+    "id": "f94be48b-b6e4-4e63-a466-c95f778eac53",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_f94be48b.md"
+  },
+  {
+    "id": "501780ff-023c-4e19-84f6-8f8d8f3247b3",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_501780ff.md"
+  },
+  {
+    "id": "161adf00-d5cf-4b5a-94e7-7559c7f99d1e",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_161adf00.md"
+  },
+  {
+    "id": "84468de1-be29-4e35-a7c9-904db45c1aa8",
+    "title": "Card 1",
+    "subject": "Test",
+    "source_type": "qa",
+    "file": "drill\\extended\\Test\\Card_1_84468de1.md"
+  },
+  {
+    "id": "9f2e4bf3-b0d5-4a7a-b7bd-2f4c16266171",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_9f2e4bf3.md"
+  },
+  {
+    "id": "665a9026-037f-4131-b91a-9026b65af941",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_665a9026.md"
+  },
+  {
+    "id": "ce15200b-6da6-4171-a94f-135b2a1289fd",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_ce15200b.md"
+  },
+  {
+    "id": "818cc017-a7aa-4696-83fc-8d12a6a90d41",
+    "title": "Card 1",
+    "subject": "Test",
+    "source_type": "qa",
+    "file": "drill\\extended\\Test\\Card_1_818cc017.md"
+  },
+  {
+    "id": "65aabda7-6da9-4116-83a2-65a293feb6d7",
+    "title": "Test Entry",
+    "subject": "Test",
+    "source_type": "text",
+    "file": "drill\\core\\Test\\Test_Entry_65aabda7.md"
   }
 ]
