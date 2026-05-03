@@ -61,6 +61,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const _localCacheRef = useRef({});
   const entryDataCacheRef = sharedCacheRef || _localCacheRef;
   const [loadingEntry, setLoadingEntry] = useState(false);
+  const latestStateRef = useRef(null);
 
   const cacheableState = () => ({
     topicHTML, topicPageId, topicVersion, topicVersionCount, topicVersionList,
@@ -149,8 +150,19 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   // Cache current entry data when it changes
   useEffect(() => {
     if (!entry.id || loadingEntry) return;
-    entryDataCacheRef.current[entry.id] = cacheableState();
+    const state = cacheableState();
+    entryDataCacheRef.current[entry.id] = state;
+    latestStateRef.current = { id: entry.id, state };
   }, [topicHTML, topicPageId, topicVersion, topicVersionCount, qaHistory, includedQaIds, comments, lastUpdated, topicStatus, topicDirty, asking, loadingTopic]);
+
+  // Save to cache on unmount
+  useEffect(() => {
+    return () => {
+      if (latestStateRef.current) {
+        entryDataCacheRef.current[latestStateRef.current.id] = latestStateRef.current.state;
+      }
+    };
+  }, []);
 
   const loadSavedTopicPage = async () => {
     const currentId = entry.id;

@@ -306,6 +306,7 @@ function showPage(id) {
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {selectedChild ? (
           <EntryDetail
+            key={selectedChild.id}
             entry={selectedChild}
             allEntries={children}
             onClose={() => setSelectedChild(null)}
