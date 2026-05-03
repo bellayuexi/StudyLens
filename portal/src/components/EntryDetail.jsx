@@ -854,14 +854,16 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             </div>
           ))}
 
-          {/* Deep analysis entry */}
-          <div style={{ marginTop: 16, padding: '12px 16px', background: '#161822', borderRadius: 8, border: '1px solid #2a2d35' }}>
-            <button onClick={() => navigate(`/deep/${entry.id}`)}
-              style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #9c27b044',
-                background: '#9c27b022', color: '#ce93d8', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
-              🔬 深入分析 — 分解子主题并逐个探索
-            </button>
-          </div>
+          {/* Deep analysis entry — only for top-level entries */}
+          {!entry.parent_id && (
+            <div style={{ marginTop: 16, padding: '12px 16px', background: '#161822', borderRadius: 8, border: '1px solid #2a2d35' }}>
+              <button onClick={() => navigate(`/deep/${entry.id}`)}
+                style={{ width: '100%', padding: '10px', borderRadius: 8, border: '1px solid #9c27b044',
+                  background: '#9c27b022', color: '#ce93d8', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+                🔬 深入分析 — 分解子主题并逐个探索
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
