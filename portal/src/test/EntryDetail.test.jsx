@@ -403,4 +403,73 @@ describe('EntryDetail Component', () => {
       expect(screen.getByText('历史-北宋')).toBeInTheDocument();
     });
   });
+
+  // ============================
+  // F15: Empty State Two Choices (F1 feature)
+  // ============================
+  describe('F15: Empty State Learning Paths', () => {
+    it('shows two learning path choices when no QAs and no topic page', async () => {
+      renderDetail();
+      await waitFor(() => {
+        expect(screen.getByText('智能问答探索')).toBeInTheDocument();
+      });
+      expect(screen.getByText('深入分析')).toBeInTheDocument();
+    });
+
+    it('shows description for each learning path', async () => {
+      renderDetail();
+      await waitFor(() => {
+        expect(screen.getByText(/AI生成问题/)).toBeInTheDocument();
+        expect(screen.getByText(/拆解为子主题/)).toBeInTheDocument();
+      });
+    });
+
+    it('hides deep analysis choice for child entries', async () => {
+      renderDetail({ entry: { ...mockEntry, parent_id: 'parent-1' } });
+      await waitFor(() => {
+        expect(screen.getByText('智能问答探索')).toBeInTheDocument();
+      });
+      expect(screen.queryByText('深入分析')).toBeNull();
+    });
+
+    it('clicking explore choice switches to explore tab', async () => {
+      renderDetail();
+      await waitFor(() => {
+        expect(screen.getByText('智能问答探索')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('智能问答探索'));
+      await waitFor(() => {
+        expect(screen.getByText(/深入学习/)).toBeInTheDocument();
+      });
+    });
+  });
+
+  // ============================
+  // F16: Annotation Apply Incremental Update (B4 fix)
+  // ============================
+  describe('F16: Annotation Apply with existingHTML', () => {
+    it('passes existingHTML and requirements when applying comments', async () => {
+      api.getLatestTopicPage.mockResolvedValue({
+        page: {
+          id: 'tp-1', version: 1, html: '<p>Existing topic content</p>',
+          qa_history: [{ question: 'Q1', answer: 'A1' }],
+          comments: [{ id: 'c1', text: '需要补充更多细节' }],
+          included_qa_ids: [], created_at: '2026-01-01',
+        },
+      });
+      renderDetail();
+      await waitFor(() => {
+        expect(screen.getByText(/应用批注更新/)).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText(/应用批注更新/));
+      await waitFor(() => {
+        expect(api.generateTopicPage).toHaveBeenCalledWith(
+          'entry-1',
+          expect.any(Array),
+          expect.stringContaining('Existing topic content'),
+          expect.stringContaining('批注')
+        );
+      });
+    });
+  });
 });
