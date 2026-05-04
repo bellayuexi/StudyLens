@@ -1,5 +1,16 @@
 const http = require('http');
 const https = require('https');
+const fs = require('fs');
+const path = require('path');
+
+function loadSubjectPrompts(subject) {
+  try {
+    const settingsPath = path.join(__dirname, '..', 'wiki', 'config', 'settings.json');
+    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    const discipline = (subject || '').split('-')[0];
+    return settings.subjects?.[discipline] || {};
+  } catch { return {}; }
+}
 
 const DEFAULT_PROVIDERS = [
   {
@@ -94,7 +105,8 @@ async function callLLM(messages, { maxTokens = 4096, providers = DEFAULT_PROVIDE
 }
 
 async function analyze(text, subject = '') {
-  const prompt = `You are a knowledge extraction assistant for a student. Analyze the following study notes and extract structured knowledge entries.
+  const subjectPrompts = loadSubjectPrompts(subject);
+  const basePrompt = subjectPrompts.analyzePrompt || `You are a knowledge extraction assistant for a student. Analyze the following study notes and extract structured knowledge entries.
 
 For each distinct knowledge point, return a JSON array of objects with:
 - "title": concise title (under 20 chars)
@@ -113,7 +125,9 @@ For each distinct knowledge point, return a JSON array of objects with:
 Subject classification rules:
 - For history: use specific dynasty like "历史-隋朝", "历史-唐朝", "历史-北宋", "历史-南宋", "历史-辽", "历史-西夏", "历史-金", "历史-元朝" etc. Do NOT use combined periods like "历史-隋唐".
 - For other subjects: use patterns like "数学-代数", "物理-力学", "化学-有机" etc.
-- Each knowledge point must belong to exactly ONE specific category.
+- Each knowledge point must belong to exactly ONE specific category.`;
+
+  const prompt = `${basePrompt}
 
 ${subject ? `User suggested subject: "${subject}" — use this as a hint but still classify precisely.` : ''}
 

@@ -486,17 +486,65 @@ app.post('/api/entries/:id/children', (req, res) => {
 const settingsPath = path.join(__dirname, '..', 'wiki', 'config', 'settings.json');
 
 const DEFAULT_PROMPTS = {
-  analyzePrompt: `你是一个知识提取助手。分析学习笔记，提取结构化知识点。
-每个知识点包含：title（简洁标题≤20字）、content（清晰解释）、subject（学科分类如"历史-北宋"）、tags（多维度标签）。
-标签维度示例：核心概念、分类维度（如历史：政治制度/军事战争/经济发展/民族关系/对外交流/科技发明/文化艺术）、跨类关联标签。
-返回JSON数组。`,
-  topicPrompt: `你是一个教育内容设计师。生成美观的HTML专题页面。
-要求：完整HTML+内联CSS、深色主题(背景#0f1117,文字#e0e0e0)、分章节(导语→背景→核心内容→影响/意义→总结)、
-清晰排版(标题/卡片/分隔线/高亮)、中文内容适合中学生、使用渐变和阴影效果。`,
-  qaPrompt: `你是一个学习辅导助手，拥有全面的学科知识。
-回答要求：用你自己的知识全面准确地回答、引用学生笔记建立联系、使用对比分析和具体数据、
-中文回答适合中学生、建议知识卡片捕捉核心新知识点。
-返回JSON: {"answer":"回答","suggestedCards":[{"title":"","content":"","subject":"","tags":[]}]}`,
+  analyzePrompt: `You are a knowledge extraction assistant for a student. Analyze the following study notes and extract structured knowledge entries.
+
+For each distinct knowledge point, return a JSON array of objects with:
+- "title": concise title (under 20 chars)
+- "content": the knowledge point explained clearly
+- "subject": precise subject classification (see rules below)
+- "tags": array of relevant tags — include ALL of the following dimensions:
+  1. Core concepts: key terms, names, formulas (e.g. "科举制", "赵匡胤", "勾股定理")
+  2. Category dimensions: assign multi-dimensional category tags based on the subject area:
+     - For history: add tags from these dimensions where applicable:
+       "政治制度", "军事战争", "经济发展", "民族关系", "对外交流", "科技发明", "文化艺术", "社会生活", "人物"
+     - For math: "代数", "几何", "概率", "函数", "公式", "定理", "证明"
+     - For physics: "力学", "电磁", "热学", "光学", "实验", "公式"
+     - For other subjects: infer appropriate dimensional tags
+  3. Connections: tags that link to related knowledge across different categories
+
+Subject classification rules:
+- For history: use specific dynasty like "历史-隋朝", "历史-唐朝", "历史-北宋" etc.
+- For other subjects: use patterns like "数学-代数", "物理-力学", "化学-有机" etc.
+- Each knowledge point must belong to exactly ONE specific category.
+
+Return ONLY valid JSON array, no other text.`,
+  topicPrompt: `你是一个教育内容设计师。基于以下知识点和相关资料，生成一个美观的HTML专题页面。
+
+要求：
+1. 生成完整的HTML页面（含内联CSS），适合iframe嵌入
+2. 深色主题（背景 #0f1117，文字 #e0e0e0）
+3. 分章节展示：导语→背景→核心内容→影响/意义→总结
+4. 使用清晰的排版：标题、卡片、分隔线、高亮重点
+5. 中文内容，适合中学生阅读
+6. 使用你自己的知识补充完整内容，不要局限于提供的材料
+7. 页面宽度100%，无需滚动条样式
+8. 配色美观，使用渐变和阴影效果`,
+  qaPrompt: `You are an expert study assistant with deep knowledge across all subjects. A student is studying and asks you questions.
+
+IMPORTANT: Use your OWN comprehensive knowledge to answer thoroughly and accurately. The student's notes are supplementary context, not the boundary of your answer.
+
+Instructions:
+1. Answer using your full knowledge — be thorough, accurate, and educational
+2. If the student has relevant notes, reference them to build connections
+3. Use comparisons, analysis, and specific facts/data where appropriate
+4. Write in Chinese, suitable for a middle/high school student
+5. Suggest knowledge cards that capture KEY points — NEW knowledge beyond existing notes
+
+Return a JSON object:
+{
+  "answer": "Your comprehensive answer in Chinese...",
+  "suggestedCards": [
+    {
+      "title": "card title (under 20 chars)",
+      "content": "knowledge point explained clearly",
+      "subject": "precise subject like 历史-唐朝",
+      "tags": ["relevant", "tags"]
+    }
+  ]
+}
+
+CRITICAL: The answer field must be PLAIN TEXT only — no markdown formatting.
+Return ONLY valid JSON, no other text.`,
 };
 
 function loadSettings() {
