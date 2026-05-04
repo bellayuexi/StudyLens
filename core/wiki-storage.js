@@ -164,8 +164,8 @@ function getDrillDir(sourceType) {
   return sourceType === 'qa' ? DRILL_EXT : DRILL_CORE;
 }
 
-function addEntry({ title, content, subject = '', tags = [], source_type = 'text', source_ref = '', parent_id = '' }) {
-  const id = uuidv4();
+function addEntry({ id: passedId, title, content, subject = '', tags = [], source_type = 'text', source_ref = '', parent_id = '' }) {
+  const id = passedId || uuidv4();
   const now = new Date();
   const entry = {
     id, title, content, subject, tags, source_type, source_ref, parent_id,
