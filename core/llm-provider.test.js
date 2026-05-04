@@ -54,6 +54,30 @@ describe('extractJSON', () => {
     expect(result).toEqual([{ question: 'What is X?', category: '概念' }]);
   });
 
+  it('repairs unescaped double quotes inside string values', () => {
+    const input = '[{"title": "形成\\"树瘤\\"的原因", "content": "正常"}]';
+    const raw = input.replace(/\\"/g, '"').replace(',"', '", "');
+    const mangled = '[{"title": "形成"树瘤"的原因", "content": "正常"}]';
+    const result = extractJSON(mangled, { isArray: true });
+    expect(result).not.toBeNull();
+    expect(result[0].title).toContain('树瘤');
+    expect(result[0].content).toBe('正常');
+  });
+
+  it('repairs multiple unescaped quotes in one string', () => {
+    const input = '{"answer": "He said "hello" and she said "bye"", "ok": true}';
+    const result = extractJSON(input);
+    expect(result).not.toBeNull();
+    expect(result.answer).toContain('hello');
+    expect(result.ok).toBe(true);
+  });
+
+  it('handles already-escaped quotes without double-escaping', () => {
+    const input = '{"answer": "He said \\"hello\\"", "ok": true}';
+    const result = extractJSON(input);
+    expect(result).toEqual({ answer: 'He said "hello"', ok: true });
+  });
+
   it('extracts JSON embedded in surrounding text', () => {
     const input = 'Here is the result:\n[{"id": 1}]\nDone.';
     const result = extractJSON(input, { isArray: true });

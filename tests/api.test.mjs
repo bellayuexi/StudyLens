@@ -86,7 +86,7 @@ describe('StudyGraph API', () => {
     it('POST /api/entries/:id/topic-page/save accepts valid html', async () => {
       const res = await request(app)
         .post('/api/entries/test-save-id/topic-page/save')
-        .send({ html: '<p>Test content</p>', qaHistory: [], comments: [] });
+        .send({ html: '<p>This is a test topic page with enough content to pass the minimum length validation check for saving.</p>', qaHistory: [], comments: [] });
       expect(res.status).toBe(200);
       expect(res.body).toHaveProperty('id');
       expect(res.body).toHaveProperty('version');
@@ -101,11 +101,11 @@ describe('StudyGraph API', () => {
     it('GET /api/entries/:id/topic-page/latest returns saved page', async () => {
       await request(app)
         .post('/api/entries/test-latest-id/topic-page/save')
-        .send({ html: '<p>Latest</p>', qaHistory: [{ question: 'Q', answer: 'A' }] });
+        .send({ html: '<p>This is the latest topic page content with enough text to pass the minimum length validation.</p>', qaHistory: [{ question: 'Q', answer: 'A' }] });
       const res = await request(app).get('/api/entries/test-latest-id/topic-page/latest');
       expect(res.status).toBe(200);
       expect(res.body.page).toBeTruthy();
-      expect(res.body.page.html).toContain('Latest');
+      expect(res.body.page.html).toContain('latest topic page');
     });
 
     it('GET /api/entries/:id/topic-pages returns empty array for no pages', async () => {
@@ -117,7 +117,7 @@ describe('StudyGraph API', () => {
     it('GET /api/entries/:id/topic-pages returns pages after save', async () => {
       await request(app)
         .post('/api/entries/test-pages-id/topic-page/save')
-        .send({ html: '<p>V1</p>' });
+        .send({ html: '<p>Version one of the topic page with sufficient content length for the validation to pass correctly.</p>' });
       const res = await request(app).get('/api/entries/test-pages-id/topic-pages');
       expect(res.status).toBe(200);
       expect(res.body.pages.length).toBeGreaterThanOrEqual(1);
@@ -147,7 +147,7 @@ describe('StudyGraph API', () => {
     it('save then delete a version', async () => {
       await request(app)
         .post('/api/entries/test-ver-del/topic-page/save')
-        .send({ html: '<p>Delete me</p>' });
+        .send({ html: '<p>This topic page content is meant to be deleted after saving, and it needs to be long enough to pass validation.</p>' });
       const delRes = await request(app).delete('/api/entries/test-ver-del/topic-page/1');
       expect(delRes.status).toBe(200);
       expect(delRes.body.ok).toBe(true);
@@ -316,6 +316,43 @@ describe('StudyGraph API', () => {
         .send({});
       expect(res.status).toBe(400);
       expect(res.body.error).toContain('instruction');
+    });
+  });
+
+  // ============================
+  // F9: Settings API
+  // ============================
+  describe('F9: Settings API', () => {
+    it('GET /api/settings returns defaultPrompts with all keys', async () => {
+      const res = await request(app).get('/api/settings');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('defaultPrompts');
+      expect(res.body.defaultPrompts).toHaveProperty('analyzePrompt');
+      expect(res.body.defaultPrompts).toHaveProperty('topicPrompt');
+      expect(res.body.defaultPrompts).toHaveProperty('qaPrompt');
+      expect(res.body.defaultPrompts).toHaveProperty('questionsPrompt');
+    });
+
+    it('GET /api/settings returns non-empty default prompts', async () => {
+      const res = await request(app).get('/api/settings');
+      expect(res.body.defaultPrompts.analyzePrompt.length).toBeGreaterThan(50);
+      expect(res.body.defaultPrompts.questionsPrompt.length).toBeGreaterThan(20);
+    });
+
+    it('PUT /api/settings saves and returns ok', async () => {
+      const res = await request(app)
+        .put('/api/settings')
+        .send({ subjects: {}, defaultPrompts: {} });
+      expect(res.status).toBe(200);
+      expect(res.body.ok).toBe(true);
+    });
+
+    it('GET /api/settings still returns defaults after saving empty', async () => {
+      await request(app)
+        .put('/api/settings')
+        .send({ subjects: {}, defaultPrompts: {} });
+      const res = await request(app).get('/api/settings');
+      expect(res.body.defaultPrompts.analyzePrompt.length).toBeGreaterThan(50);
     });
   });
 });
