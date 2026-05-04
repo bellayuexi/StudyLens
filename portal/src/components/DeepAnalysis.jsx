@@ -138,19 +138,21 @@ body { background: #0f1117; color: #e0e0e0; font-family: 'Segoe UI', system-ui, 
 .print-content { display: none; }
 .print-content .page-body { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
 @media print {
-  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  *, *::before, *::after { background: transparent !important; background-image: none !important; color: #000 !important; text-shadow: none !important; box-shadow: none !important; border-color: #ccc !important; }
   body { display: block !important; padding: 20px !important; }
   .sidebar { display: none !important; }
   .main-content { display: none !important; }
   .print-content { display: block !important; max-width: 100% !important; width: 100% !important; }
   .print-content .print-section { page-break-before: always; padding: 20px 0; }
   .print-content .print-section:first-child { page-break-before: avoid; }
-  .print-content h2 { border-bottom: 2px solid #64b5f6; padding-bottom: 8px; margin-bottom: 16px; color: #fff; }
-  .print-content div, .print-content section, .print-content article { max-width: 100% !important; overflow: visible !important; height: auto !important; max-height: none !important; }
+  .print-content h2 { border-bottom: 2px solid #333 !important; padding-bottom: 8px; margin-bottom: 16px; }
+  .print-content div, .print-content section, .print-content article, .print-content span, .print-content p, .print-content li, .print-content td, .print-content th { color: #000 !important; max-width: 100% !important; overflow: visible !important; height: auto !important; max-height: none !important; }
   .print-content .page-body { padding: 0 !important; }
+  pre, code { background: #f5f5f5 !important; color: #333 !important; }
   h1,h2,h3,h4,h5,h6 { page-break-after: avoid; }
-  pre, blockquote, table, div[style*="border"] { page-break-inside: avoid; }
+  pre, blockquote, table { page-break-inside: avoid; border: 1px solid #ccc !important; }
   img { max-width: 100% !important; }
+  a { color: #000 !important; text-decoration: underline; }
 }
 </style>
 </head>
