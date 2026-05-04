@@ -2,7 +2,10 @@ const Database = require('better-sqlite3');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
-const DB_PATH = path.join(__dirname, '..', 'data', 'studygraph.db');
+const DB_PATH = process.env.STUDYGRAPH_DB_PATH || path.join(__dirname, '..', 'data', 'studygraph.db');
+
+const fs = require('fs');
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 let db;
 

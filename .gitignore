@@ -10,3 +10,7 @@ portal/dist/
 server.pid
 logs/
 wiki/
+
+# Test data directories
+data-test/
+wiki-test/
