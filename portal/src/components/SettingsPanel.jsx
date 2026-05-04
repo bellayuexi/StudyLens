@@ -2,22 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { getSettings, saveSettings } from '../lib/api.js';
 
 const PROMPT_TYPES = [
-  { key: 'analyzePrompt', label: '知识提取 Prompt', placeholder: '用于从文本中提取知识点的系统提示...' },
-  { key: 'topicPrompt', label: '专题页 Prompt', placeholder: '用于生成专题页HTML内容的系统提示...' },
-  { key: 'qaPrompt', label: '问答 Prompt', placeholder: '用于回答学生问题的系统提示...' },
+  { key: 'analyzePrompt', label: '知识提取 Prompt' },
+  { key: 'topicPrompt', label: '专题页 Prompt' },
+  { key: 'qaPrompt', label: '问答 Prompt' },
 ];
 
 export default function SettingsPanel({ onClose }) {
-  const [settings, setSettings] = useState({ subjects: {} });
+  const [settings, setSettings] = useState({ subjects: {}, defaultPrompts: {} });
   const [saving, setSaving] = useState(false);
   const [newSubject, setNewSubject] = useState('');
   const [expanded, setExpanded] = useState(null);
+  const [defaultsExpanded, setDefaultsExpanded] = useState(false);
 
   useEffect(() => {
     getSettings().then(setSettings);
   }, []);
 
   const subjectKeys = Object.keys(settings.subjects);
+  const defaults = settings.defaultPrompts || {};
 
   const handleSave = async () => {
     setSaving(true);
@@ -28,7 +30,11 @@ export default function SettingsPanel({ onClose }) {
   const addSubject = () => {
     const name = newSubject.trim();
     if (!name || settings.subjects[name]) return;
-    setSettings(prev => ({ ...prev, subjects: { ...prev.subjects, [name]: {} } }));
+    const subjectDefaults = {};
+    for (const pt of PROMPT_TYPES) {
+      if (defaults[pt.key]) subjectDefaults[pt.key] = defaults[pt.key];
+    }
+    setSettings(prev => ({ ...prev, subjects: { ...prev.subjects, [name]: subjectDefaults } }));
     setNewSubject('');
     setExpanded(name);
   };
@@ -48,6 +54,13 @@ export default function SettingsPanel({ onClose }) {
         ...prev.subjects,
         [subject]: { ...prev.subjects[subject], [key]: value },
       },
+    }));
+  };
+
+  const updateDefault = (key, value) => {
+    setSettings(prev => ({
+      ...prev,
+      defaultPrompts: { ...prev.defaultPrompts, [key]: value },
     }));
   };
 
@@ -77,10 +90,38 @@ export default function SettingsPanel({ onClose }) {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
+        {/* Default prompts */}
+        <div style={{ marginBottom: 20, borderRadius: 8, border: '1px solid #2a2d35', background: '#161822' }}>
+          <div onClick={() => setDefaultsExpanded(!defaultsExpanded)}
+            style={{ padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+              {defaultsExpanded ? '▼' : '▶'} 默认 Prompt（所有学科通用）
+            </span>
+          </div>
+          {defaultsExpanded && (
+            <div style={{ padding: '0 14px 14px' }}>
+              <p style={{ fontSize: 11, color: '#666', marginBottom: 10 }}>
+                这些是系统默认的 AI 提示词。修改后将影响所有未单独配置的学科。
+              </p>
+              {PROMPT_TYPES.map(pt => (
+                <div key={pt.key} style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 12, color: '#999', display: 'block', marginBottom: 4 }}>{pt.label}</label>
+                  <textarea
+                    value={defaults[pt.key] || ''}
+                    onChange={e => updateDefault(pt.key, e.target.value)}
+                    rows={4}
+                    style={inputStyle} />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Per-subject prompts */}
         <div style={{ marginBottom: 20 }}>
-          <h3 style={{ fontSize: 14, color: '#ccc', marginBottom: 10 }}>学科 Prompt 配置</h3>
-          <p style={{ fontSize: 12, color: '#666', marginBottom: 12 }}>
-            为每个学科配置专属的 AI 提示词，让生成内容更贴合学科特点。未配置的学科将使用默认提示词。
+          <h3 style={{ fontSize: 14, color: '#ccc', marginBottom: 8 }}>学科专属配置</h3>
+          <p style={{ fontSize: 11, color: '#666', marginBottom: 12 }}>
+            添加学科后会自动填入默认提示词，你只需针对该学科做定制修改。留空则使用默认值。
           </p>
 
           <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
@@ -97,7 +138,7 @@ export default function SettingsPanel({ onClose }) {
 
           {subjectKeys.length === 0 && (
             <div style={{ padding: 20, textAlign: 'center', color: '#555', fontSize: 13 }}>
-              暂无学科配置。添加学科后，可为每个学科设置专属的 AI 提示词。
+              暂无学科配置。添加学科后，可为每个学科定制 AI 提示词。
             </div>
           )}
 
@@ -122,8 +163,8 @@ export default function SettingsPanel({ onClose }) {
                       <textarea
                         value={settings.subjects[subject]?.[pt.key] || ''}
                         onChange={e => updatePrompt(subject, pt.key, e.target.value)}
-                        placeholder={pt.placeholder}
-                        rows={3}
+                        placeholder={defaults[pt.key] || ''}
+                        rows={4}
                         style={inputStyle} />
                     </div>
                   ))}

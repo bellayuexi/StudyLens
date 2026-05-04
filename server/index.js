@@ -484,9 +484,24 @@ app.post('/api/entries/:id/children', (req, res) => {
 
 // Settings
 const settingsPath = path.join(__dirname, '..', 'wiki', 'config', 'settings.json');
+
+const DEFAULT_PROMPTS = {
+  analyzePrompt: `你是一个知识提取助手。分析学习笔记，提取结构化知识点。
+每个知识点包含：title（简洁标题≤20字）、content（清晰解释）、subject（学科分类如"历史-北宋"）、tags（多维度标签）。
+标签维度示例：核心概念、分类维度（如历史：政治制度/军事战争/经济发展/民族关系/对外交流/科技发明/文化艺术）、跨类关联标签。
+返回JSON数组。`,
+  topicPrompt: `你是一个教育内容设计师。生成美观的HTML专题页面。
+要求：完整HTML+内联CSS、深色主题(背景#0f1117,文字#e0e0e0)、分章节(导语→背景→核心内容→影响/意义→总结)、
+清晰排版(标题/卡片/分隔线/高亮)、中文内容适合中学生、使用渐变和阴影效果。`,
+  qaPrompt: `你是一个学习辅导助手，拥有全面的学科知识。
+回答要求：用你自己的知识全面准确地回答、引用学生笔记建立联系、使用对比分析和具体数据、
+中文回答适合中学生、建议知识卡片捕捉核心新知识点。
+返回JSON: {"answer":"回答","suggestedCards":[{"title":"","content":"","subject":"","tags":[]}]}`,
+};
+
 function loadSettings() {
   try { return JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); }
-  catch { return { subjects: {} }; }
+  catch { return { subjects: {}, defaultPrompts: DEFAULT_PROMPTS }; }
 }
 function saveSettings(data) {
   const dir = path.dirname(settingsPath);
@@ -495,7 +510,9 @@ function saveSettings(data) {
 }
 
 app.get('/api/settings', (req, res) => {
-  res.json(loadSettings());
+  const settings = loadSettings();
+  if (!settings.defaultPrompts) settings.defaultPrompts = DEFAULT_PROMPTS;
+  res.json(settings);
 });
 
 app.put('/api/settings', (req, res) => {
