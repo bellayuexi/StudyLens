@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import EntryDetail from './EntryDetail.jsx';
-import { getChildren, expandEntry, addChildEntry, deleteEntry, updateEntry, getLatestTopicPage, generateTopicPage, saveTopicPage } from '../lib/api.js';
+import { getChildren, expandEntry, addChildEntry, deleteEntry, updateEntry, getLatestTopicPage } from '../lib/api.js';
 
 const CATEGORY_COLORS = {
   '背景': '#4285f4', '内容': '#34a853', '影响': '#fbbc05',
@@ -32,7 +32,7 @@ export default function DeepAnalysis() {
   const [dragIdx, setDragIdx] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
   const [parentTopicVersion, setParentTopicVersion] = useState(0);
-  const [updatingSummary, setUpdatingSummary] = useState(false);
+
 
   const loadData = useCallback(async () => {
     const res = await fetch(`/api/entries/${entryId}`);
@@ -80,27 +80,6 @@ export default function DeepAnalysis() {
     setAddMode(false);
   };
 
-  const handleUpdateSummary = async () => {
-    setUpdatingSummary(true);
-    try {
-      const childSummaries = children.map(c => `【${c.title}】${c.content}`).join('\n');
-      const requirements = `请根据以下子知识点的摘要，在现有综述的基础上做补充和完善。保持综述的概括性和整体结构不变，只在相关章节中融入新的信息：\n${childSummaries}`;
-      const mode = '';
-      const data = await generateTopicPage(entryId, [], parentTopicHTML || '', requirements, mode);
-      const rawHtml = data.html || '';
-      if (rawHtml.replace(/<[^>]*>/g, '').trim().length < 50) {
-        setUpdatingSummary(false);
-        return;
-      }
-      const ts = new Date().toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' });
-      const badge = `<div style="text-align:right;padding:8px 16px;font-size:11px;color:#666;border-bottom:1px solid #333;">综述更新: ${ts}</div>`;
-      const html = rawHtml.replace(/<body[^>]*>/, (m) => m + badge) || badge + rawHtml;
-      setParentTopicHTML(html);
-      const saved = await saveTopicPage(entryId, html, []);
-      setParentTopicVersion(saved.version);
-    } catch (e) { console.error(e); }
-    setUpdatingSummary(false);
-  };
 
   const handleExport = async () => {
     const pages = [];
@@ -324,14 +303,6 @@ function showPage(id) {
                 {parentTopicVersion > 0 && <span style={{ fontSize: 11, color: '#34a853', marginLeft: 6 }}>v{parentTopicVersion}</span>}
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
-                {children.length > 0 && (
-                  <button onClick={handleUpdateSummary} disabled={updatingSummary}
-                    style={{ padding: '5px 14px', borderRadius: 6, border: 'none', fontSize: 12,
-                      background: updatingSummary ? '#333' : '#9c27b033', color: updatingSummary ? '#666' : '#ce93d8',
-                      cursor: updatingSummary ? 'wait' : 'pointer' }}>
-                    {updatingSummary ? '更新中...' : '🔄 用子节点内容更新综述'}
-                  </button>
-                )}
                 <button onClick={handleExport}
                   style={{ padding: '5px 14px', borderRadius: 6, border: 'none', fontSize: 12,
                     background: '#1565c033', color: '#64b5f6', cursor: 'pointer' }}>
