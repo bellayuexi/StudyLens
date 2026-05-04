@@ -14,3 +14,5 @@ wiki/
 # Test data directories
 data-test/
 wiki-test/
+test-results/
+test-english-input.txt
