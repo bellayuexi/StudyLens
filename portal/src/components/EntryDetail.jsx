@@ -898,15 +898,39 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                     const next = !prev;
                     try {
                       const iframe = document.querySelector('iframe[title="知识专题"]');
-                      if (iframe?.contentDocument) {
-                        const doc = iframe.contentDocument;
-                        let style = doc.getElementById('_sg_theme_override');
-                        if (next) {
-                          if (!style) { style = doc.createElement('style'); style.id = '_sg_theme_override'; doc.head.appendChild(style); }
-                          style.textContent = 'html, body { background: #fff !important; color: #222 !important; } * { color: #333 !important; border-color: #ddd !important; } div, section, article, aside, header, footer, nav, main, details, summary, figure { background-color: transparent !important; } html, body { background-color: #fff !important; } h1,h2,h3,h4,h5,h6 { color: #111 !important; } a { color: #1a73e8 !important; } pre, code { background-color: #f5f5f5 !important; color: #333 !important; } blockquote { border-left-color: #ccc !important; background-color: #f9f9f9 !important; } table { border-color: #ddd !important; } th { background-color: #f0f0f0 !important; color: #333 !important; } tr:nth-child(even) { background-color: #fafafa !important; } img, svg, video, canvas, iframe { filter: none !important; }';
-                        } else if (style) {
-                          style.remove();
-                        }
+                      if (!iframe?.contentDocument) return next;
+                      const doc = iframe.contentDocument;
+                      if (next) {
+                        const parseColor = (s) => {
+                          const m = s.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+                          return m ? [+m[1], +m[2], +m[3]] : null;
+                        };
+                        const invertColor = ([r, g, b]) => [255 - r, 255 - g, 255 - b];
+                        const lum = ([r, g, b]) => 0.299 * r + 0.587 * g + 0.114 * b;
+                        const toHex = ([r, g, b]) => `rgb(${r},${g},${b})`;
+                        const all = doc.querySelectorAll('*');
+                        all.forEach(el => {
+                          const cs = doc.defaultView.getComputedStyle(el);
+                          const bg = parseColor(cs.backgroundColor);
+                          if (bg && lum(bg) < 80) {
+                            const inv = invertColor(bg);
+                            el.dataset.sgOrigBg = el.style.backgroundColor || '';
+                            el.style.setProperty('background-color', toHex(inv), 'important');
+                          }
+                          const fg = parseColor(cs.color);
+                          if (fg && lum(fg) > 180) {
+                            el.dataset.sgOrigColor = el.style.color || '';
+                            el.style.setProperty('color', toHex(invertColor(fg)), 'important');
+                          }
+                        });
+                        doc.documentElement.dataset.sgTheme = 'light';
+                      } else {
+                        const all = doc.querySelectorAll('*');
+                        all.forEach(el => {
+                          if ('sgOrigBg' in el.dataset) { el.style.backgroundColor = el.dataset.sgOrigBg; delete el.dataset.sgOrigBg; }
+                          if ('sgOrigColor' in el.dataset) { el.style.color = el.dataset.sgOrigColor; delete el.dataset.sgOrigColor; }
+                        });
+                        delete doc.documentElement.dataset.sgTheme;
                       }
                     } catch {}
                     return next;
