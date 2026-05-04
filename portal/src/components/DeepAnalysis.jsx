@@ -119,6 +119,21 @@ body { background: #0f1117; color: #e0e0e0; font-family: 'Segoe UI', system-ui, 
 .nav-count { font-size: 10px; color: #555; padding: 4px 16px 8px; }
 .main-content { flex: 1; overflow: hidden; background: #0f1117; }
 .main-content iframe { width: 100%; height: 100%; border: none; background: #0f1117; }
+.print-content { display: none; }
+@media print {
+  *, *::before, *::after { background: transparent !important; background-image: none !important; color: #000 !important; text-shadow: none !important; box-shadow: none !important; border-color: #ccc !important; }
+  body { display: block !important; padding: 20px !important; }
+  .sidebar { display: none !important; }
+  .main-content { display: none !important; }
+  .print-content { display: block !important; max-width: 100% !important; width: 100% !important; }
+  .print-content .print-section { page-break-before: always; padding: 20px 0; }
+  .print-content .print-section:first-child { page-break-before: avoid; }
+  .print-content h2 { border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 16px; }
+  pre, code { background: #f5f5f5 !important; }
+  pre, blockquote, table { page-break-inside: avoid; border: 1px solid #ccc !important; }
+  img { max-width: 100% !important; }
+  a { text-decoration: underline; }
+}
 </style>
 </head>
 <body>
@@ -136,6 +151,10 @@ ${childNavItems}
 <div class="main-content">
 ${pages.map((p, i) => `<iframe id="frame-child-${i}" style="display:none" srcdoc="${p.html.replace(/"/g, '&quot;')}"></iframe>`).join('\n')}
 <iframe id="frame-summary" srcdoc="${summaryHtml.replace(/"/g, '&quot;')}"></iframe>
+</div>
+<div class="print-content">
+<div class="print-section"><h2>📄 综述: ${title}</h2>${summaryHtml}</div>
+${pages.map((p, i) => `<div class="print-section"><h2>${i + 1}. ${p.title}</h2>${p.html}</div>`).join('\n')}
 </div>
 <script>
 var current = 'summary';

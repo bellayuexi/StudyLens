@@ -943,7 +943,8 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
               )}
               {topicHTML && (
                 <button onClick={() => {
-                  const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${entry.title} - 专题页</title></head><body>${topicHTML}</body></html>`;
+                  const printCSS = `@media print { *, *::before, *::after { background: transparent !important; background-image: none !important; color: #000 !important; text-shadow: none !important; box-shadow: none !important; border-color: #ccc !important; } body { padding: 20px !important; max-width: 100% !important; width: 100% !important; } div, section, article, main { max-width: 100% !important; width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; } a { text-decoration: underline; } img { max-width: 100% !important; } h1,h2,h3,h4,h5,h6 { page-break-after: avoid; } pre, blockquote, table { page-break-inside: avoid; border: 1px solid #ccc !important; } pre, code { background: #f5f5f5 !important; } }`;
+                  const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${entry.title} - 专题页</title><style>${printCSS}</style></head><body>${topicHTML}</body></html>`;
                   const blob = new Blob([fullHtml], { type: 'text/html' });
                   const a = document.createElement('a');
                   a.href = URL.createObjectURL(blob);
@@ -1074,7 +1075,7 @@ document.addEventListener('mousedown', function(e) {
                 }
                 const widthStyle = doc.createElement('style');
                 widthStyle.id = '_sg_width_fix';
-                widthStyle.textContent = 'body, .container, .content, main, article, .wrapper, .page { max-width: 100% !important; width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; } body { padding: 16px 24px !important; box-sizing: border-box !important; }';
+                widthStyle.textContent = 'body, .container, .content, main, article, .wrapper, .page { max-width: 100% !important; width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; } body { padding: 16px 24px !important; box-sizing: border-box !important; } @media print { *, *::before, *::after { background: transparent !important; background-image: none !important; color: #000 !important; text-shadow: none !important; box-shadow: none !important; border-color: #ccc !important; } body { padding: 20px !important; } pre, code { background: #f5f5f5 !important; } pre, blockquote, table { page-break-inside: avoid; border: 1px solid #ccc !important; } img { max-width: 100% !important; } a { text-decoration: underline; } }';
                 doc.head.appendChild(widthStyle);
               }
             }} style={{ flex: 1, border: editMode ? '2px solid #34a853' : 'none', background: lightTheme ? '#ffffff' : '#0f1117' }} title="知识专题" />
