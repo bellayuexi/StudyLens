@@ -567,7 +567,13 @@ function saveSettings(data) {
 
 app.get('/api/settings', (req, res) => {
   const settings = loadSettings();
-  if (!settings.defaultPrompts) settings.defaultPrompts = DEFAULT_PROMPTS;
+  if (!settings.defaultPrompts || Object.keys(settings.defaultPrompts).length === 0) {
+    settings.defaultPrompts = DEFAULT_PROMPTS;
+  } else {
+    for (const key of Object.keys(DEFAULT_PROMPTS)) {
+      if (!settings.defaultPrompts[key]) settings.defaultPrompts[key] = DEFAULT_PROMPTS[key];
+    }
+  }
   res.json(settings);
 });
 

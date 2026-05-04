@@ -104,13 +104,16 @@ export default function SettingsPanel({ onClose }) {
               <p style={{ fontSize: 11, color: '#666', marginBottom: 10 }}>
                 这些是系统默认的 AI 提示词。修改后将影响所有未单独配置的学科。
               </p>
+              <p style={{ fontSize: 11, color: '#e8a73580', marginBottom: 10 }}>
+                ⚠️ 注意：修改默认 Prompt 会影响所有未设置专属 Prompt 的学科。
+              </p>
               {PROMPT_TYPES.map(pt => (
                 <div key={pt.key} style={{ marginBottom: 12 }}>
                   <label style={{ fontSize: 12, color: '#999', display: 'block', marginBottom: 4 }}>{pt.label}</label>
                   <textarea
                     value={defaults[pt.key] || ''}
                     onChange={e => updateDefault(pt.key, e.target.value)}
-                    rows={4}
+                    rows={8}
                     style={inputStyle} />
                 </div>
               ))}
