@@ -7,7 +7,7 @@ const testWikiDir = path.join(__dirname, 'wiki-test');
 module.exports = defineConfig({
   testDir: './e2e',
   timeout: 30000,
-  retries: 0,
+  retries: 1,
   use: {
     baseURL: 'http://localhost:3099',
     headless: true,

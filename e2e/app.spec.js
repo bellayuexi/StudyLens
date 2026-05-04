@@ -120,6 +120,7 @@ test.describe('Entry List with Seeded Data', () => {
 
   test('displays seeded entries in category view', async ({ page }) => {
     await page.goto('/');
+    await expect(page.getByText('3 个知识点')).toBeVisible({ timeout: 5000 });
     await expect(page.getByText('秦朝统一').first()).toBeVisible();
     await expect(page.getByText('汉武帝').first()).toBeVisible();
     await expect(page.getByText('光合作用').first()).toBeVisible();
@@ -127,7 +128,7 @@ test.describe('Entry List with Seeded Data', () => {
 
   test('entry count is correct', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByText('3 个知识点')).toBeVisible();
+    await expect(page.getByText('3 个知识点')).toBeVisible({ timeout: 5000 });
   });
 
   test('clicking entry shows detail panel', async ({ page }) => {

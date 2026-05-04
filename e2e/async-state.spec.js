@@ -18,11 +18,11 @@ async function clearAll(request) {
   } catch { /* no entries */ }
 }
 
-function mockTopicPages(page, entryId) {
-  page.route(`**/api/entries/${entryId}/topic-page/latest`, route => {
+async function mockTopicPages(page, entryId) {
+  await page.route(`**/api/entries/${entryId}/topic-page/latest`, route => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ page: null }) });
   });
-  page.route(`**/api/entries/${entryId}/topic-pages`, route => {
+  await page.route(`**/api/entries/${entryId}/topic-pages`, route => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ pages: [] }) });
   });
 }
@@ -60,10 +60,11 @@ test.describe('Async State Isolation', () => {
     await page.route(`**/api/entries/${entryB.id}/questions`, route => {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ questions: [{ id: 'q3', question: '光合作用的产物是什么？', category: '概念' }] }) });
     });
-    mockTopicPages(page, entryA.id);
-    mockTopicPages(page, entryB.id);
+    await mockTopicPages(page, entryA.id);
+    await mockTopicPages(page, entryB.id);
 
     await page.goto('/');
+    await expect(page.getByText('2 个知识点')).toBeVisible({ timeout: 5000 });
 
     // Click entry A, switch to explore tab, generate questions
     await openExploreAndGenerate(page, '秦朝统一');
@@ -83,10 +84,11 @@ test.describe('Async State Isolation', () => {
     await page.route(`**/api/entries/${entryA.id}/questions`, route => {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ questions: questionsA }) });
     });
-    mockTopicPages(page, entryA.id);
-    mockTopicPages(page, entryB.id);
+    await mockTopicPages(page, entryA.id);
+    await mockTopicPages(page, entryB.id);
 
     await page.goto('/');
+    await expect(page.getByText('2 个知识点')).toBeVisible({ timeout: 5000 });
 
     // Open entry A, go to explore tab, generate questions
     await openExploreAndGenerate(page, '秦朝统一');
@@ -116,10 +118,11 @@ test.describe('Async State Isolation', () => {
     await page.route(`**/api/topic-pages/*/qa-history`, route => {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true }) });
     });
-    mockTopicPages(page, entryA.id);
-    mockTopicPages(page, entryB.id);
+    await mockTopicPages(page, entryA.id);
+    await mockTopicPages(page, entryB.id);
 
     await page.goto('/');
+    await expect(page.getByText('2 个知识点')).toBeVisible({ timeout: 5000 });
 
     // Open A, generate questions, answer one
     await openExploreAndGenerate(page, '秦朝统一');
@@ -142,10 +145,11 @@ test.describe('Async State Isolation', () => {
       await slowPromise;
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ questions: [{ id: 'q1', question: '迟到的问题', category: '概念' }] }) });
     });
-    mockTopicPages(page, entryA.id);
-    mockTopicPages(page, entryB.id);
+    await mockTopicPages(page, entryA.id);
+    await mockTopicPages(page, entryB.id);
 
     await page.goto('/');
+    await expect(page.getByText('2 个知识点')).toBeVisible({ timeout: 5000 });
 
     // Open entry A, start generating questions (will be slow)
     await openExploreAndGenerate(page, '秦朝统一');
@@ -178,6 +182,7 @@ test.describe('Async State Isolation', () => {
     });
 
     await page.goto('/');
+    await expect(page.getByText('2 个知识点')).toBeVisible({ timeout: 5000 });
 
     // Open entry A — should show A's topic page
     await page.getByText('秦朝统一').first().click();

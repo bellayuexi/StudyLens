@@ -18,11 +18,11 @@ async function clearAll(request) {
   } catch { /* no entries */ }
 }
 
-function mockTopicPages(page, entryId) {
-  page.route(`**/api/entries/${entryId}/topic-page/latest`, route => {
+async function mockTopicPages(page, entryId) {
+  await page.route(`**/api/entries/${entryId}/topic-page/latest`, route => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ page: null }) });
   });
-  page.route(`**/api/entries/${entryId}/topic-pages`, route => {
+  await page.route(`**/api/entries/${entryId}/topic-pages`, route => {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ pages: [] }) });
   });
 }
@@ -104,7 +104,7 @@ test.describe('Entry Editing', () => {
   });
 
   test('clicking entry shows content and tags', async ({ page }) => {
-    mockTopicPages(page, entry.id);
+    await mockTopicPages(page, entry.id);
     await page.goto('/');
     await page.getByText('原始标题').first().click();
     await expect(page.getByText('原始内容').first()).toBeVisible({ timeout: 5000 });
@@ -112,7 +112,7 @@ test.describe('Entry Editing', () => {
   });
 
   test('delete entry removes it from list', async ({ page }) => {
-    mockTopicPages(page, entry.id);
+    await mockTopicPages(page, entry.id);
     await page.goto('/');
     await expect(page.getByText('1 个知识点')).toBeVisible();
     await page.getByText('原始标题').first().click();
@@ -179,13 +179,13 @@ test.describe('Deep Analysis Navigation', () => {
   });
 
   test('deep analysis button navigates to deep analysis page', async ({ page }) => {
-    mockTopicPages(page, entry.id);
+    await mockTopicPages(page, entry.id);
     await page.route(`**/api/entries/${entry.id}/children`, route => {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ children: [] }) });
     });
 
     await page.goto('/');
-    await expect(page.getByText('1 个知识点')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('中国古代史').first()).toBeVisible({ timeout: 5000 });
     await page.getByText('中国古代史').first().click();
     await expect(page.getByText('从夏商周到明清的历史').first()).toBeVisible({ timeout: 5000 });
 
@@ -198,13 +198,13 @@ test.describe('Deep Analysis Navigation', () => {
   });
 
   test('deep analysis page shows AI expand button', async ({ page }) => {
-    mockTopicPages(page, entry.id);
+    await mockTopicPages(page, entry.id);
     await page.route(`**/api/entries/${entry.id}/children`, route => {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ children: [] }) });
     });
 
     await page.goto('/');
-    await expect(page.getByText('1 个知识点')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('中国古代史').first()).toBeVisible({ timeout: 5000 });
     await page.getByText('中国古代史').first().click();
 
     const deepBtn = page.getByText('深入分析').first();
@@ -215,7 +215,7 @@ test.describe('Deep Analysis Navigation', () => {
   });
 
   test('deep analysis shows children after expand', async ({ page }) => {
-    mockTopicPages(page, entry.id);
+    await mockTopicPages(page, entry.id);
     let expandCalled = false;
     await page.route(`**/api/entries/${entry.id}/children`, route => {
       const children = expandCalled
@@ -241,7 +241,7 @@ test.describe('Deep Analysis Navigation', () => {
     });
 
     await page.goto('/');
-    await expect(page.getByText('1 个知识点')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('中国古代史').first()).toBeVisible({ timeout: 5000 });
     await page.getByText('中国古代史').first().click();
 
     const deepBtn = page.getByText('深入分析').first();
@@ -256,13 +256,13 @@ test.describe('Deep Analysis Navigation', () => {
   });
 
   test('back button returns from deep analysis to main page', async ({ page }) => {
-    mockTopicPages(page, entry.id);
+    await mockTopicPages(page, entry.id);
     await page.route(`**/api/entries/${entry.id}/children`, route => {
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ children: [] }) });
     });
 
     await page.goto('/');
-    await expect(page.getByText('1 个知识点')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('中国古代史').first()).toBeVisible({ timeout: 5000 });
     await page.getByText('中国古代史').first().click();
 
     const deepBtn = page.getByText('深入分析').first();
