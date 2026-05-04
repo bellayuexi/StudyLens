@@ -92,6 +92,22 @@ export default function DeepAnalysis() {
       } catch { pages.push({ title: child.title, html: `<div style="padding:24px;color:#888">加载失败</div>` }); }
     }
     const summaryHtml = parentTopicHTML || '<div style="padding:24px;color:#888">暂无综述</div>';
+    const stripHtmlWrapper = (html) => {
+      return html
+        .replace(/<!DOCTYPE[^>]*>/gi, '')
+        .replace(/<html[^>]*>/gi, '')
+        .replace(/<\/html>/gi, '')
+        .replace(/<head>[\s\S]*?<\/head>/gi, '')
+        .replace(/<body[^>]*>/gi, '<div class="page-body">')
+        .replace(/<\/body>/gi, '</div>');
+    };
+    const widthCSS = '<style>body,body>div,body>section,body>article,body>main,[class*=container],[class*=wrapper],[class*=content]{max-width:100%!important;width:100%!important;margin-left:0!important;margin-right:0!important;padding-left:24px!important;padding-right:24px!important}</style>';
+    const injectCSS = (html) => {
+      if (html.includes('</head>')) return html.replace('</head>', widthCSS + '</head>');
+      if (html.includes('</body>')) return html.replace('</body>', widthCSS + '</body>');
+      return html + widthCSS;
+    };
+    const summaryStripped = stripHtmlWrapper(summaryHtml);
     const title = parentEntry?.title || '深入分析';
     const childNavItems = pages.map((p, i) => `<a href="#" onclick="showPage('child-${i}');return false" class="nav-item child" id="nav-child-${i}"><span class="dot"></span>${p.title}</a>`).join('\n');
     const exportHtml = `<!DOCTYPE html>
@@ -120,8 +136,11 @@ body { background: #0f1117; color: #e0e0e0; font-family: 'Segoe UI', system-ui, 
 .main-content { flex: 1; overflow: hidden; background: #0f1117; }
 .main-content iframe { width: 100%; height: 100%; border: none; background: #0f1117; }
 .print-content { display: none; }
+.print-content .page-body { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
 @media print {
-  *, *::before, *::after { background: transparent !important; background-image: none !important; color: #000 !important; text-shadow: none !important; box-shadow: none !important; border-color: #ccc !important; }
+  *, *::before, *::after { color: #000 !important; text-shadow: none !important; box-shadow: none !important; border-color: #ccc !important; }
+  body, div, section, article, main, span, p, li, td, th, blockquote, pre, header, footer, nav, details, summary { background: #fff !important; background-color: #fff !important; background-image: none !important; }
+  div, section, article, main, [class*="container"], [class*="wrapper"], [class*="content"] { max-width: 100% !important; width: auto !important; overflow: visible !important; height: auto !important; max-height: none !important; }
   body { display: block !important; padding: 20px !important; }
   .sidebar { display: none !important; }
   .main-content { display: none !important; }
@@ -149,12 +168,12 @@ ${childNavItems}
 </div>
 </div>
 <div class="main-content">
-${pages.map((p, i) => `<iframe id="frame-child-${i}" style="display:none" srcdoc="${p.html.replace(/"/g, '&quot;')}"></iframe>`).join('\n')}
-<iframe id="frame-summary" srcdoc="${summaryHtml.replace(/"/g, '&quot;')}"></iframe>
+${pages.map((p, i) => `<iframe id="frame-child-${i}" style="display:none" srcdoc="${injectCSS(p.html).replace(/"/g, '&quot;')}"></iframe>`).join('\n')}
+<iframe id="frame-summary" srcdoc="${injectCSS(summaryHtml).replace(/"/g, '&quot;')}"></iframe>
 </div>
 <div class="print-content">
-<div class="print-section"><h2>📄 综述: ${title}</h2>${summaryHtml}</div>
-${pages.map((p, i) => `<div class="print-section"><h2>${i + 1}. ${p.title}</h2>${p.html}</div>`).join('\n')}
+<div class="print-section"><h2>📄 综述: ${title}</h2>${summaryStripped}</div>
+${pages.map((p, i) => `<div class="print-section"><h2>${i + 1}. ${p.title}</h2>${stripHtmlWrapper(p.html)}</div>`).join('\n')}
 </div>
 <script>
 var current = 'summary';
