@@ -191,3 +191,26 @@ export async function saveSettings(data) {
   });
   return res.json();
 }
+
+export async function getLLMConfig() {
+  const res = await fetch(`${API}/api/llm/config`);
+  return res.json();
+}
+
+export async function saveLLMConfig(data) {
+  const res = await fetch(`${API}/api/llm/config`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function testLLMProvider(providerName) {
+  const res = await fetch(`${API}/api/llm/test`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ providerName }),
+  });
+  return res.json();
+}

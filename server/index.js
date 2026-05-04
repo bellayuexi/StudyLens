@@ -591,6 +591,45 @@ app.put('/api/settings', (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/llm/config', (req, res) => {
+  try {
+    res.json(llm.loadLLMConfig());
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/llm/config', (req, res) => {
+  try {
+    llm.saveLLMConfig(req.body);
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/llm/test', async (req, res) => {
+  try {
+    const { providerName } = req.body;
+    const config = llm.loadLLMConfig();
+    const providerCfg = config.providers[providerName];
+    if (!providerCfg) return res.status(400).json({ error: `Unknown provider: ${providerName}` });
+
+    if (providerName === 'agent-maestro') {
+      const ok = await llm.probeAgentMaestro(config);
+      return res.json({ ok, message: ok ? 'Agent Maestro is reachable' : 'Agent Maestro is not reachable' });
+    }
+
+    const result = await llm.callLLM(
+      [{ role: 'user', content: 'Reply with exactly: OK' }],
+      { maxTokens: 16, providers: [{ name: providerName, ...providerCfg }] }
+    );
+    res.json({ ok: true, message: `Response: ${result.slice(0, 100)}` });
+  } catch (err) {
+    res.json({ ok: false, message: err.message });
+  }
+});
+
 const portalDist = path.join(__dirname, '..', 'portal', 'dist');
 if (fs.existsSync(portalDist)) {
   app.use(express.static(portalDist));

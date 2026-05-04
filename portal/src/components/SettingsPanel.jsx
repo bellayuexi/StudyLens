@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getSettings, saveSettings } from '../lib/api.js';
+import { getSettings, saveSettings, getLLMConfig, saveLLMConfig, testLLMProvider } from '../lib/api.js';
 
 const PROMPT_TYPES = [
   { key: 'analyzePrompt', label: '知识提取 Prompt' },
@@ -15,12 +15,22 @@ export default function SettingsPanel({ onClose }) {
   const [newSubject, setNewSubject] = useState('');
   const [expanded, setExpanded] = useState(null);
   const [defaultsExpanded, setDefaultsExpanded] = useState(false);
+  const [llmConfig, setLlmConfig] = useState(null);
+  const [llmExpanded, setLlmExpanded] = useState(false);
+  const [llmDirty, setLlmDirty] = useState(false);
+  const [llmSaving, setLlmSaving] = useState(false);
+  const [testResults, setTestResults] = useState({});
+  const llmOrigRef = useRef(null);
   const originalRef = useRef(null);
 
   useEffect(() => {
     getSettings().then(data => {
       setSettings(data);
       originalRef.current = JSON.stringify(data);
+    });
+    getLLMConfig().then(data => {
+      setLlmConfig(data);
+      llmOrigRef.current = JSON.stringify(data);
     });
   }, []);
 
@@ -41,6 +51,28 @@ export default function SettingsPanel({ onClose }) {
     originalRef.current = JSON.stringify(settings);
     setDirty(false);
     setSaving(false);
+  };
+
+  const updateLlm = (updater) => {
+    setLlmConfig(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      setLlmDirty(JSON.stringify(next) !== llmOrigRef.current);
+      return next;
+    });
+  };
+
+  const handleLlmSave = async () => {
+    setLlmSaving(true);
+    await saveLLMConfig(llmConfig);
+    llmOrigRef.current = JSON.stringify(llmConfig);
+    setLlmDirty(false);
+    setLlmSaving(false);
+  };
+
+  const handleTest = async (name) => {
+    setTestResults(prev => ({ ...prev, [name]: { testing: true } }));
+    const result = await testLLMProvider(name);
+    setTestResults(prev => ({ ...prev, [name]: result }));
   };
 
   const addSubject = () => {
@@ -136,6 +168,110 @@ export default function SettingsPanel({ onClose }) {
             </div>
           )}
         </div>
+
+        {/* LLM Provider Config */}
+        {llmConfig && (
+          <div style={{ marginBottom: 20, borderRadius: 8, border: '1px solid #2a2d35', background: '#161822' }}>
+            <div onClick={() => setLlmExpanded(!llmExpanded)}
+              style={{ padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+                {llmExpanded ? '▼' : '▶'} LLM 模型配置
+              </span>
+              {llmDirty && <span style={{ fontSize: 11, color: '#fbbc05' }}>未保存</span>}
+            </div>
+            {llmExpanded && (
+              <div style={{ padding: '0 14px 14px' }}>
+                <div style={{ marginBottom: 12 }}>
+                  <label style={{ fontSize: 12, color: '#999', display: 'block', marginBottom: 4 }}>默认模式</label>
+                  <select value={llmConfig.defaultProvider || 'auto'}
+                    onChange={e => updateLlm(prev => ({ ...prev, defaultProvider: e.target.value }))}
+                    style={{ ...inputStyle, cursor: 'pointer' }}>
+                    <option value="auto">自动检测 (推荐)</option>
+                    {Object.keys(llmConfig.providers || {}).map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {Object.entries(llmConfig.providers || {}).map(([name, cfg]) => (
+                  <div key={name} style={{ marginBottom: 12, padding: 10, borderRadius: 6, border: '1px solid #2a2d45', background: '#1a1d2e' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: '#ddd' }}>{name}</span>
+                      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                        <label style={{ fontSize: 11, color: '#999', display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <input type="checkbox" checked={cfg.enabled !== false}
+                            onChange={e => updateLlm(prev => ({
+                              ...prev, providers: { ...prev.providers, [name]: { ...prev.providers[name], enabled: e.target.checked } }
+                            }))} />
+                          启用
+                        </label>
+                        <button onClick={() => handleTest(name)}
+                          disabled={testResults[name]?.testing}
+                          style={{ padding: '2px 8px', borderRadius: 4, border: 'none', cursor: 'pointer',
+                            background: '#4285f420', color: '#4285f4', fontSize: 11 }}>
+                          {testResults[name]?.testing ? '测试中...' : '测试'}
+                        </button>
+                      </div>
+                    </div>
+                    {testResults[name] && !testResults[name].testing && (
+                      <div style={{ fontSize: 11, padding: '4px 8px', borderRadius: 4, marginBottom: 6,
+                        background: testResults[name].ok ? '#34a85320' : '#ea433520',
+                        color: testResults[name].ok ? '#34a853' : '#ea4335' }}>
+                        {testResults[name].message}
+                      </div>
+                    )}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                      <div>
+                        <label style={{ fontSize: 11, color: '#777' }}>Base URL</label>
+                        <input value={cfg.baseUrl || ''} onChange={e => updateLlm(prev => ({
+                          ...prev, providers: { ...prev.providers, [name]: { ...prev.providers[name], baseUrl: e.target.value } }
+                        }))} style={{ ...inputStyle, fontSize: 11 }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 11, color: '#777' }}>模型</label>
+                        <input value={cfg.model || ''} onChange={e => updateLlm(prev => ({
+                          ...prev, providers: { ...prev.providers, [name]: { ...prev.providers[name], model: e.target.value } }
+                        }))} style={{ ...inputStyle, fontSize: 11 }} />
+                      </div>
+                    </div>
+                    {name === 'openai-compatible' && (
+                      <div style={{ marginTop: 6 }}>
+                        <label style={{ fontSize: 11, color: '#777' }}>API Key</label>
+                        <input type="password" value={cfg.apiKey || ''} onChange={e => updateLlm(prev => ({
+                          ...prev, providers: { ...prev.providers, [name]: { ...prev.providers[name], apiKey: e.target.value } }
+                        }))} style={{ ...inputStyle, fontSize: 11 }} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                <div style={{ marginTop: 12 }}>
+                  <label style={{ fontSize: 12, color: '#999', display: 'block', marginBottom: 6 }}>任务路由</label>
+                  <p style={{ fontSize: 11, color: '#666', marginBottom: 8 }}>指定每种任务使用哪个 Provider（default = 使用默认模式）</p>
+                  {Object.entries(llmConfig.taskRouting || {}).map(([task, provider]) => (
+                    <div key={task} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontSize: 12, color: '#aaa', width: 80 }}>{task}</span>
+                      <select value={provider || 'default'} onChange={e => updateLlm(prev => ({
+                        ...prev, taskRouting: { ...prev.taskRouting, [task]: e.target.value }
+                      }))} style={{ ...inputStyle, flex: 1, fontSize: 11, cursor: 'pointer' }}>
+                        <option value="default">default（跟随默认模式）</option>
+                        {Object.keys(llmConfig.providers || {}).map(name => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
+                </div>
+
+                <button onClick={handleLlmSave} disabled={llmSaving || !llmDirty}
+                  style={{ marginTop: 12, padding: '6px 16px', borderRadius: 6, border: 'none', cursor: llmDirty ? 'pointer' : 'default',
+                    background: llmDirty ? '#34a853' : '#2a2d35', color: llmDirty ? '#fff' : '#666', fontSize: 12 }}>
+                  {llmSaving ? '保存中...' : '保存 LLM 配置'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Per-subject prompts */}
         <div style={{ marginBottom: 20 }}>

@@ -1,0 +1,28 @@
+{
+  "defaultProvider": "auto",
+  "providers": {
+    "agent-maestro": {
+      "enabled": true,
+      "baseUrl": "http://localhost:23333/api/anthropic",
+      "model": "claude-sonnet-4-6"
+    },
+    "openai-compatible": {
+      "enabled": false,
+      "baseUrl": "https://api.openai.com/v1",
+      "apiKey": "",
+      "model": "gpt-4o"
+    },
+    "ollama": {
+      "enabled": true,
+      "baseUrl": "http://localhost:11434",
+      "model": "llama3.2"
+    }
+  },
+  "taskRouting": {
+    "analyze": "default",
+    "questions": "default",
+    "topicPage": "default",
+    "qa": "default",
+    "expand": "default"
+  }
+}

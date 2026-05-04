@@ -3,6 +3,150 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
+const LLM_CONFIG_PATH = path.join(__dirname, '..', 'wiki', 'config', 'llm-config.json');
+const LLM_CONFIG_TEMPLATE = path.join(__dirname, '..', 'config', 'llm-config.template.json');
+
+function loadLLMConfig() {
+  try {
+    return JSON.parse(fs.readFileSync(LLM_CONFIG_PATH, 'utf-8'));
+  } catch {
+    try { return JSON.parse(fs.readFileSync(LLM_CONFIG_TEMPLATE, 'utf-8')); } catch { return {}; }
+  }
+}
+
+function saveLLMConfig(config) {
+  const dir = path.dirname(LLM_CONFIG_PATH);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(LLM_CONFIG_PATH, JSON.stringify(config, null, 2), 'utf-8');
+}
+
+function buildProvider(name, cfg) {
+  if (name === 'agent-maestro') {
+    const baseUrl = (cfg.baseUrl || process.env.LLM_PROXY_URL || process.env.ANTHROPIC_BASE_URL || 'http://localhost:23333/api/anthropic').replace(/\/$/, '');
+    return {
+      name: 'agent-maestro',
+      url: () => baseUrl.endsWith('/v1/messages') ? baseUrl : `${baseUrl}/v1/messages`,
+      model: () => cfg.model || process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
+      headers: () => ({ 'Content-Type': 'application/json' }),
+      buildBody: (messages, model, maxTokens) => JSON.stringify({ model, max_tokens: maxTokens, messages }),
+      parseResponse: (body) => { const data = JSON.parse(body); return data.content?.[0]?.text || ''; },
+    };
+  }
+  if (name === 'openai-compatible') {
+    const baseUrl = (cfg.baseUrl || 'https://api.openai.com/v1').replace(/\/$/, '');
+    const apiKey = cfg.apiKey || process.env.OPENAI_API_KEY || '';
+    return {
+      name: 'openai-compatible',
+      url: () => baseUrl.endsWith('/chat/completions') ? baseUrl : `${baseUrl}/chat/completions`,
+      model: () => cfg.model || 'gpt-4o',
+      headers: () => {
+        const h = { 'Content-Type': 'application/json' };
+        if (apiKey) h['Authorization'] = `Bearer ${apiKey}`;
+        return h;
+      },
+      buildBody: (messages, model, maxTokens) => JSON.stringify({ model, max_tokens: maxTokens, messages }),
+      parseResponse: (body) => { const data = JSON.parse(body); return data.choices?.[0]?.message?.content || ''; },
+    };
+  }
+  if (name === 'ollama') {
+    const baseUrl = (cfg.baseUrl || process.env.OLLAMA_URL || 'http://localhost:11434').replace(/\/$/, '');
+    return {
+      name: 'ollama',
+      url: () => `${baseUrl}/api/chat`,
+      model: () => cfg.model || process.env.OLLAMA_MODEL || 'llama3.2',
+      headers: () => ({ 'Content-Type': 'application/json' }),
+      buildBody: (messages, model) => JSON.stringify({ model, messages, stream: false }),
+      parseResponse: (body) => { const data = JSON.parse(body); return data.message?.content || ''; },
+    };
+  }
+  return null;
+}
+
+let _maestroAvailable = null;
+let _maestroCheckedAt = 0;
+
+async function probeAgentMaestro(config) {
+  const now = Date.now();
+  if (_maestroAvailable !== null && now - _maestroCheckedAt < 60000) return _maestroAvailable;
+  const cfg = config.providers?.['agent-maestro'] || {};
+  const baseUrl = (cfg.baseUrl || 'http://localhost:23333/api/anthropic').replace(/\/$/, '');
+  try {
+    await new Promise((resolve, reject) => {
+      const url = new URL(baseUrl);
+      const mod = url.protocol === 'https:' ? https : http;
+      const req = mod.request(url, { method: 'GET', timeout: 3000 }, (res) => {
+        res.resume();
+        resolve(true);
+      });
+      req.on('error', () => reject());
+      req.on('timeout', () => { req.destroy(); reject(); });
+      req.end();
+    });
+    _maestroAvailable = true;
+  } catch {
+    _maestroAvailable = false;
+  }
+  _maestroCheckedAt = now;
+  return _maestroAvailable;
+}
+
+async function getProvidersForTask(task = 'default') {
+  const config = loadLLMConfig();
+  const routing = config.taskRouting || {};
+  const providerName = routing[task] || 'default';
+
+  if (providerName !== 'default') {
+    const cfg = config.providers?.[providerName];
+    if (cfg?.enabled !== false) {
+      const p = buildProvider(providerName, cfg);
+      if (p) return [p];
+    }
+  }
+
+  const mode = config.defaultProvider || 'auto';
+  const providers = [];
+
+  if (mode === 'auto') {
+    const maestroCfg = config.providers?.['agent-maestro'] || {};
+    if (maestroCfg.enabled !== false) {
+      const available = await probeAgentMaestro(config);
+      if (available) providers.push(buildProvider('agent-maestro', maestroCfg));
+    }
+    const openaiCfg = config.providers?.['openai-compatible'] || {};
+    if (openaiCfg.enabled !== false && openaiCfg.apiKey) {
+      providers.push(buildProvider('openai-compatible', openaiCfg));
+    }
+    const ollamaCfg = config.providers?.['ollama'] || {};
+    if (ollamaCfg.enabled !== false) {
+      providers.push(buildProvider('ollama', ollamaCfg));
+    }
+  } else {
+    const cfg = config.providers?.[mode] || {};
+    const p = buildProvider(mode, cfg);
+    if (p) providers.push(p);
+    // fallback
+    for (const [name, c] of Object.entries(config.providers || {})) {
+      if (name !== mode && c.enabled !== false) {
+        const fb = buildProvider(name, c);
+        if (fb) providers.push(fb);
+      }
+    }
+  }
+
+  if (providers.length === 0) {
+    providers.push(buildProvider('agent-maestro', {}));
+    providers.push(buildProvider('ollama', {}));
+  }
+
+  return providers.filter(Boolean);
+}
+
+// Legacy compatibility
+const DEFAULT_PROVIDERS = [
+  buildProvider('agent-maestro', {}),
+  buildProvider('ollama', {}),
+].filter(Boolean);
+
 function loadSubjectPrompts(subject) {
   try {
     const settingsPath = path.join(__dirname, '..', 'wiki', 'config', 'settings.json');
@@ -11,34 +155,6 @@ function loadSubjectPrompts(subject) {
     return settings.subjects?.[discipline] || {};
   } catch { return {}; }
 }
-
-const DEFAULT_PROVIDERS = [
-  {
-    name: 'agent-maestro',
-    url: () => {
-      const base = (process.env.LLM_PROXY_URL || process.env.ANTHROPIC_BASE_URL || 'http://localhost:23333/api/anthropic').replace(/\/$/, '');
-      return base.endsWith('/v1/messages') ? base : `${base}/v1/messages`;
-    },
-    model: () => process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-6',
-    headers: () => ({ 'Content-Type': 'application/json' }),
-    buildBody: (messages, model, maxTokens) => JSON.stringify({ model, max_tokens: maxTokens, messages }),
-    parseResponse: (body) => {
-      const data = JSON.parse(body);
-      return data.content?.[0]?.text || '';
-    },
-  },
-  {
-    name: 'ollama',
-    url: () => (process.env.OLLAMA_URL || 'http://localhost:11434') + '/api/chat',
-    model: () => process.env.OLLAMA_MODEL || 'llama3.2',
-    headers: () => ({ 'Content-Type': 'application/json' }),
-    buildBody: (messages, model) => JSON.stringify({ model, messages, stream: false }),
-    parseResponse: (body) => {
-      const data = JSON.parse(body);
-      return data.message?.content || '';
-    },
-  },
-];
 
 function extractJSON(text, { isArray = false, repairKeys } = {}) {
   const cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
@@ -108,9 +224,10 @@ function httpRequest(urlStr, options, body) {
   });
 }
 
-async function callLLM(messages, { maxTokens = 4096, providers = DEFAULT_PROVIDERS } = {}) {
+async function callLLM(messages, { maxTokens = 4096, providers, task } = {}) {
+  const providerList = providers || await getProvidersForTask(task || 'default');
   const errors = [];
-  for (const p of providers) {
+  for (const p of providerList) {
     try {
       const model = typeof p.model === 'function' ? p.model() : p.model;
       const url = typeof p.url === 'function' ? p.url() : p.url;
@@ -156,7 +273,7 @@ ${text}
 
 Return ONLY valid JSON array, no other text.`;
 
-  const result = await callLLM([{ role: 'user', content: prompt }]);
+  const result = await callLLM([{ role: 'user', content: prompt }], { task: 'analyze' });
   const parsed = extractJSON(result, { isArray: true });
   if (!parsed) {
     console.error('[analyze] LLM raw response (first 500):', result.slice(0, 500));
@@ -184,7 +301,7 @@ Return a JSON array of objects: [{"id": "existing_entry_id", "relation": "brief 
 Only include genuinely related entries. Return empty array [] if none are related.
 Return ONLY valid JSON, no other text.`;
 
-  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 1024 });
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 1024, task: 'analyze' });
   return extractJSON(result, { isArray: true }) || [];
 }
 
@@ -233,7 +350,7 @@ Return ONLY valid JSON, no other text. Do not wrap in code fences.`;
   }
   messages.push({ role: 'user', content: question });
 
-  const result = await callLLM(messages, { maxTokens: 4096 });
+  const result = await callLLM(messages, { maxTokens: 4096, task: 'qa' });
   const parsed = extractJSON(result);
   if (parsed) return parsed;
   const ansMatch = result.match(/"answer"\s*:\s*"([\s\S]*?)"\s*,\s*"suggestedCards"/);
@@ -261,7 +378,7 @@ Based on the instruction, return a JSON array of changes to make. Each change is
 Only include entries that actually need changes. Return ONLY valid JSON array, no other text.
 If no changes are needed, return [].`;
 
-  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 4096 });
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 4096, task: 'analyze' });
   return extractJSON(result, { isArray: true }) || [];
 }
 
@@ -324,7 +441,7 @@ Rules:
 - For tree: max 4 branches, max 4 children each
 - Return ONLY valid JSON, no other text.`;
 
-  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 4096, providers: [DEFAULT_PROVIDERS[0]] });
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 4096, task: 'qa' });
   const parsed = extractJSON(result);
   if (!parsed) { console.warn('[buildQAMindMap] no JSON found'); return { type: 'tree', title: '', branches: [] }; }
   return parsed;
@@ -358,7 +475,7 @@ ${questionGuidance}
 重要：问题文本中如果要引用术语，请用「」而不是引号，避免JSON解析错误。
 只返回JSON，不要其他文字。`;
 
-  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 1024 });
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 1024, task: 'questions' });
   const parsed = extractJSON(result, { isArray: true, repairKeys: ['question', 'category'] });
   if (!parsed) { console.error('[smartQ] no match in LLM response:', result.slice(0, 200)); return []; }
   return parsed;
@@ -478,7 +595,7 @@ ${requirementsList}
   };
   console.log(`[topic-gen] START: "${entry.title}" mode=${mode || 'default'} isUpdate=${isUpdate} prompt=${prompt.length} chars`);
 
-  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 16384 });
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 16384, task: 'topicPage' });
   let html = result.replace(/```html\s*/g, '').replace(/```\s*/g, '').trim();
   if (!html.includes('<html') && !html.includes('<!DOCTYPE')) {
     html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="background:#0f1117;color:#e0e0e0;font-family:system-ui;padding:24px">${html}</body></html>`;
@@ -488,7 +605,7 @@ ${requirementsList}
     logData.firstResultLength = html.length;
     logData.firstResultTextLength = html.replace(/<[^>]*>/g, '').trim().length;
     logData.firstResultPreview = html.slice(0, 500);
-    const retry = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 16384 });
+    const retry = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 16384, task: 'topicPage' });
     let retryHtml = retry.replace(/```html\s*/g, '').replace(/```\s*/g, '').trim();
     if (!retryHtml.includes('<html') && !retryHtml.includes('<!DOCTYPE')) {
       retryHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="background:#0f1117;color:#e0e0e0;font-family:system-ui;padding:24px">${retryHtml}</body></html>`;
@@ -524,9 +641,9 @@ ${qaContext ? '参考学生已探索过的问题，确保子知识点覆盖这�
 重要：文本中引用术语请用「」而不是引号，避免JSON解析错误。
 只返回JSON，不要其他文字。`;
 
-  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 2048 });
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 2048, task: 'expand' });
   const parsed = extractJSON(result, { isArray: true, repairKeys: ['title', 'content', 'category'] });
   return parsed || [];
 }
 
-module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap, generateSmartQuestions, generateTopicHTML, expandEntry, extractJSON };
+module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap, generateSmartQuestions, generateTopicHTML, expandEntry, extractJSON, loadLLMConfig, saveLLMConfig, probeAgentMaestro };
