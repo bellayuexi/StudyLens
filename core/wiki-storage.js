@@ -360,8 +360,30 @@ function getTopicPageByVersion(entryId, version) {
   return pages.find(p => p.version === version) || null;
 }
 
+function getTopicPageStatusMap() {
+  if (!fs.existsSync(TOPICS_DIR)) return {};
+  const result = {};
+  for (const dir of fs.readdirSync(TOPICS_DIR)) {
+    const dirPath = path.join(TOPICS_DIR, dir);
+    if (!fs.statSync(dirPath).isDirectory()) continue;
+    for (const f of fs.readdirSync(dirPath).filter(f => f.endsWith('.md')).sort().reverse()) {
+      try {
+        const raw = fs.readFileSync(path.join(dirPath, f), 'utf-8');
+        const match = raw.match(/^---\n([\s\S]*?)\n---\n/);
+        if (!match) continue;
+        const meta = JSON.parse(match[1]);
+        const entryId = meta.entry_id;
+        if (!entryId || result[entryId]) continue;
+        const hasQa = Array.isArray(meta.qa_history) && meta.qa_history.some(q => q.answer);
+        result[entryId] = { has_topic_page: true, has_qa: hasQa };
+      } catch {}
+    }
+  }
+  return result;
+}
+
 function getChildren(parentId) {
   return getAllEntries().filter(e => e.parent_id === parentId).sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
 }
 
-module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory, getChildren, deleteTopicPageVersion, getTopicPageByVersion };
+module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory, getChildren, deleteTopicPageVersion, getTopicPageByVersion, getTopicPageStatusMap };

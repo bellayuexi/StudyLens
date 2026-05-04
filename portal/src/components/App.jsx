@@ -136,12 +136,20 @@ export default function App() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
                     <span style={{ fontSize: 10, color: '#555' }}>{e.subject}</span>
-                    {e.has_children && (
-                      <span onClick={(ev) => { ev.stopPropagation(); navigate(`/deep/${e.id}`); }}
-                        style={{ fontSize: 10, color: '#4285f4', cursor: 'pointer', padding: '1px 6px', borderRadius: 4, background: '#4285f411' }}>
-                        🔬 深入
-                      </span>
-                    )}
+                    <span style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                      {e.has_topic_page && (
+                        <span style={{ fontSize: 9, color: '#4caf50', padding: '0 4px', borderRadius: 3, background: '#4caf5018', lineHeight: '16px' }}>专题</span>
+                      )}
+                      {e.has_qa && (
+                        <span style={{ fontSize: 9, color: '#ff9800', padding: '0 4px', borderRadius: 3, background: '#ff980018', lineHeight: '16px' }}>问答</span>
+                      )}
+                      {e.has_children && (
+                        <span onClick={(ev) => { ev.stopPropagation(); navigate(`/deep/${e.id}`); }}
+                          style={{ fontSize: 9, color: '#4285f4', cursor: 'pointer', padding: '0 4px', borderRadius: 3, background: '#4285f418', lineHeight: '16px' }}>
+                          深入
+                        </span>
+                      )}
+                    </span>
                   </div>
                 </div>
               ))}
