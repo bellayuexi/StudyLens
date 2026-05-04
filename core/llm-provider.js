@@ -303,9 +303,21 @@ Rules:
 }
 
 async function generateSmartQuestions(entry, existingQaHistory = []) {
+  const subjectPrompts = loadSubjectPrompts(entry.subject);
   const existingSection = existingQaHistory.length > 0
     ? `\n以下问题已经被回答过，请不要生成与这些问题重复或高度相似的问题：\n${existingQaHistory.map(h => `- ${h.question}`).join('\n')}\n`
     : '';
+
+  const defaultCategories = `生成的问题应该覆盖：
+1. 基本概念（是什么）
+2. 原因分析（为什么）
+3. 影响/意义（有什么影响）
+4. 比较对比（与其他知识的关联）
+5. 深入思考（评价/启示）
+
+返回JSON数组，每个元素: {"question": "问题内容", "category": "概念/原因/影响/对比/思考"}`;
+
+  const questionGuidance = subjectPrompts.questionsPrompt || defaultCategories;
 
   const prompt = `你是一个学习辅导助手。根据以下知识点，生成5个有深度的学习问题，帮助学生深入理解这个知识点。
 
@@ -314,14 +326,7 @@ async function generateSmartQuestions(entry, existingQaHistory = []) {
 内容: ${entry.content}
 标签: ${(entry.tags || []).join(', ')}
 ${existingSection}
-生成的问题应该覆盖：
-1. 基本概念（是什么）
-2. 原因分析（为什么）
-3. 影响/意义（有什么影响）
-4. 比较对比（与其他知识的关联）
-5. 深入思考（评价/启示）
-
-返回JSON数组，每个元素: {"question": "问题内容", "category": "概念/原因/影响/对比/思考"}
+${questionGuidance}
 重要：问题文本中如果要引用术语，请用「」而不是引号，避免JSON解析错误。
 只返回JSON，不要其他文字。`;
 

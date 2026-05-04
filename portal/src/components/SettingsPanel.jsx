@@ -3,6 +3,7 @@ import { getSettings, saveSettings } from '../lib/api.js';
 
 const PROMPT_TYPES = [
   { key: 'analyzePrompt', label: '知识提取 Prompt' },
+  { key: 'questionsPrompt', label: '智能提问 Prompt' },
   { key: 'topicPrompt', label: '专题页 Prompt' },
   { key: 'qaPrompt', label: '问答 Prompt' },
 ];

@@ -545,6 +545,14 @@ Return a JSON object:
 
 CRITICAL: The answer field must be PLAIN TEXT only — no markdown formatting.
 Return ONLY valid JSON, no other text.`,
+  questionsPrompt: `生成的问题应该覆盖：
+1. 基本概念（是什么）
+2. 原因分析（为什么）
+3. 影响/意义（有什么影响）
+4. 比较对比（与其他知识的关联）
+5. 深入思考（评价/启示）
+
+返回JSON数组，每个元素: {"question": "问题内容", "category": "概念/原因/影响/对比/思考"}`,
 };
 
 function loadSettings() {
