@@ -49,6 +49,26 @@ function extractJSON(text, { isArray = false, repairKeys } = {}) {
   try { return JSON.parse(raw); } catch (e1) {
     raw = raw.replace(/,\s*([\]}])/g, '$1');
     raw = raw.replace(/(?<=:\s*"[^"]*)\n/g, '\\n');
+    // Repair unescaped quotes inside JSON string values
+    let repaired = '';
+    let inStr = false, escaped = false;
+    for (let i = 0; i < raw.length; i++) {
+      const ch = raw[i];
+      if (escaped) { repaired += ch; escaped = false; continue; }
+      if (ch === '\\' && inStr) { repaired += ch; escaped = true; continue; }
+      if (ch === '"') {
+        if (!inStr) { inStr = true; repaired += ch; }
+        else {
+          const after = raw.slice(i + 1).trimStart();
+          if (after[0] === ':' || after[0] === ',' || after[0] === '}' || after[0] === ']' || after.startsWith('\n')) {
+            inStr = false; repaired += ch;
+          } else {
+            repaired += '\\"';
+          }
+        }
+      } else { repaired += ch; }
+    }
+    raw = repaired;
     try { return JSON.parse(raw); } catch (e2) {
       if (repairKeys) {
         const items = [];
@@ -138,7 +158,15 @@ Return ONLY valid JSON array, no other text.`;
 
   const result = await callLLM([{ role: 'user', content: prompt }]);
   const parsed = extractJSON(result, { isArray: true });
-  if (!parsed) throw new Error('LLM did not return valid JSON array');
+  if (!parsed) {
+    console.error('[analyze] LLM raw response (first 500):', result.slice(0, 500));
+    const cleaned = result.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    const match = cleaned.match(/\[[\s\S]*\]/);
+    if (match) {
+      try { JSON.parse(match[0]); } catch(e) { console.error('[analyze] JSON parse error:', e.message, 'near:', match[0].slice(0, 200)); }
+    } else { console.error('[analyze] no array match in cleaned text'); }
+    throw new Error('LLM did not return valid JSON array');
+  }
   return parsed;
 }
 
