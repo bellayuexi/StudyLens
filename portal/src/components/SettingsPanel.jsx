@@ -14,6 +14,7 @@ export default function SettingsPanel({ onClose }) {
   const [dirty, setDirty] = useState(false);
   const [newSubject, setNewSubject] = useState('');
   const [expanded, setExpanded] = useState(null);
+  const [promptsExpanded, setPromptsExpanded] = useState(false);
   const [defaultsExpanded, setDefaultsExpanded] = useState(false);
   const [llmConfig, setLlmConfig] = useState(null);
   const [llmExpanded, setLlmExpanded] = useState(false);
@@ -139,37 +140,7 @@ export default function SettingsPanel({ onClose }) {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
-        {/* Default prompts */}
-        <div style={{ marginBottom: 20, borderRadius: 8, border: '1px solid #2a2d35', background: '#161822' }}>
-          <div onClick={() => setDefaultsExpanded(!defaultsExpanded)}
-            style={{ padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
-              {defaultsExpanded ? '▼' : '▶'} 默认 Prompt（所有学科通用）
-            </span>
-          </div>
-          {defaultsExpanded && (
-            <div style={{ padding: '0 14px 14px' }}>
-              <p style={{ fontSize: 11, color: '#666', marginBottom: 10 }}>
-                这些是系统默认的 AI 提示词。修改后将影响所有未单独配置的学科。
-              </p>
-              <p style={{ fontSize: 11, color: '#e8a73580', marginBottom: 10 }}>
-                ⚠️ 注意：修改默认 Prompt 会影响所有未设置专属 Prompt 的学科。
-              </p>
-              {PROMPT_TYPES.map(pt => (
-                <div key={pt.key} style={{ marginBottom: 12 }}>
-                  <label style={{ fontSize: 12, color: '#999', display: 'block', marginBottom: 4 }}>{pt.label}</label>
-                  <textarea
-                    value={defaults[pt.key] || ''}
-                    onChange={e => updateDefault(pt.key, e.target.value)}
-                    rows={8}
-                    style={inputStyle} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* LLM Provider Config */}
+        {/* LLM Provider Config — first */}
         {llmConfig && (
           <div style={{ marginBottom: 20, borderRadius: 8, border: '1px solid #2a2d35', background: '#161822' }}>
             <div onClick={() => setLlmExpanded(!llmExpanded)}
@@ -273,61 +244,106 @@ export default function SettingsPanel({ onClose }) {
           </div>
         )}
 
-        {/* Per-subject prompts */}
-        <div style={{ marginBottom: 20 }}>
-          <h3 style={{ fontSize: 14, color: '#ccc', marginBottom: 8 }}>学科专属配置</h3>
-          <p style={{ fontSize: 11, color: '#666', marginBottom: 12 }}>
-            添加学科后会自动填入默认提示词，你只需针对该学科做定制修改。留空则使用默认值。
-          </p>
-
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <input value={newSubject} onChange={e => setNewSubject(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && addSubject()}
-              placeholder="添加学科（如：生物、英语、地理）"
-              style={{ ...inputStyle, flex: 1 }} />
-            <button onClick={addSubject}
-              style={{ padding: '8px 16px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                background: '#4285f4', color: '#fff', fontSize: 12, whiteSpace: 'nowrap' }}>
-              + 添加
-            </button>
+        {/* Prompt Config — wraps defaults + per-subject */}
+        <div style={{ marginBottom: 20, borderRadius: 8, border: '1px solid #2a2d35', background: '#161822' }}>
+          <div onClick={() => setPromptsExpanded(!promptsExpanded)}
+            style={{ padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>
+              {promptsExpanded ? '▼' : '▶'} Prompt 配置
+            </span>
+            {dirty && <span style={{ fontSize: 11, color: '#fbbc05' }}>未保存</span>}
           </div>
+          {promptsExpanded && (
+            <div style={{ padding: '0 14px 14px' }}>
+              {/* Default prompts */}
+              <div style={{ marginBottom: 16, borderRadius: 6, border: '1px solid #2a2d45', background: '#1a1d2e' }}>
+                <div onClick={() => setDefaultsExpanded(!defaultsExpanded)}
+                  style={{ padding: '10px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                  <span style={{ fontSize: 13, fontWeight: 500, color: '#ddd' }}>
+                    {defaultsExpanded ? '▼' : '▶'} 默认 Prompt（所有学科通用）
+                  </span>
+                </div>
+                {defaultsExpanded && (
+                  <div style={{ padding: '0 12px 12px' }}>
+                    <p style={{ fontSize: 11, color: '#666', marginBottom: 10 }}>
+                      这些是系统默认的 AI 提示词。修改后将影响所有未单独配置的学科。
+                    </p>
+                    {PROMPT_TYPES.map(pt => (
+                      <div key={pt.key} style={{ marginBottom: 12 }}>
+                        <label style={{ fontSize: 12, color: '#999', display: 'block', marginBottom: 4 }}>{pt.label}</label>
+                        <textarea
+                          value={defaults[pt.key] || ''}
+                          onChange={e => updateDefault(pt.key, e.target.value)}
+                          rows={8}
+                          style={inputStyle} />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-          {subjectKeys.length === 0 && (
-            <div style={{ padding: 20, textAlign: 'center', color: '#555', fontSize: 13 }}>
-              暂无学科配置。添加学科后，可为每个学科定制 AI 提示词。
-            </div>
-          )}
+              {/* Per-subject prompts */}
+              <h4 style={{ fontSize: 13, color: '#ccc', marginBottom: 8 }}>学科专属配置</h4>
+              <p style={{ fontSize: 11, color: '#666', marginBottom: 12 }}>
+                添加学科后会自动填入默认提示词，你只需针对该学科做定制修改。留空则使用默认值。
+              </p>
 
-          {subjectKeys.map(subject => (
-            <div key={subject} style={{ marginBottom: 8, borderRadius: 8, border: '1px solid #2a2d35', background: '#161822' }}>
-              <div onClick={() => setExpanded(expanded === subject ? null : subject)}
-                style={{ padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: 14, fontWeight: 500, color: '#ddd' }}>
-                  {expanded === subject ? '▼' : '▶'} {subject}
-                </span>
-                <button onClick={e => { e.stopPropagation(); removeSubject(subject); }}
-                  style={{ padding: '2px 8px', borderRadius: 4, border: 'none', cursor: 'pointer',
-                    background: '#ea433520', color: '#ea4335', fontSize: 11 }}>
-                  删除
+              <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                <input value={newSubject} onChange={e => setNewSubject(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && addSubject()}
+                  placeholder="添加学科（如：生物、英语、地理）"
+                  style={{ ...inputStyle, flex: 1 }} />
+                <button onClick={addSubject}
+                  style={{ padding: '8px 16px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                    background: '#4285f4', color: '#fff', fontSize: 12, whiteSpace: 'nowrap' }}>
+                  + 添加
                 </button>
               </div>
-              {expanded === subject && (
-                <div style={{ padding: '0 14px 14px' }}>
-                  {PROMPT_TYPES.map(pt => (
-                    <div key={pt.key} style={{ marginBottom: 12 }}>
-                      <label style={{ fontSize: 12, color: '#999', display: 'block', marginBottom: 4 }}>{pt.label}</label>
-                      <textarea
-                        value={settings.subjects[subject]?.[pt.key] || ''}
-                        onChange={e => updatePrompt(subject, pt.key, e.target.value)}
-                        placeholder={defaults[pt.key] || ''}
-                        rows={4}
-                        style={inputStyle} />
-                    </div>
-                  ))}
+
+              {subjectKeys.length === 0 && (
+                <div style={{ padding: 20, textAlign: 'center', color: '#555', fontSize: 13 }}>
+                  暂无学科配置。添加学科后，可为每个学科定制 AI 提示词。
                 </div>
               )}
+
+              {subjectKeys.map(subject => (
+                <div key={subject} style={{ marginBottom: 8, borderRadius: 6, border: '1px solid #2a2d45', background: '#1a1d2e' }}>
+                  <div onClick={() => setExpanded(expanded === subject ? null : subject)}
+                    style={{ padding: '10px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <span style={{ fontSize: 13, fontWeight: 500, color: '#ddd' }}>
+                      {expanded === subject ? '▼' : '▶'} {subject}
+                    </span>
+                    <button onClick={e => { e.stopPropagation(); removeSubject(subject); }}
+                      style={{ padding: '2px 8px', borderRadius: 4, border: 'none', cursor: 'pointer',
+                        background: '#ea433520', color: '#ea4335', fontSize: 11 }}>
+                      删除
+                    </button>
+                  </div>
+                  {expanded === subject && (
+                    <div style={{ padding: '0 12px 12px' }}>
+                      {PROMPT_TYPES.map(pt => (
+                        <div key={pt.key} style={{ marginBottom: 12 }}>
+                          <label style={{ fontSize: 12, color: '#999', display: 'block', marginBottom: 4 }}>{pt.label}</label>
+                          <textarea
+                            value={settings.subjects[subject]?.[pt.key] || ''}
+                            onChange={e => updatePrompt(subject, pt.key, e.target.value)}
+                            placeholder={defaults[pt.key] || ''}
+                            rows={4}
+                            style={inputStyle} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              <button onClick={handleSave} disabled={saving || !dirty}
+                style={{ marginTop: 12, padding: '6px 16px', borderRadius: 6, border: 'none', cursor: dirty ? 'pointer' : 'default',
+                  background: dirty ? '#34a853' : '#2a2d35', color: dirty ? '#fff' : '#666', fontSize: 12 }}>
+                {saving ? '保存中...' : '保存 Prompt 配置'}
+              </button>
             </div>
-          ))}
+          )}
         </div>
       </div>
     </div>
