@@ -768,7 +768,14 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             <span key={i} style={{ background: '#1c1f2e', padding: '2px 8px', borderRadius: 10, fontSize: 11, color: '#777' }}>#{t}</span>
           ))}
           {editingField === 'tags' ? (
-            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+              {(editForm.tags || []).map((t, i) => (
+                <span key={i} style={{ background: '#2a2d45', padding: '2px 8px', borderRadius: 10, fontSize: 11, color: '#ccc', display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                  #{t}
+                  <span onClick={() => setEditForm({ ...editForm, tags: editForm.tags.filter((_, j) => j !== i) })}
+                    style={{ cursor: 'pointer', color: '#e53935', fontSize: 13, lineHeight: 1, marginLeft: 2 }}>×</span>
+                </span>
+              ))}
               <input value={tagInput} onChange={e => setTagInput(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter') { const t = tagInput.trim(); if (t && !editForm.tags.includes(t)) setEditForm({ ...editForm, tags: [...editForm.tags, t] }); setTagInput(''); }
