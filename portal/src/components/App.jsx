@@ -27,7 +27,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [leftWidth, setLeftWidth] = useState(360);
   const [dragging, setDragging] = useState(false);
-  const [filterSubject, setFilterSubject] = useState(null);
+  const [filterDiscipline, setFilterDiscipline] = useState(null);
+  const [filterSubCategory, setFilterSubCategory] = useState(null);
   const [viewMode, setViewMode] = useState('category');
   const [backend, setBackend] = useState('wiki');
   const [searchQuery, setSearchQuery] = useState('');
@@ -49,10 +50,17 @@ export default function App() {
   }, [dragging]);
 
   const subjects = [...new Set(allEntries.map(e => e.subject).filter(Boolean))];
+  const disciplines = [...new Set(subjects.map(s => s.split('-')[0]))];
+  const subCategories = filterDiscipline
+    ? [...new Set(subjects.filter(s => s.startsWith(filterDiscipline + '-')).map(s => s.split('-').slice(1).join('-')))]
+    : [];
   const handleEntryClick = (entry) => setSelectedEntry(entry);
 
   const filteredEntries = allEntries.filter(e => {
-    if (filterSubject && e.subject !== filterSubject) return false;
+    if (filterDiscipline) {
+      if (!e.subject || !e.subject.startsWith(filterDiscipline)) return false;
+      if (filterSubCategory && e.subject !== filterDiscipline + '-' + filterSubCategory) return false;
+    }
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       return (e.title + e.content + (e.tags || []).join(' ') + e.subject).toLowerCase().includes(q);
@@ -98,18 +106,35 @@ export default function App() {
               background: '#1c1f2e', color: '#ddd', fontSize: 12, outline: 'none', fontFamily: 'inherit', minWidth: 0 }} />
         </div>
 
-        {/* Subject filter */}
-        {viewMode === 'category' && subjects.length > 0 && (
+        {/* Discipline selector */}
+        {disciplines.length > 0 && (
           <div style={{ padding: '6px 12px', borderBottom: '1px solid #2a2d35', display: 'flex', flexWrap: 'wrap', gap: 3 }}>
-            <span onClick={() => setFilterSubject(null)}
+            <span onClick={() => { setFilterDiscipline(null); setFilterSubCategory(null); }}
+              style={{ padding: '3px 10px', borderRadius: 10, fontSize: 11, cursor: 'pointer', fontWeight: 500,
+                background: filterDiscipline === null ? '#4285f4' : '#1c1f2e', color: filterDiscipline === null ? '#fff' : '#aaa' }}>全部</span>
+            {disciplines.map(d => (
+              <span key={d} onClick={() => { setFilterDiscipline(d === filterDiscipline ? null : d); setFilterSubCategory(null); }}
+                style={{ padding: '3px 10px', borderRadius: 10, fontSize: 11, cursor: 'pointer', fontWeight: 500,
+                  background: d === filterDiscipline ? getColor(d) : '#1c1f2e',
+                  color: d === filterDiscipline ? '#fff' : '#aaa' }}>
+                {d}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Sub-category filter */}
+        {viewMode === 'category' && filterDiscipline && subCategories.length > 0 && (
+          <div style={{ padding: '4px 12px', borderBottom: '1px solid #2a2d35', display: 'flex', flexWrap: 'wrap', gap: 3 }}>
+            <span onClick={() => setFilterSubCategory(null)}
               style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, cursor: 'pointer',
-                background: filterSubject === null ? '#4285f4' : '#1c1f2e', color: filterSubject === null ? '#fff' : '#aaa' }}>全部</span>
-            {subjects.map(s => (
-              <span key={s} onClick={() => setFilterSubject(s === filterSubject ? null : s)}
+                background: filterSubCategory === null ? '#4285f433' : '#1c1f2e', color: filterSubCategory === null ? '#ddd' : '#777' }}>全部{filterDiscipline}</span>
+            {subCategories.map(s => (
+              <span key={s} onClick={() => setFilterSubCategory(s === filterSubCategory ? null : s)}
                 style={{ padding: '2px 8px', borderRadius: 10, fontSize: 10, cursor: 'pointer',
-                  background: s === filterSubject ? getColor(s) : '#1c1f2e',
-                  color: s === filterSubject ? '#fff' : '#aaa',
-                  borderLeft: `2px solid ${getColor(s)}` }}>
+                  background: s === filterSubCategory ? getColor(filterDiscipline + '-' + s) : '#1c1f2e',
+                  color: s === filterSubCategory ? '#fff' : '#aaa',
+                  borderLeft: `2px solid ${getColor(filterDiscipline + '-' + s)}` }}>
                 {s}
               </span>
             ))}
