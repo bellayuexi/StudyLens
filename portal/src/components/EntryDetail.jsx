@@ -52,6 +52,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const [collapsedCats, setCollapsedCats] = useState(new Set());
   const [editingQaIdx, setEditingQaIdx] = useState(null);
   const [editingAnswer, setEditingAnswer] = useState('');
+  const [lightTheme, setLightTheme] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const qaRef = useRef(null);
   const questionsCacheRef = useRef({});
@@ -589,6 +590,34 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     return () => window.removeEventListener('message', handler);
   }, []);
 
+  useEffect(() => {
+    if (!iframeRef.current) return;
+    const doc = iframeRef.current.contentDocument || iframeRef.current.contentWindow?.document;
+    if (!doc || !doc.head) return;
+    const existing = doc.getElementById('_sg_light_theme');
+    if (lightTheme && !existing) {
+      const style = doc.createElement('style');
+      style.id = '_sg_light_theme';
+      style.textContent = `
+        html, body { background: #ffffff !important; color: #1a1a1a !important; }
+        h1, h2, h3, h4, h5, h6 { color: #111 !important; }
+        p, li, td, th, span, div, section, article, main { color: #1a1a1a !important; }
+        a { color: #1a56db !important; }
+        pre, code { background: #f3f4f6 !important; color: #1a1a1a !important; border-color: #e5e7eb !important; }
+        table { border-color: #d1d5db !important; }
+        th { background: #f3f4f6 !important; color: #111 !important; }
+        td { border-color: #e5e7eb !important; }
+        hr { border-color: #d1d5db !important; }
+        blockquote { border-left-color: #3b82f6 !important; background: #eff6ff !important; color: #1a1a1a !important; }
+        * { border-color: #e5e7eb !important; }
+        [style*="background"] { background-image: none !important; }
+      `;
+      doc.head.appendChild(style);
+    } else if (!lightTheme && existing) {
+      existing.remove();
+    }
+  }, [lightTheme]);
+
   const handleApplyComments = async () => {
     if (!comments.length) return;
     setLoadingTopic(true);
@@ -892,6 +921,13 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                 </button>
               )}
               {topicHTML && (
+                <button onClick={() => setLightTheme(!lightTheme)}
+                  style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: 'pointer',
+                    background: lightTheme ? '#fff3cd' : '#1c1f2e', color: lightTheme ? '#856404' : '#888' }}>
+                  {lightTheme ? '🌙 深色' : '☀️ 浅色'}
+                </button>
+              )}
+              {topicHTML && (
                 <button onClick={() => {
                   const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${entry.title} - 专题页</title></head><body>${topicHTML}</body></html>`;
                   const blob = new Blob([fullHtml], { type: 'text/html' });
@@ -1015,13 +1051,38 @@ document.addEventListener('mousedown', function(e) {
   if (e.target.id !== '_ann_btn') { var old = document.getElementById('_ann_btn'); if (old) old.remove(); }
 });
 <\/script>`} ref={iframeRef} onLoad={() => {
-              if (editMode && iframeRef.current) {
+              if (iframeRef.current) {
                 const doc = iframeRef.current.contentDocument || iframeRef.current.contentWindow.document;
-                doc.body.contentEditable = 'true';
-                doc.body.style.outline = 'none';
-                doc.body.style.cursor = 'text';
+                if (editMode) {
+                  doc.body.contentEditable = 'true';
+                  doc.body.style.outline = 'none';
+                  doc.body.style.cursor = 'text';
+                }
+                const widthStyle = doc.createElement('style');
+                widthStyle.id = '_sg_width_fix';
+                widthStyle.textContent = 'body, .container, .content, main, article, .wrapper, .page { max-width: 100% !important; width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; } body { padding: 16px 24px !important; box-sizing: border-box !important; }';
+                doc.head.appendChild(widthStyle);
+                if (lightTheme) {
+                  const lightStyle = doc.createElement('style');
+                  lightStyle.id = '_sg_light_theme';
+                  lightStyle.textContent = `
+                    html, body { background: #ffffff !important; color: #1a1a1a !important; }
+                    h1, h2, h3, h4, h5, h6 { color: #111 !important; }
+                    p, li, td, th, span, div, section, article, main { color: #1a1a1a !important; }
+                    a { color: #1a56db !important; }
+                    pre, code { background: #f3f4f6 !important; color: #1a1a1a !important; border-color: #e5e7eb !important; }
+                    table { border-color: #d1d5db !important; }
+                    th { background: #f3f4f6 !important; color: #111 !important; }
+                    td { border-color: #e5e7eb !important; }
+                    hr { border-color: #d1d5db !important; }
+                    blockquote { border-left-color: #3b82f6 !important; background: #eff6ff !important; color: #1a1a1a !important; }
+                    * { border-color: #e5e7eb !important; }
+                    [style*="background"] { background-image: none !important; }
+                  `;
+                  doc.head.appendChild(lightStyle);
+                }
               }
-            }} style={{ flex: 1, border: editMode ? '2px solid #34a853' : 'none', background: '#0f1117' }} title="知识专题" />
+            }} style={{ flex: 1, border: editMode ? '2px solid #34a853' : 'none', background: lightTheme ? '#ffffff' : '#0f1117' }} title="知识专题" />
           ) : (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#666' }}>
               <div style={{ fontSize: 48 }}>📄</div>

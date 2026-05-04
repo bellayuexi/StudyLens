@@ -439,7 +439,7 @@ async function generateTopicHTML(entry, relatedEntries = [], qaHistory = [], exi
 4. 使用清晰的排版：标题、卡片、分隔线、高亮重点
 5. 中文内容，适合中学生阅读
 6. 使用你自己的知识补充完整内容，不要局限于提供的材料
-7. 页面宽度100%，无需滚动条样式
+7. 页面宽度100%，不要设置max-width限制，内容撑满整个页面宽度，body使用padding: 16px 24px
 8. 配色美观，使用渐变和阴影效果
 ${qaContext ? '9. 【重要】上面的问答内容是学生深入探索的结果，必须将每个问答的核心答案完整融入专题页对应章节中，不可遗漏任何一个问答\n' : ''}${requirements ? `10. 【用户特别要求】${requirements}` : ''}`;
   }
