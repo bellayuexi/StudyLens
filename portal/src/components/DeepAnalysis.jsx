@@ -138,25 +138,19 @@ body { background: #0f1117; color: #e0e0e0; font-family: 'Segoe UI', system-ui, 
 .print-content { display: none; }
 .print-content .page-body { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
 @media print {
-  * { color: #111 !important; text-shadow: none !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-  body { display: block !important; padding: 20px !important; background: #fff !important; }
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+  body { display: block !important; padding: 20px !important; }
   .sidebar { display: none !important; }
   .main-content { display: none !important; }
   .print-content { display: block !important; max-width: 100% !important; width: 100% !important; }
   .print-content .print-section { page-break-before: always; padding: 20px 0; }
   .print-content .print-section:first-child { page-break-before: avoid; }
-  .print-content h2 { border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 16px; background: transparent !important; border-radius: 0 !important; }
-  .print-content div, .print-content section, .print-content article, .print-content details, .print-content blockquote { border: 1px solid #d0d0d0 !important; border-radius: 6px !important; background: #f8f8f8 !important; margin-bottom: 8px !important; padding: 10px !important; overflow: visible !important; height: auto !important; max-height: none !important; max-width: 100% !important; }
-  .print-content div > div, .print-content section > div { background: #fff !important; border-color: #e0e0e0 !important; }
-  .print-content .page-body { border: none !important; background: transparent !important; padding: 0 !important; }
-  .print-content h1, .print-content h3, .print-content h4, .print-content h5, .print-content h6 { background: transparent !important; border: none !important; page-break-after: avoid; }
-  .print-content p, .print-content span, .print-content li, .print-content td, .print-content th, .print-content a, .print-content label, .print-content strong, .print-content em { background: transparent !important; border: none !important; }
-  pre, code { background: #f0f0f0 !important; border: 1px solid #ccc !important; }
-  pre, blockquote, table { page-break-inside: avoid; }
+  .print-content h2 { border-bottom: 2px solid #64b5f6; padding-bottom: 8px; margin-bottom: 16px; color: #fff; }
+  .print-content div, .print-content section, .print-content article { max-width: 100% !important; overflow: visible !important; height: auto !important; max-height: none !important; }
+  .print-content .page-body { padding: 0 !important; }
+  h1,h2,h3,h4,h5,h6 { page-break-after: avoid; }
+  pre, blockquote, table, div[style*="border"] { page-break-inside: avoid; }
   img { max-width: 100% !important; }
-  a { text-decoration: underline; }
-  table { border-collapse: collapse !important; }
-  td, th { border: 1px solid #ccc !important; padding: 6px !important; }
 }
 </style>
 </head>

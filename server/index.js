@@ -491,8 +491,8 @@ app.post('/api/entries/:id/children', (req, res) => {
   }
 });
 
-// Settings
-const settingsPath = path.join(__dirname, '..', 'wiki', 'config', 'settings.json');
+// Settings (prompts — tracked in git)
+const settingsPath = path.join(__dirname, '..', 'config', 'prompts.json');
 
 const DEFAULT_PROMPTS = {
   analyzePrompt: `You are a knowledge extraction assistant for a student. Analyze the following study notes and extract structured knowledge entries.

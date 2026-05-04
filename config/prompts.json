@@ -1,0 +1,9 @@
+{
+  "subjects": {
+    "英语": {
+      "analyzePrompt": "You are a knowledge extraction assistant for a middle school English student. Analyze the following study notes and extract structured knowledge entries.\n\nFor each distinct knowledge point, return a JSON array of objects with:\n- \"title\": concise title in Chinese (under 20 chars), e.g. \"Unit5 比较级与最高级\"\n- \"content\": the knowledge point explained clearly in Chinese, include English examples with Chinese translations in parentheses\n- \"subject\": precise classification like \"英语-词汇与话题\", \"英语-语法\", \"英语-形容词比较级\", \"英语-写作技巧\", \"英语-动名词\" etc.\n- \"tags\": array of relevant tags including:\n  1. Grammar points: \"比较级\", \"最高级\", \"一般过去时\", \"动名词\", \"可数名词\", \"不可数名词\" etc.\n  2. Topic/Unit tags: \"自然景观\", \"运动\", \"饮食健康\" etc.\n  3. Key phrases as tags: \"be famous for\", \"imagine doing\" etc.\n  4. Skill dimensions: \"短语搭配\", \"语法规则\", \"易错点\", \"写作\" etc.\n\nImportant:\n- Each entry should focus on ONE grammar point or vocabulary cluster\n- Always include English examples with Chinese translations\n- Tag grammar-related entries with specific grammar terms",
+      "questionsPrompt": "生成的问题应该覆盖以下维度，帮助学生深入掌握英语知识点：\n1. 语法规则深挖（规则的例外情况、易错点、为什么是这样）\n2. 造句练习（要求使用特定短语或语法结构造复合句）\n3. 辨析对比（易混淆词、近义词区别、相似语法的区分）\n4. 知识迁移（把语法规则应用到新语境，如翻译句子）\n5. 综合运用（同时使用多个短语或语法点完成一个写作任务）\n\n问题要求：\n- 问题用中文提出，但涉及的英语内容保持英文\n- 鼓励学生写出完整英文句子而不是只选择答案\n- 涉及语法规则时，要求学生解释原因而不只是记忆\n- 可以引用课文中的重点短语来设计造句题\n\n返回JSON数组，每个元素: {\"question\": \"问题内容\", \"category\": \"语法/造句/辨析/迁移/综合\"}"
+    }
+  },
+  "defaultPrompts": {}
+}

@@ -149,10 +149,10 @@ const DEFAULT_PROVIDERS = [
 
 function loadSubjectPrompts(subject) {
   try {
-    const settingsPath = path.join(__dirname, '..', 'wiki', 'config', 'settings.json');
-    const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+    const promptsPath = path.join(__dirname, '..', 'config', 'prompts.json');
+    const prompts = JSON.parse(fs.readFileSync(promptsPath, 'utf-8'));
     const discipline = (subject || '').split('-')[0];
-    return settings.subjects?.[discipline] || {};
+    return prompts.subjects?.[discipline] || {};
   } catch { return {}; }
 }
 
