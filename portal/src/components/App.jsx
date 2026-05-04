@@ -4,6 +4,7 @@ import TimelineView from './TimelineView.jsx';
 import IngestPanel from './IngestPanel.jsx';
 import EntryDetail from './EntryDetail.jsx';
 import CategoryView from './CategoryView.jsx';
+import SettingsPanel from './SettingsPanel.jsx';
 import { fetchGraph } from '../lib/api.js';
 
 const SUBJECT_COLORS = {};
@@ -30,13 +31,13 @@ export default function App() {
   const [filterDiscipline, setFilterDiscipline] = useState(null);
   const [filterSubCategory, setFilterSubCategory] = useState(null);
   const [viewMode, setViewMode] = useState('category');
-  const [backend, setBackend] = useState('wiki');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showSettings, setShowSettings] = useState(false);
 
   const loadGraph = useCallback(async () => {
-    const { entries } = await fetchGraph(backend);
+    const { entries } = await fetchGraph('wiki');
     setAllEntries(entries);
-  }, [backend]);
+  }, []);
 
   useEffect(() => { loadGraph(); }, [loadGraph]);
 
@@ -76,16 +77,11 @@ export default function App() {
         <div style={{ padding: '12px 16px', borderBottom: '1px solid #2a2d35' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <h1 style={{ margin: 0, fontSize: 18, color: '#fff' }}>📚 StudyGraph</h1>
-            <div style={{ display: 'flex', gap: 2 }}>
-              {['wiki', 'sqlite'].map(b => (
-                <button key={b} onClick={() => setBackend(b)}
-                  style={{ padding: '2px 8px', borderRadius: 4, border: 'none', cursor: 'pointer', fontSize: 10,
-                    background: backend === b ? (b === 'wiki' ? '#34a853' : '#4285f4') : '#1c1f2e',
-                    color: backend === b ? '#fff' : '#777' }}>
-                  {b === 'wiki' ? 'Wiki' : 'DB'}
-                </button>
-              ))}
-            </div>
+            <button onClick={() => setShowSettings(!showSettings)}
+              style={{ padding: '4px 8px', borderRadius: 4, border: 'none', cursor: 'pointer', fontSize: 14,
+                background: showSettings ? '#4285f4' : '#1c1f2e', color: showSettings ? '#fff' : '#888' }}>
+              ⚙️
+            </button>
           </div>
         </div>
 
@@ -193,7 +189,9 @@ export default function App() {
 
       {/* Main Content: Knowledge Exploration */}
       <div style={{ flex: 1, overflow: 'hidden' }}>
-        {selectedEntry ? (
+        {showSettings ? (
+          <SettingsPanel onClose={() => setShowSettings(false)} />
+        ) : selectedEntry ? (
           <EntryDetail
             entry={selectedEntry}
             allEntries={allEntries}

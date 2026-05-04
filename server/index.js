@@ -482,6 +482,27 @@ app.post('/api/entries/:id/children', (req, res) => {
   }
 });
 
+// Settings
+const settingsPath = path.join(__dirname, '..', 'wiki', 'config', 'settings.json');
+function loadSettings() {
+  try { return JSON.parse(fs.readFileSync(settingsPath, 'utf-8')); }
+  catch { return { subjects: {} }; }
+}
+function saveSettings(data) {
+  const dir = path.dirname(settingsPath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(settingsPath, JSON.stringify(data, null, 2));
+}
+
+app.get('/api/settings', (req, res) => {
+  res.json(loadSettings());
+});
+
+app.put('/api/settings', (req, res) => {
+  saveSettings(req.body);
+  res.json({ ok: true });
+});
+
 const portalDist = path.join(__dirname, '..', 'portal', 'dist');
 if (fs.existsSync(portalDist)) {
   app.use(express.static(portalDist));

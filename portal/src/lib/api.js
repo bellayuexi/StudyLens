@@ -177,3 +177,17 @@ export async function addChildEntry(parentId, data) {
   });
   return res.json();
 }
+
+export async function getSettings() {
+  const res = await fetch(`${API}/api/settings`);
+  return res.json();
+}
+
+export async function saveSettings(data) {
+  const res = await fetch(`${API}/api/settings`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
