@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getSettings, saveSettings } from '../lib/api.js';
 
 const PROMPT_TYPES = [
@@ -11,20 +11,35 @@ const PROMPT_TYPES = [
 export default function SettingsPanel({ onClose }) {
   const [settings, setSettings] = useState({ subjects: {}, defaultPrompts: {} });
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const [newSubject, setNewSubject] = useState('');
   const [expanded, setExpanded] = useState(null);
   const [defaultsExpanded, setDefaultsExpanded] = useState(false);
+  const originalRef = useRef(null);
 
   useEffect(() => {
-    getSettings().then(setSettings);
+    getSettings().then(data => {
+      setSettings(data);
+      originalRef.current = JSON.stringify(data);
+    });
   }, []);
 
   const subjectKeys = Object.keys(settings.subjects);
   const defaults = settings.defaultPrompts || {};
 
+  const markDirty = (updater) => {
+    setSettings(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      setDirty(JSON.stringify(next) !== originalRef.current);
+      return next;
+    });
+  };
+
   const handleSave = async () => {
     setSaving(true);
     await saveSettings(settings);
+    originalRef.current = JSON.stringify(settings);
+    setDirty(false);
     setSaving(false);
   };
 
@@ -35,13 +50,13 @@ export default function SettingsPanel({ onClose }) {
     for (const pt of PROMPT_TYPES) {
       if (defaults[pt.key]) subjectDefaults[pt.key] = defaults[pt.key];
     }
-    setSettings(prev => ({ ...prev, subjects: { ...prev.subjects, [name]: subjectDefaults } }));
+    markDirty(prev => ({ ...prev, subjects: { ...prev.subjects, [name]: subjectDefaults } }));
     setNewSubject('');
     setExpanded(name);
   };
 
   const removeSubject = (name) => {
-    setSettings(prev => {
+    markDirty(prev => {
       const { [name]: _, ...rest } = prev.subjects;
       return { ...prev, subjects: rest };
     });
@@ -49,7 +64,7 @@ export default function SettingsPanel({ onClose }) {
   };
 
   const updatePrompt = (subject, key, value) => {
-    setSettings(prev => ({
+    markDirty(prev => ({
       ...prev,
       subjects: {
         ...prev.subjects,
@@ -59,7 +74,7 @@ export default function SettingsPanel({ onClose }) {
   };
 
   const updateDefault = (key, value) => {
-    setSettings(prev => ({
+    markDirty(prev => ({
       ...prev,
       defaultPrompts: { ...prev.defaultPrompts, [key]: value },
     }));
@@ -76,16 +91,17 @@ export default function SettingsPanel({ onClose }) {
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: '#0f1117' }}>
       <div style={{ padding: '16px 24px', borderBottom: '1px solid #2a2d35', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <h2 style={{ margin: 0, fontSize: 18, color: '#fff' }}>⚙️ 设置</h2>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={handleSave} disabled={saving}
-            style={{ padding: '6px 16px', borderRadius: 6, border: 'none', cursor: 'pointer',
-              background: '#34a853', color: '#fff', fontSize: 13, opacity: saving ? 0.6 : 1 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {dirty && <span style={{ fontSize: 11, color: '#fbbc05' }}>有未保存的修改</span>}
+          <button onClick={handleSave} disabled={saving || !dirty}
+            style={{ padding: '6px 16px', borderRadius: 6, border: 'none', cursor: dirty ? 'pointer' : 'default',
+              background: dirty ? '#34a853' : '#2a2d35', color: dirty ? '#fff' : '#666', fontSize: 13, opacity: saving ? 0.6 : 1 }}>
             {saving ? '保存中...' : '保存'}
           </button>
           <button onClick={onClose}
-            style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid #333', cursor: 'pointer',
-              background: 'transparent', color: '#aaa', fontSize: 13 }}>
-            关闭
+            style={{ padding: '6px 16px', borderRadius: 6, border: 'none', cursor: 'pointer',
+              background: '#4285f4', color: '#fff', fontSize: 13 }}>
+            ← 返回
           </button>
         </div>
       </div>

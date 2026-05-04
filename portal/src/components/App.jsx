@@ -188,10 +188,13 @@ export default function App() {
         onMouseLeave={ev => { if (!dragging) ev.currentTarget.style.background = 'transparent'; }} />
 
       {/* Main Content: Knowledge Exploration */}
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        {showSettings ? (
-          <SettingsPanel onClose={() => setShowSettings(false)} />
-        ) : selectedEntry ? (
+      <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
+        {showSettings && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
+            <SettingsPanel onClose={() => setShowSettings(false)} />
+          </div>
+        )}
+        {selectedEntry ? (
           <EntryDetail
             entry={selectedEntry}
             allEntries={allEntries}
