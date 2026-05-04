@@ -173,8 +173,8 @@ ${pages.map((p, i) => `<iframe id="frame-child-${i}" style="display:none" srcdoc
 <iframe id="frame-summary" srcdoc="${injectCSS(summaryHtml).replace(/"/g, '&quot;')}"></iframe>
 </div>
 <div class="print-content">
-<div class="print-section"><h2>📄 综述: ${title}</h2>${summaryStripped}</div>
-${pages.map((p, i) => `<div class="print-section"><h2>${i + 1}. ${p.title}</h2>${stripHtmlWrapper(p.html)}</div>`).join('\n')}
+<div class="print-section"><h2>📄 综述: ${title}</h2>${summaryHtml}</div>
+${pages.map((p, i) => `<div class="print-section"><h2>${i + 1}. ${p.title}</h2>${p.html}</div>`).join('\n')}
 </div>
 <script>
 var current = 'summary';
