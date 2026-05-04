@@ -590,34 +590,6 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     return () => window.removeEventListener('message', handler);
   }, []);
 
-  useEffect(() => {
-    if (!iframeRef.current) return;
-    const doc = iframeRef.current.contentDocument || iframeRef.current.contentWindow?.document;
-    if (!doc || !doc.head) return;
-    const existing = doc.getElementById('_sg_light_theme');
-    if (lightTheme && !existing) {
-      const style = doc.createElement('style');
-      style.id = '_sg_light_theme';
-      style.textContent = `
-        html, body { background: #ffffff !important; color: #1a1a1a !important; }
-        h1, h2, h3, h4, h5, h6 { color: #111 !important; }
-        p, li, td, th, span, div, section, article, main { color: #1a1a1a !important; }
-        a { color: #1a56db !important; }
-        pre, code { background: #f3f4f6 !important; color: #1a1a1a !important; border-color: #e5e7eb !important; }
-        table { border-color: #d1d5db !important; }
-        th { background: #f3f4f6 !important; color: #111 !important; }
-        td { border-color: #e5e7eb !important; }
-        hr { border-color: #d1d5db !important; }
-        blockquote { border-left-color: #3b82f6 !important; background: #eff6ff !important; color: #1a1a1a !important; }
-        * { border-color: #e5e7eb !important; }
-        [style*="background"] { background-image: none !important; }
-      `;
-      doc.head.appendChild(style);
-    } else if (!lightTheme && existing) {
-      existing.remove();
-    }
-  }, [lightTheme]);
-
   const handleApplyComments = async () => {
     if (!comments.length) return;
     setLoadingTopic(true);
@@ -920,8 +892,24 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                   应用批注更新
                 </button>
               )}
-              {topicHTML && (
-                <button onClick={() => setLightTheme(!lightTheme)}
+              {topicHTML && !loadingTopic && (
+                <button onClick={async () => {
+                  const targetMode = lightTheme ? 'theme-dark' : 'theme-light';
+                  setLoadingTopic(true);
+                  setTopicStatus(lightTheme ? '切换深色...' : '切换浅色...');
+                  try {
+                    const result = await generateTopicPage(entry.id, [], topicHTML, '', targetMode);
+                    if (result.html) {
+                      setTopicHTML(result.html);
+                      setLightTheme(!lightTheme);
+                    }
+                  } catch (err) {
+                    setTopicStatus('主题切换失败');
+                  } finally {
+                    setLoadingTopic(false);
+                    setTopicStatus('');
+                  }
+                }}
                   style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: 'pointer',
                     background: lightTheme ? '#fff3cd' : '#1c1f2e', color: lightTheme ? '#856404' : '#888' }}>
                   {lightTheme ? '🌙 深色' : '☀️ 浅色'}
@@ -1062,25 +1050,6 @@ document.addEventListener('mousedown', function(e) {
                 widthStyle.id = '_sg_width_fix';
                 widthStyle.textContent = 'body, .container, .content, main, article, .wrapper, .page { max-width: 100% !important; width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; } body { padding: 16px 24px !important; box-sizing: border-box !important; }';
                 doc.head.appendChild(widthStyle);
-                if (lightTheme) {
-                  const lightStyle = doc.createElement('style');
-                  lightStyle.id = '_sg_light_theme';
-                  lightStyle.textContent = `
-                    html, body { background: #ffffff !important; color: #1a1a1a !important; }
-                    h1, h2, h3, h4, h5, h6 { color: #111 !important; }
-                    p, li, td, th, span, div, section, article, main { color: #1a1a1a !important; }
-                    a { color: #1a56db !important; }
-                    pre, code { background: #f3f4f6 !important; color: #1a1a1a !important; border-color: #e5e7eb !important; }
-                    table { border-color: #d1d5db !important; }
-                    th { background: #f3f4f6 !important; color: #111 !important; }
-                    td { border-color: #e5e7eb !important; }
-                    hr { border-color: #d1d5db !important; }
-                    blockquote { border-left-color: #3b82f6 !important; background: #eff6ff !important; color: #1a1a1a !important; }
-                    * { border-color: #e5e7eb !important; }
-                    [style*="background"] { background-image: none !important; }
-                  `;
-                  doc.head.appendChild(lightStyle);
-                }
               }
             }} style={{ flex: 1, border: editMode ? '2px solid #34a853' : 'none', background: lightTheme ? '#ffffff' : '#0f1117' }} title="知识专题" />
           ) : (

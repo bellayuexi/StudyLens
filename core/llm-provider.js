@@ -384,7 +384,7 @@ async function generateTopicHTML(entry, relatedEntries = [], qaHistory = [], exi
   // 'regenerate' - ignore existing HTML, fresh generation with QA
   // '' (default) - legacy behavior: all QA + existing HTML
 
-  const skipQA = mode === 'annotation' || mode === 'merge';
+  const skipQA = mode === 'annotation' || mode === 'merge' || mode === 'theme-light' || mode === 'theme-dark';
   const skipExisting = mode === 'regenerate';
 
   let qaContext = '';
@@ -405,7 +405,18 @@ async function generateTopicHTML(entry, relatedEntries = [], qaHistory = [], exi
 
   let taskDescription, contentSection, requirementsList;
 
-  if (mode === 'annotation') {
+  if (mode === 'theme-light' || mode === 'theme-dark') {
+    const themeHTML = existingHTML.slice(0, 15000);
+    const isLight = mode === 'theme-light';
+    taskDescription = `将现有专题页面的配色方案转换为${isLight ? '浅色' : '深色'}主题`;
+    contentSection = `当前专题页完整HTML:\n${themeHTML}\n`;
+    requirementsList = `要求：
+1. 【最重要】只修改颜色相关的CSS属性（background, color, border-color, box-shadow等），严格保留所有文字内容、HTML结构、布局不变
+2. ${isLight ? '浅色主题：背景使用白色系(#ffffff, #f8f9fa, #f3f4f6)，文字使用深色(#1a1a1a, #333, #111)，链接蓝色(#1a56db)，代码块浅灰背景(#f3f4f6)' : '深色主题：背景使用深色(#0f1117, #161822, #1c1f2e)，文字使用浅色(#e0e0e0, #fff, #bbb)，链接蓝色(#4285f4)'}
+3. 保持渐变效果但调整为${isLight ? '浅色系' : '深色系'}渐变
+4. 表格、卡片、引用块等组件的边框和背景也要相应调整
+5. 直接输出转换后的完整HTML页面`;
+  } else if (mode === 'annotation') {
     const annotationHTML = existingHTML.slice(0, 15000);
     taskDescription = '根据用户批注对现有专题页面做局部修改';
     contentSection = `当前专题页完整HTML（必须在此基础上做最小化修改）:\n${annotationHTML}\n`;
