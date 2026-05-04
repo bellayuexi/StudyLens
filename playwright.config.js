@@ -24,6 +24,7 @@ module.exports = defineConfig({
       PORT: '3099',
       STUDYGRAPH_DB_PATH: path.join(testDataDir, 'e2e.db'),
       STUDYGRAPH_WIKI_DIR: testWikiDir,
+      STUDYGRAPH_TEST_MODE: '1',
     },
   },
 });

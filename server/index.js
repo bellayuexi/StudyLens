@@ -15,6 +15,15 @@ const uploadDir = path.join(__dirname, '..', 'uploads');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 const upload = multer({ dest: uploadDir, limits: { fileSize: 20 * 1024 * 1024 } });
 
+if (process.env.STUDYGRAPH_TEST_MODE) {
+  app.post('/api/test/seed', (req, res) => {
+    try {
+      const entry = storage.addEntry(req.body);
+      res.json(entry);
+    } catch (err) { res.status(500).json({ error: err.message }); }
+  });
+}
+
 // Get all entries + connections for graph
 app.get('/api/graph', (req, res) => {
   const b = req.query.backend || 'wiki';
