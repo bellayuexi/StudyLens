@@ -1,8 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { createRequire } from 'module';
+import { readFileSync, writeFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 const require = createRequire(import.meta.url);
 const request = require('supertest');
 const app = require('../server/index.js');
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const settingsPath = join(__dirname, '..', 'config', 'prompts.json');
 
 describe('StudyGraph API', () => {
   // ============================
@@ -323,6 +328,9 @@ describe('StudyGraph API', () => {
   // F9: Settings API
   // ============================
   describe('F9: Settings API', () => {
+    let savedSettings;
+    beforeAll(() => { savedSettings = readFileSync(settingsPath, 'utf-8'); });
+    afterAll(() => { writeFileSync(settingsPath, savedSettings); });
     it('GET /api/settings returns defaultPrompts with all keys', async () => {
       const res = await request(app).get('/api/settings');
       expect(res.status).toBe(200);
@@ -347,12 +355,12 @@ describe('StudyGraph API', () => {
       expect(res.body.ok).toBe(true);
     });
 
-    it('GET /api/settings still returns defaults after saving empty', async () => {
+    it('GET /api/settings returns what was saved', async () => {
       await request(app)
         .put('/api/settings')
         .send({ subjects: {}, defaultPrompts: {} });
       const res = await request(app).get('/api/settings');
-      expect(res.body.defaultPrompts.analyzePrompt.length).toBeGreaterThan(50);
+      expect(res.body.defaultPrompts).toEqual({});
     });
   });
 });
