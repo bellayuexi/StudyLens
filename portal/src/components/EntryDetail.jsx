@@ -893,22 +893,24 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                 </button>
               )}
               {topicHTML && !loadingTopic && (
-                <button onClick={async () => {
-                  const targetMode = lightTheme ? 'theme-dark' : 'theme-light';
-                  setLoadingTopic(true);
-                  setTopicStatus(lightTheme ? '切换深色...' : '切换浅色...');
-                  try {
-                    const result = await generateTopicPage(entry.id, [], topicHTML, '', targetMode);
-                    if (result.html) {
-                      setTopicHTML(result.html);
-                      setLightTheme(!lightTheme);
-                    }
-                  } catch (err) {
-                    setTopicStatus('主题切换失败');
-                  } finally {
-                    setLoadingTopic(false);
-                    setTopicStatus('');
-                  }
+                <button onClick={() => {
+                  setLightTheme(prev => {
+                    const next = !prev;
+                    try {
+                      const iframe = document.querySelector('iframe[title="知识专题"]');
+                      if (iframe?.contentDocument) {
+                        const doc = iframe.contentDocument;
+                        let style = doc.getElementById('_sg_theme_override');
+                        if (next) {
+                          if (!style) { style = doc.createElement('style'); style.id = '_sg_theme_override'; doc.head.appendChild(style); }
+                          style.textContent = 'html, body { background: #fff !important; color: #222 !important; } * { border-color: #ddd !important; } h1,h2,h3,h4,h5,h6 { color: #111 !important; } p,li,td,th,span,div,section,article { color: #333 !important; } a { color: #1a73e8 !important; } pre,code { background: #f5f5f5 !important; color: #333 !important; } blockquote { border-left-color: #ccc !important; background: #f9f9f9 !important; } table { border-color: #ddd !important; } th { background: #f0f0f0 !important; } tr:nth-child(even) { background: #fafafa !important; }';
+                        } else if (style) {
+                          style.remove();
+                        }
+                      }
+                    } catch {}
+                    return next;
+                  });
                 }}
                   style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: 'pointer',
                     background: lightTheme ? '#fff3cd' : '#1c1f2e', color: lightTheme ? '#856404' : '#888' }}>

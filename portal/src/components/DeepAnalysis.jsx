@@ -85,7 +85,7 @@ export default function DeepAnalysis() {
     try {
       const childSummaries = children.map(c => `【${c.title}】${c.content}`).join('\n');
       const requirements = `请根据以下子知识点的摘要，在现有综述的基础上做补充和完善。保持综述的概括性和整体结构不变，只在相关章节中融入新的信息：\n${childSummaries}`;
-      const mode = parentTopicHTML ? 'annotation' : '';
+      const mode = '';
       const data = await generateTopicPage(entryId, [], parentTopicHTML || '', requirements, mode);
       const rawHtml = data.html || '';
       if (rawHtml.replace(/<[^>]*>/g, '').trim().length < 50) {
@@ -341,7 +341,8 @@ function showPage(id) {
             </div>
             {parentTopicHTML ? (
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <iframe srcDoc={parentTopicHTML} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="综述页面" />
+                <iframe srcDoc={parentTopicHTML} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="综述页面"
+                onLoad={e => { try { const d = e.target.contentDocument; const s = d.createElement('style'); s.textContent = 'body, .container, .content, main, article, .wrapper, .page { max-width: 100% !important; width: 100% !important; box-sizing: border-box !important; margin-left: 0 !important; margin-right: 0 !important; } body { padding: 16px 24px !important; }'; d.head.appendChild(s); } catch {} }} />
                 {children.length > 0 && (
                   <div style={{ padding: '8px 16px', borderTop: '1px solid #2a2d35', background: '#161822' }}>
                     <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>子主题导航</div>

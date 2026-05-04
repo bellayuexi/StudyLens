@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import TimelineView from './TimelineView.jsx';
 import IngestPanel from './IngestPanel.jsx';
@@ -23,23 +23,51 @@ const VIEWS = [
 
 export default function App() {
   const navigate = useNavigate();
+  const sharedCacheRef = useRef(window.__sg_entry_cache || {});
   const [allEntries, setAllEntries] = useState([]);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const [loading, setLoading] = useState(false);
   const [leftWidth, setLeftWidth] = useState(360);
   const [dragging, setDragging] = useState(false);
-  const [filterDiscipline, setFilterDiscipline] = useState(null);
-  const [filterSubCategory, setFilterSubCategory] = useState(null);
-  const [viewMode, setViewMode] = useState('category');
+  const [filterDiscipline, setFilterDiscipline] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('sg_filterDiscipline')); } catch { return null; }
+  });
+  const [filterSubCategory, setFilterSubCategory] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('sg_filterSubCategory')); } catch { return null; }
+  });
+  const [viewMode, setViewMode] = useState(() => sessionStorage.getItem('sg_viewMode') || 'category');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const pendingEntryId = useRef(sessionStorage.getItem('sg_selectedEntryId'));
+
+  useEffect(() => {
+    window.__sg_entry_cache = sharedCacheRef.current;
+  }, []);
 
   const loadGraph = useCallback(async () => {
     const { entries } = await fetchGraph('wiki');
     setAllEntries(entries);
+    if (pendingEntryId.current) {
+      const match = entries.find(e => e.id === pendingEntryId.current);
+      if (match) setSelectedEntry(match);
+      pendingEntryId.current = null;
+    }
   }, []);
 
   useEffect(() => { loadGraph(); }, [loadGraph]);
+
+  useEffect(() => {
+    sessionStorage.setItem('sg_filterDiscipline', JSON.stringify(filterDiscipline));
+  }, [filterDiscipline]);
+  useEffect(() => {
+    sessionStorage.setItem('sg_filterSubCategory', JSON.stringify(filterSubCategory));
+  }, [filterSubCategory]);
+  useEffect(() => {
+    sessionStorage.setItem('sg_viewMode', viewMode);
+  }, [viewMode]);
+  useEffect(() => {
+    sessionStorage.setItem('sg_selectedEntryId', selectedEntry?.id || '');
+  }, [selectedEntry]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -202,6 +230,7 @@ export default function App() {
             onDeleted={() => { setSelectedEntry(null); loadGraph(); }}
             onNavigate={(entry) => setSelectedEntry(entry)}
             onUpdated={loadGraph}
+            sharedCacheRef={sharedCacheRef}
           />
         ) : (
           <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
