@@ -41,7 +41,7 @@ export default function IngestPanel({ onIngested, loading, setLoading }) {
         res = await ingestUrl(url.trim(), subject.trim());
         setUrl('');
       }
-      setResult({ ok: true, count: res.created?.length || 0 });
+      setResult({ ok: true, count: res.created?.length || 0, skipped: res.skipped || [] });
       onIngested();
     } catch (err) {
       setResult({ ok: false, msg: err.message });
@@ -98,6 +98,16 @@ export default function IngestPanel({ onIngested, loading, setLoading }) {
       {result && (
         <div style={{ marginTop: 6, fontSize: 12, color: result.ok ? '#34a853' : '#ef5350' }}>
           {result.ok ? `成功提取 ${result.count} 个知识点` : `错误: ${result.msg}`}
+          {result.skipped?.length > 0 && (
+            <div style={{ marginTop: 4, color: '#ffb74d' }}>
+              跳过 {result.skipped.length} 个重复知识点:
+              {result.skipped.map((s, i) => (
+                <div key={i} style={{ marginLeft: 8, fontSize: 11, color: '#999' }}>
+                  • {s.title} — 与「{s.duplicateTitle}」重复: {s.reason}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
