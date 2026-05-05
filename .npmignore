@@ -1,0 +1,34 @@
+# Test files
+e2e/
+tests/
+portal/src/test/
+*.test.js
+*.test.mjs
+*.test.jsx
+*.spec.js
+test-results/
+coverage/
+portal/coverage/
+
+# Dev tools
+scripts/
+.claude/
+playwright.config.js
+vitest.config.js
+
+# Data
+wiki/
+wiki-test/
+data/
+data-test/
+*.db
+*.db-shm
+*.db-wal
+logs/
+screenshots/
+uploads/
+server.pid
+
+# Build artifacts
+portal/node_modules/
+node_modules/

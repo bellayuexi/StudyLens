@@ -1,20 +1,43 @@
 {
   "name": "studygraph",
   "version": "0.1.0",
-  "private": true,
-  "description": "Personal knowledge graph learning system for students",
+  "description": "Personal knowledge graph learning system powered by LLM",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "keywords": ["knowledge-graph", "llm", "learning", "study", "ai", "education"],
+  "main": "server/index.js",
+  "bin": {
+    "studygraph": "./bin/studygraph.js"
+  },
+  "files": [
+    "server/",
+    "core/",
+    "config/",
+    "portal/src/",
+    "portal/index.html",
+    "portal/package.json",
+    "portal/vite.config.js",
+    "bin/",
+    "docs/",
+    "README.md"
+  ],
   "scripts": {
     "server": "node server/index.js",
     "portal": "cd portal && npx vite --port 3001",
     "dev": "concurrently \"npm run server\" \"npm run portal\"",
+    "start": "node server/index.js",
     "setup": "npm install && cd portal && npm install",
+    "build": "cd portal && npx vite build",
+    "prepublishOnly": "npm run build",
     "test:api": "npx vitest run tests/",
     "test:portal": "cd portal && npx vitest run",
     "test:e2e": "npx playwright test",
     "test": "npm run test:api && npm run test:portal"
   },
   "dependencies": {
-    "better-sqlite3": "^11.0.0",
     "cheerio": "^1.2.0",
     "cors": "^2.8.5",
     "express": "^4.21.0",
