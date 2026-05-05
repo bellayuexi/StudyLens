@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { askQuestion, saveQACards, buildQAMindMap } from '../lib/api.js';
+import { buildHistory } from '../lib/qa-utils.js';
 
 function ComparisonView({ data }) {
   const cols = data.columns || [];
@@ -141,16 +142,6 @@ export default function QAPage({ onSaved }) {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [messages]);
 
-  const buildHistory = () => {
-    const hist = [];
-    for (let i = 0; i < messages.length; i += 2) {
-      const q = messages[i];
-      const a = messages[i + 1];
-      if (q && a) hist.push({ question: q.text, answer: a.text, suggestedCards: a.cards || [] });
-    }
-    return hist;
-  };
-
   const handleAsk = async () => {
     const q = input.trim();
     if (!q || asking) return;
@@ -158,7 +149,7 @@ export default function QAPage({ onSaved }) {
     setMessages(prev => [...prev, { role: 'user', text: q }]);
     setAsking(true);
     try {
-      const history = buildHistory();
+      const history = buildHistory(messages);
       const data = await askQuestion(q, history);
       setMessages(prev => [...prev, { role: 'ai', text: data.answer, cards: data.suggestedCards || [] }]);
       setLatestCards(data.suggestedCards || []);
