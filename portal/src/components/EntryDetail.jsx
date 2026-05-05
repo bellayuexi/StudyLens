@@ -1305,7 +1305,7 @@ document.addEventListener('mousedown', function(e) {
                     <div style={{ padding: 12, textAlign: 'center', color: '#666', fontSize: 12 }}>
                       所有问题已回答完毕！
                       {topicHTML ? (
-                        newQaCount > 0 ? (
+                        qaHistory.filter(h => h.answer && !h.loading).filter((h, i) => !includedQaIds.includes(h._qid || `qa_${i}`)).length > 0 ? (
                           <button onClick={handleRefreshTopic} disabled={loadingTopic}
                             style={{ marginTop: 8, display: 'block', width: '100%', padding: '8px', borderRadius: 6, border: 'none', fontSize: 13,
                               background: '#9c27b033', color: '#ce93d8', cursor: loadingTopic ? 'wait' : 'pointer' }}>
