@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import EntryDetail from './EntryDetail.jsx';
 import { getChildren, expandEntry, addChildEntry, deleteEntry, updateEntry, getLatestTopicPage } from '../lib/api.js';
+import { exportSinglePageHtml } from '../lib/exportHtml.js';
 
 const CATEGORY_COLORS = {
   '背景': '#4285f4', '内容': '#34a853', '影响': '#fbbc05',
@@ -361,10 +362,17 @@ function showPage(id) {
                 {parentTopicVersion > 0 && <span style={{ fontSize: 11, color: '#34a853', marginLeft: 6 }}>v{parentTopicVersion}</span>}
               </div>
               <div style={{ display: 'flex', gap: 6 }}>
+                {parentTopicHTML && (
+                  <button onClick={() => exportSinglePageHtml(parentTopicHTML, `${parentEntry.title} - 综述`, `${parentEntry.title}_综述.html`)}
+                    style={{ padding: '5px 14px', borderRadius: 6, border: 'none', fontSize: 12,
+                      background: '#1565c033', color: '#64b5f6', cursor: 'pointer' }}>
+                    📄 导出当前页面
+                  </button>
+                )}
                 <button onClick={handleExport}
                   style={{ padding: '5px 14px', borderRadius: 6, border: 'none', fontSize: 12,
                     background: '#1565c033', color: '#64b5f6', cursor: 'pointer' }}>
-                  📥 导出HTML
+                  📥 导出整体
                 </button>
               </div>
             </div>

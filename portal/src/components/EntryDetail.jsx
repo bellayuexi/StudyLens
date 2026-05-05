@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { deleteEntry, updateEntry, generateSmartQuestions, askEntryQuestion, generateTopicPage, saveTopicPage, getLatestTopicPage, getTopicPages, getTopicPageByVersion, updateTopicPageComments, updateTopicPageQaHistory, deleteTopicPageVersion } from '../lib/api.js';
+import { exportSinglePageHtml } from '../lib/exportHtml.js';
 
 const QUESTION_COLORS = { '概念': '#4285f4', '原因': '#ea4335', '影响': '#34a853', '对比': '#fbbc05', '思考': '#9c27b0', '自定义': '#ff6d00' };
 
@@ -950,14 +951,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
               )}
               {topicHTML && (
                 <button onClick={() => {
-                  const exportCSS = `body, body > div, body > section, body > article, body > main, [class*="container"], [class*="wrapper"], [class*="content"] { max-width: 100% !important; width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; padding-left: 20px !important; padding-right: 20px !important; } @media print { body { padding: 20px !important; background: #fff !important; color: #222 !important; } * { max-width: 100% !important; overflow: visible !important; height: auto !important; max-height: none !important; -webkit-text-fill-color: initial !important; -webkit-background-clip: initial !important; background-clip: initial !important; color: #222 !important; background: transparent !important; background-image: none !important; } strong, b { color: #111 !important; } .badge { background: #e8e8e8 !important; color: #333 !important; } .highlight { background: #f5f5dc !important; border-left-color: #ccc !important; } .card { background: #fafafa !important; border-color: #ddd !important; box-shadow: none !important; } .hero { background: #f0f0f0 !important; } .hero h1 { color: #111 !important; } a { color: #1a73e8 !important; } .compare-table th { background: #f0f0f0 !important; color: #333 !important; } .compare-table td { border-color: #ddd !important; } h1,h2,h3,h4,h5,h6 { page-break-after: avoid; color: #111 !important; } pre, code { background: #f5f5f5 !important; color: #333 !important; } pre, blockquote, table { page-break-inside: avoid; border-color: #ccc !important; } img { max-width: 100% !important; } }`;
-                  const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${entry.title} - 专题页</title><style>${exportCSS}</style></head><body>${topicHTML}</body></html>`;
-                  const blob = new Blob([fullHtml], { type: 'text/html' });
-                  const a = document.createElement('a');
-                  a.href = URL.createObjectURL(blob);
-                  a.download = `${entry.title}_专题页_v${topicVersion}.html`;
-                  a.click();
-                  URL.revokeObjectURL(a.href);
+                  exportSinglePageHtml(topicHTML, `${entry.title} - 专题页`, `${entry.title}_专题页_v${topicVersion}.html`);
                 }}
                   style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: 'pointer',
                     background: '#1c1f2e', color: '#888' }}>
