@@ -64,9 +64,24 @@ app.post('/api/ingest', async (req, res) => {
     storage.addRaw(text, source_type, source_ref);
     const knowledgePoints = await llm.analyze(text, subject);
     const existingEntries = storage.getAllEntries();
-    const created = [];
 
-    for (const kp of knowledgePoints) {
+    // Check for duplicates
+    let duplicates = [];
+    try {
+      duplicates = await llm.checkDuplicates(knowledgePoints, existingEntries);
+    } catch (_) { /* duplicate check is best-effort */ }
+    const dupNewIndices = new Set(duplicates.map(d => d.newIndex));
+
+    const created = [];
+    const skipped = [];
+
+    for (let i = 0; i < knowledgePoints.length; i++) {
+      if (dupNewIndices.has(i)) {
+        const dup = duplicates.find(d => d.newIndex === i);
+        skipped.push({ ...knowledgePoints[i], duplicateOf: dup.existingId, duplicateTitle: dup.existingTitle, reason: dup.reason });
+        continue;
+      }
+      const kp = knowledgePoints[i];
       const entry = storage.addEntry({
         title: kp.title,
         content: kp.content,
@@ -77,7 +92,6 @@ app.post('/api/ingest', async (req, res) => {
       });
       created.push(entry);
 
-      // Auto-connect to existing knowledge
       try {
         const connections = await llm.findConnections(entry, existingEntries);
         for (const conn of connections) {
@@ -85,12 +99,12 @@ app.post('/api/ingest', async (req, res) => {
             storage.addConnection(entry.id, conn.id, conn.relation);
           }
         }
-      } catch (_) { /* connection finding is best-effort */ }
+      } catch (_) {}
 
       existingEntries.push(entry);
     }
 
-    res.json({ created });
+    res.json({ created, skipped });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -179,9 +193,23 @@ app.post('/api/ingest/file', upload.single('file'), async (req, res) => {
     const subject = req.body.subject || '';
     const knowledgePoints = await llm.analyze(text.slice(0, 10000), subject);
     const existingEntries = storage.getAllEntries();
-    const created = [];
 
-    for (const kp of knowledgePoints) {
+    let duplicates = [];
+    try {
+      duplicates = await llm.checkDuplicates(knowledgePoints, existingEntries);
+    } catch (_) {}
+    const dupNewIndices = new Set(duplicates.map(d => d.newIndex));
+
+    const created = [];
+    const skipped = [];
+
+    for (let i = 0; i < knowledgePoints.length; i++) {
+      if (dupNewIndices.has(i)) {
+        const dup = duplicates.find(d => d.newIndex === i);
+        skipped.push({ ...knowledgePoints[i], duplicateOf: dup.existingId, duplicateTitle: dup.existingTitle, reason: dup.reason });
+        continue;
+      }
+      const kp = knowledgePoints[i];
       const entry = storage.addEntry({
         title: kp.title, content: kp.content,
         subject: kp.subject || subject || '', tags: kp.tags || [],
@@ -196,7 +224,7 @@ app.post('/api/ingest/file', upload.single('file'), async (req, res) => {
       } catch (_) {}
       existingEntries.push(entry);
     }
-    res.json({ created, extractedLength: text.length });
+    res.json({ created, skipped, extractedLength: text.length });
   } catch (err) {
     if (req.file) try { fs.unlinkSync(req.file.path); } catch (_) {}
     res.status(500).json({ error: err.message });
@@ -213,9 +241,23 @@ app.post('/api/ingest/url', async (req, res) => {
     storage.addRaw(text, 'url', url);
     const knowledgePoints = await llm.analyze(text.slice(0, 10000), subject || '');
     const existingEntries = storage.getAllEntries();
-    const created = [];
 
-    for (const kp of knowledgePoints) {
+    let duplicates = [];
+    try {
+      duplicates = await llm.checkDuplicates(knowledgePoints, existingEntries);
+    } catch (_) {}
+    const dupNewIndices = new Set(duplicates.map(d => d.newIndex));
+
+    const created = [];
+    const skipped = [];
+
+    for (let i = 0; i < knowledgePoints.length; i++) {
+      if (dupNewIndices.has(i)) {
+        const dup = duplicates.find(d => d.newIndex === i);
+        skipped.push({ ...knowledgePoints[i], duplicateOf: dup.existingId, duplicateTitle: dup.existingTitle, reason: dup.reason });
+        continue;
+      }
+      const kp = knowledgePoints[i];
       const entry = storage.addEntry({
         title: kp.title, content: kp.content,
         subject: kp.subject || subject || '', tags: kp.tags || [],
@@ -230,7 +272,7 @@ app.post('/api/ingest/url', async (req, res) => {
       } catch (_) {}
       existingEntries.push(entry);
     }
-    res.json({ created, extractedLength: text.length });
+    res.json({ created, skipped, extractedLength: text.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
