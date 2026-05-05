@@ -176,7 +176,40 @@ test.describe('Entry Field Editing', () => {
     await editInput.fill('修改后标题');
     await editInput.press('Enter');
 
+    // Detail panel updates immediately
     await expect(page.getByText('修改后标题').first()).toBeVisible({ timeout: 5000 });
+
+    // Sidebar entry list also updates immediately (no need to switch entries)
+    const sidebar = page.locator('[style*="width"]').first();
+    await expect(sidebar.getByText('修改后标题')).toBeVisible({ timeout: 5000 });
+  });
+
+  test('edited title persists after navigating away and back', async ({ page, request }) => {
+    const entry1 = await seedEntry(request, { title: '条目一', content: '内容一', subject: '测试' });
+    const entry2 = await seedEntry(request, { title: '条目二', content: '内容二', subject: '测试' });
+    await mockTopicPages(page, entry1.id);
+    await mockTopicPages(page, entry2.id);
+
+    await page.goto('/');
+    await page.getByText('条目一').first().click();
+    const titleEl = page.locator('h2').filter({ hasText: '条目一' });
+    await expect(titleEl).toBeVisible({ timeout: 5000 });
+
+    // Edit title
+    await titleEl.click();
+    const editInput = page.locator('input:focus');
+    await expect(editInput).toBeVisible({ timeout: 3000 });
+    await editInput.fill('已修改条目');
+    await editInput.press('Enter');
+    await expect(page.getByText('已修改条目').first()).toBeVisible({ timeout: 5000 });
+
+    // Navigate to another entry
+    await page.getByText('条目二').first().click();
+    await expect(page.locator('h2').filter({ hasText: '条目二' })).toBeVisible({ timeout: 5000 });
+
+    // Navigate back — edited title should persist
+    await page.getByText('已修改条目').first().click();
+    await expect(page.locator('h2').filter({ hasText: '已修改条目' })).toBeVisible({ timeout: 5000 });
   });
 
   test('add tag to entry', async ({ page, request }) => {
