@@ -15,7 +15,18 @@ AI-powered deep study assistant. Paste notes, upload files, or provide URLs — 
 - **Granularity control** — limit max knowledge points per ingestion for high-level summaries
 - **Multi-provider LLM** — supports OpenAI-compatible APIs, Ollama, and custom endpoints
 
-## Quick Start
+## Install
+
+```bash
+npm install -g studylens
+studylens
+```
+
+Open `http://localhost:3000` — on first launch the Settings panel opens automatically to guide you through LLM setup.
+
+Data is stored in `./studylens-data/` in the current directory. Set `STUDYLENS_DATA_DIR` to change the location.
+
+## Quick Start (Development)
 
 ```bash
 npm run setup    # Install dependencies (server + portal)
