@@ -437,7 +437,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         if (entryIdRef.current === genEntryId) { setTopicStatus('已生成（保存失败，请重试）'); showError('专题页保存失败'); }
       }
     } catch (err) {
-      if (entryIdRef.current === genEntryId) { setTopicStatus('生成失败'); showError('专题页生成失败'); }
+      if (entryIdRef.current === genEntryId) { setTopicStatus('生成失败'); showError(`专题页生成失败: ${err.message}`); }
       console.error(err);
     }
     if (entryIdRef.current === genEntryId) {
@@ -489,7 +489,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         if (entryIdRef.current === genEntryId) { setTopicStatus('已更新（保存失败，请重试）'); showError('专题页保存失败'); }
       }
     } catch (err) {
-      if (entryIdRef.current === genEntryId) { setTopicStatus('更新失败'); showError('专题页更新失败'); }
+      if (entryIdRef.current === genEntryId) { setTopicStatus('更新失败'); showError(`专题页更新失败: ${err.message}`); }
     }
     if (entryIdRef.current === genEntryId) {
       setLoadingTopic(false);

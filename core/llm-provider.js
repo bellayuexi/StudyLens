@@ -204,11 +204,11 @@ function extractJSON(text, { isArray = false, repairKeys } = {}) {
   }
 }
 
-function httpRequest(urlStr, options, body) {
+function httpRequest(urlStr, options, body, timeout = 120000) {
   return new Promise((resolve, reject) => {
     const url = new URL(urlStr);
     const mod = url.protocol === 'https:' ? https : http;
-    const req = mod.request(url, { method: 'POST', headers: options.headers, timeout: 120000 }, (res) => {
+    const req = mod.request(url, { method: 'POST', headers: options.headers, timeout }, (res) => {
       const chunks = [];
       res.on('data', c => chunks.push(c));
       res.on('end', () => {
@@ -224,7 +224,7 @@ function httpRequest(urlStr, options, body) {
   });
 }
 
-async function callLLM(messages, { maxTokens = 4096, providers, task } = {}) {
+async function callLLM(messages, { maxTokens = 4096, providers, task, timeout } = {}) {
   const providerList = providers || await getProvidersForTask(task || 'default');
   const errors = [];
   for (const p of providerList) {
@@ -232,7 +232,7 @@ async function callLLM(messages, { maxTokens = 4096, providers, task } = {}) {
       const model = typeof p.model === 'function' ? p.model() : p.model;
       const url = typeof p.url === 'function' ? p.url() : p.url;
       const body = p.buildBody(messages, model, maxTokens);
-      const raw = await httpRequest(url, { headers: p.headers() }, body);
+      const raw = await httpRequest(url, { headers: p.headers() }, body, timeout);
       return p.parseResponse(raw);
     } catch (err) {
       errors.push(`${p.name}: ${err.message}`);
@@ -597,7 +597,7 @@ ${requirementsList}
   };
   console.log(`[topic-gen] START: "${entry.title}" mode=${mode || 'default'} isUpdate=${isUpdate} prompt=${prompt.length} chars`);
 
-  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 16384, task: 'topicPage' });
+  const result = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 16384, task: 'topicPage', timeout: 300000 });
   let html = result.replace(/```html\s*/g, '').replace(/```\s*/g, '').trim();
   if (!html.includes('<html') && !html.includes('<!DOCTYPE')) {
     html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="background:#0f1117;color:#e0e0e0;font-family:system-ui;padding:24px">${html}</body></html>`;
@@ -607,7 +607,7 @@ ${requirementsList}
     logData.firstResultLength = html.length;
     logData.firstResultTextLength = html.replace(/<[^>]*>/g, '').trim().length;
     logData.firstResultPreview = html.slice(0, 500);
-    const retry = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 16384, task: 'topicPage' });
+    const retry = await callLLM([{ role: 'user', content: prompt }], { maxTokens: 16384, task: 'topicPage', timeout: 300000 });
     let retryHtml = retry.replace(/```html\s*/g, '').replace(/```\s*/g, '').trim();
     if (!retryHtml.includes('<html') && !retryHtml.includes('<!DOCTYPE')) {
       retryHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="background:#0f1117;color:#e0e0e0;font-family:system-ui;padding:24px">${retryHtml}</body></html>`;

@@ -41,7 +41,7 @@ export const saveQACards = (question, cards) => apiPost('/api/qa/save', { questi
 export const buildQAMindMap = (question, answer, cards = [], relatedEntries = []) => apiPost('/api/qa/mindmap', { question, answer, cards, relatedEntries });
 export const generateSmartQuestions = (entryId) => apiPost(`/api/entries/${entryId}/questions`, {});
 export const askEntryQuestion = (entryId, question, history = []) => apiPost(`/api/entries/${entryId}/ask`, { question, history });
-export const generateTopicPage = (entryId, qaHistory = [], existingHTML = '', requirements = '', mode = '') => apiPost(`/api/entries/${entryId}/topic-page`, { qaHistory, existingHTML, requirements, mode });
+export const generateTopicPage = (entryId, qaHistory = [], existingHTML = '', requirements = '', mode = '') => apiPost(`/api/entries/${entryId}/topic-page`, { qaHistory, existingHTML, requirements, mode }, { throwOnError: true });
 export const saveTopicPage = (entryId, html, qaHistory = [], comments = [], includedQaIds = []) => apiPost(`/api/entries/${entryId}/topic-page/save`, { html, qaHistory, comments, includedQaIds });
 export const updateTopicPageComments = (pageId, comments) => apiPost(`/api/topic-pages/${pageId}/comments`, { comments }, { method: 'PUT' });
 export const updateTopicPageQaHistory = (pageId, qaHistory) => apiPost(`/api/topic-pages/${pageId}/qa-history`, { qaHistory }, { method: 'PUT' });
