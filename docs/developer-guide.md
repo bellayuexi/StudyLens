@@ -1,8 +1,8 @@
-# StudyGraph 开发者指南
+# StudyLens 开发者指南
 
 ## 设计理念
 
-StudyGraph 采用 **AI 增强的知识管理** 架构，核心设计原则：
+StudyLens 采用 **AI 增强的知识管理** 架构，核心设计原则：
 
 1. **AI 作为辅助而非替代**：AI 生成的内容（问题、回答、专题页）始终支持用户编辑和覆盖
 2. **渐进式学习**：通过"录入 → 探索 → 生成 → 修改"的循环，逐步深化知识理解
@@ -14,7 +14,7 @@ StudyGraph 采用 **AI 增强的知识管理** 架构，核心设计原则：
 ## 系统架构
 
 ```
-StudyGraph/
+StudyLens/
 ├── server/index.js          # Express API 服务器（PORT=3000）
 ├── core/
 │   ├── llm-provider.js      # LLM 调用层（provider 切换、JSON 提取）
@@ -153,7 +153,7 @@ npm test
 
 ### 运行前端测试
 ```bash
-cd StudyGraph/portal
+cd StudyLens/portal
 npx vitest run
 ```
 
@@ -182,7 +182,7 @@ npx playwright test
 
 ```bash
 # 1. 构建前端
-cd StudyGraph/portal
+cd StudyLens/portal
 npm run build
 
 # 2. 停止旧服务器（找到占用 3000 端口的进程并终止）
@@ -204,7 +204,7 @@ curl http://localhost:3000/api/graph
 
 如果只修改了前端代码（portal/src 下的文件）：
 ```bash
-cd StudyGraph/portal
+cd StudyLens/portal
 npm run build
 # 服务器会自动提供新的 portal/dist/ 内容
 # 浏览器中 Ctrl+Shift+R 强制刷新即可

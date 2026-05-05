@@ -100,7 +100,7 @@ export default function App() {
         {/* Header */}
         <div style={{ padding: '12px 16px', borderBottom: '1px solid #2a2d35' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h1 style={{ margin: 0, fontSize: 18, color: '#fff' }}>📚 StudyGraph</h1>
+            <h1 style={{ margin: 0, fontSize: 18, color: '#fff' }}>📚 StudyLens</h1>
             <button data-testid="settings-btn" onClick={() => setShowSettings(!showSettings)}
               style={{ padding: '4px 8px', borderRadius: 4, border: 'none', cursor: 'pointer', fontSize: 14,
                 background: showSettings ? '#4285f4' : '#1c1f2e', color: showSettings ? '#fff' : '#888' }}>

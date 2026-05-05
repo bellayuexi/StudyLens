@@ -1,6 +1,6 @@
-# StudyGraph
+# StudyLens
 
-Personal knowledge graph learning system powered by LLM. Paste notes, upload files, or provide URLs — StudyGraph extracts knowledge points, organizes them into a navigable graph, and generates topic pages with AI-driven Q&A.
+AI-powered deep study assistant. Paste notes, upload files, or provide URLs — StudyLens extracts knowledge points, organizes them for browsing, and generates topic pages with AI-driven Q&A.
 
 ## Features
 
@@ -12,6 +12,7 @@ Personal knowledge graph learning system powered by LLM. Paste notes, upload fil
 - **Smart Q&A** — ask questions about your knowledge base with context-aware answers
 - **Timeline & category views** — browse knowledge by time or subject
 - **Export** — single-page HTML export with print-optimized CSS
+- **Granularity control** — limit max knowledge points per ingestion for high-level summaries
 - **Multi-provider LLM** — supports OpenAI-compatible APIs, Ollama, and custom endpoints
 
 ## Quick Start
@@ -25,7 +26,7 @@ Open `http://localhost:3000` (production build) or `http://localhost:3001` (dev 
 
 ## LLM Configuration
 
-StudyGraph requires an LLM backend. Configure via the in-app Settings panel or edit `wiki/config/llm-config.json`. Supported providers:
+StudyLens requires an LLM backend. Configure via the in-app Settings panel or edit `wiki/config/llm-config.json`. Supported providers:
 
 | Provider | Config |
 |----------|--------|
@@ -38,7 +39,7 @@ A template is available at `config/llm-config.template.json`.
 ## Project Structure
 
 ```
-StudyGraph/
+StudyLens/
 ├── server/           # Express API server
 │   └── index.js
 ├── core/             # Business logic

@@ -2,7 +2,7 @@ const puppeteer = require('puppeteer');
 const path = require('path');
 const { execSync } = require('child_process');
 
-const BASE_URL = process.env.STUDYGRAPH_URL || 'http://localhost:5173';
+const BASE_URL = process.env.STUDYLENS_URL || 'http://localhost:5173';
 const CHAT_ID = 'oc_f2fcef2d97444f7b7861abadcb2d98d3';
 const OUT_DIR = path.join(__dirname, '..', 'screenshots');
 const fs = require('fs');

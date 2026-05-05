@@ -41,7 +41,7 @@ function fetchUrl(urlStr) {
   return new Promise((resolve, reject) => {
     const url = new URL(urlStr);
     const mod = url.protocol === 'https:' ? https : http;
-    mod.get(url, { timeout: 30000, headers: { 'User-Agent': 'Mozilla/5.0 StudyGraph/1.0' } }, (res) => {
+    mod.get(url, { timeout: 30000, headers: { 'User-Agent': 'Mozilla/5.0 StudyLens/1.0' } }, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         return fetchUrl(res.headers.location).then(resolve, reject);
       }

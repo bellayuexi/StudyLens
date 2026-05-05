@@ -19,9 +19,9 @@ async function clearAll(request) {
 }
 
 test.describe('Page Loading', () => {
-  test('homepage loads with StudyGraph title', async ({ page }) => {
+  test('homepage loads with StudyLens title', async ({ page }) => {
     await page.goto('/');
-    await expect(page.locator('h1')).toContainText('StudyGraph');
+    await expect(page.locator('h1')).toContainText('StudyLens');
   });
 
   test('homepage shows empty state placeholder', async ({ page }) => {

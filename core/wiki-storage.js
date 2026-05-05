@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 
-const WIKI_ROOT = process.env.STUDYGRAPH_WIKI_DIR || path.join(__dirname, '..', 'wiki');
+const WIKI_ROOT = process.env.STUDYLENS_WIKI_DIR || path.join(__dirname, '..', 'wiki');
 const RAW_DIR = path.join(WIKI_ROOT, 'raw');
 const DRILL_CORE = path.join(WIKI_ROOT, 'drill', 'core');
 const DRILL_EXT = path.join(WIKI_ROOT, 'drill', 'extended');

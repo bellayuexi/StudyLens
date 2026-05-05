@@ -9,5 +9,5 @@ const testWikiDir = path.join(__dirname, '..', 'wiki-test');
 fs.mkdirSync(testDataDir, { recursive: true });
 fs.mkdirSync(testWikiDir, { recursive: true });
 
-process.env.STUDYGRAPH_DB_PATH = path.join(testDataDir, 'studygraph.db');
-process.env.STUDYGRAPH_WIKI_DIR = testWikiDir;
+process.env.STUDYLENS_DB_PATH = path.join(testDataDir, 'studylens.db');
+process.env.STUDYLENS_WIKI_DIR = testWikiDir;

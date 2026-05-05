@@ -48,7 +48,7 @@ async function processKnowledgePoints(knowledgePoints, subject, sourceType, sour
   return { created, skipped };
 }
 
-if (process.env.STUDYGRAPH_TEST_MODE) {
+if (process.env.STUDYLENS_TEST_MODE) {
   app.post('/api/test/seed', (req, res) => {
     try {
       const entry = storage.addEntry(req.body);
@@ -533,7 +533,7 @@ if (fs.existsSync(portalDist)) {
 }
 
 if (require.main === module) {
-  app.listen(PORT, () => console.log(`StudyGraph server running on http://localhost:${PORT}`));
+  app.listen(PORT, () => console.log(`StudyLens server running on http://localhost:${PORT}`));
 }
 
 module.exports = app;

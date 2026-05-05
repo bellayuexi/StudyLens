@@ -1,16 +1,17 @@
 {
-  "name": "studygraph",
+  "name": "studylens",
   "version": "0.1.0",
-  "description": "Personal knowledge graph learning system powered by LLM",
+  "private": true,
+  "description": "AI-powered deep study assistant — turn notes into structured knowledge",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": ""
   },
-  "keywords": ["knowledge-graph", "llm", "learning", "study", "ai", "education"],
+  "keywords": ["study", "learning", "llm", "ai", "education", "knowledge"],
   "main": "server/index.js",
   "bin": {
-    "studygraph": "./bin/studygraph.js"
+    "studylens": "./bin/studylens.js"
   },
   "files": [
     "server/",

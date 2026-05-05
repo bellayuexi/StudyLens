@@ -9,7 +9,7 @@ const app = require('../server/index.js');
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const settingsPath = join(__dirname, '..', 'config', 'prompts.json');
 
-describe('StudyGraph API', () => {
+describe('StudyLens API', () => {
   // ============================
   // F1: Graph & Entry CRUD
   // ============================
