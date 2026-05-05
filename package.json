@@ -1,13 +1,20 @@
 {
   "name": "studylens",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AI-powered deep study assistant — turn notes into structured knowledge",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/cdlliuy/studygraph.git"
   },
-  "keywords": ["study", "learning", "llm", "ai", "education", "knowledge"],
+  "keywords": [
+    "study",
+    "learning",
+    "llm",
+    "ai",
+    "education",
+    "knowledge"
+  ],
   "main": "server/index.js",
   "bin": {
     "studylens": "./bin/studylens.js"
