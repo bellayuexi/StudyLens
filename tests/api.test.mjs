@@ -39,12 +39,6 @@ describe('StudyGraph API', () => {
       });
     });
 
-    it('GET /api/graph returns backend field', async () => {
-      const res = await request(app).get('/api/graph');
-      expect(res.status).toBe(200);
-      expect(res.body).toHaveProperty('backend');
-    });
-
     it('GET /api/entries returns all entries', async () => {
       const res = await request(app).get('/api/entries');
       expect(res.status).toBe(200);

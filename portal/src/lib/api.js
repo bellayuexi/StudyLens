@@ -1,7 +1,7 @@
 const API = '';
 
-export async function fetchGraph(backend = 'wiki') {
-  const res = await fetch(`${API}/api/graph?backend=${backend}`);
+export async function fetchGraph() {
+  const res = await fetch(`${API}/api/graph`);
   return res.json();
 }
 

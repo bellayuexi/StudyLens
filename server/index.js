@@ -3,7 +3,7 @@ const cors = require('cors');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const storage = require('../core/dual-storage');
+const storage = require('../core/wiki-storage');
 const llm = require('../core/llm-provider');
 const extractor = require('../core/extractor');
 
@@ -26,8 +26,7 @@ if (process.env.STUDYGRAPH_TEST_MODE) {
 
 // Get all entries + connections for graph
 app.get('/api/graph', (req, res) => {
-  const b = req.query.backend || 'wiki';
-  const allEntries = storage.getAllEntries(b);
+  const allEntries = storage.getAllEntries();
   const statusMap = storage.getTopicPageStatusMap();
   const entries = allEntries.filter(e => !e.parent_id).map(e => ({
     ...e,
@@ -35,22 +34,20 @@ app.get('/api/graph', (req, res) => {
     has_topic_page: !!(statusMap[e.id]?.has_topic_page),
     has_qa: !!(statusMap[e.id]?.has_qa),
   }));
-  const connections = storage.getAllConnections(b);
-  res.json({ entries, connections, backend: b });
+  const connections = storage.getAllConnections();
+  res.json({ entries, connections });
 });
 
 // Get all entries
 app.get('/api/entries', (req, res) => {
-  const b = req.query.backend || 'wiki';
   const { q } = req.query;
-  const entries = q ? storage.searchEntries(q, b) : storage.getAllEntries(b);
+  const entries = q ? storage.searchEntries(q) : storage.getAllEntries();
   res.json(entries);
 });
 
 // Get single entry
 app.get('/api/entries/:id', (req, res) => {
-  const b = req.query.backend || 'wiki';
-  const entry = storage.getEntry(req.params.id, b);
+  const entry = storage.getEntry(req.params.id);
   if (!entry) return res.status(404).json({ error: 'Not found' });
   res.json(entry);
 });

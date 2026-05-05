@@ -151,15 +151,15 @@ describe('API with mocked LLM', () => {
       createdIds.push(entryId);
     });
 
-    it('GET /api/entries with sqlite backend finds ingested entry', async () => {
-      const res = await request(app).get('/api/entries?backend=sqlite');
+    it('GET /api/entries finds ingested entry', async () => {
+      const res = await request(app).get('/api/entries');
       expect(res.status).toBe(200);
       const found = res.body.find(e => e.id === entryId);
       expect(found).toBeTruthy();
     });
 
-    it('GET /api/entries/:id with sqlite backend returns entry', async () => {
-      const res = await request(app).get(`/api/entries/${entryId}?backend=sqlite`);
+    it('GET /api/entries/:id returns entry', async () => {
+      const res = await request(app).get(`/api/entries/${entryId}`);
       expect(res.status).toBe(200);
       expect(res.body.id).toBe(entryId);
     });
