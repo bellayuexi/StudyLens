@@ -95,7 +95,20 @@ export default function DeepAnalysis() {
     const stripHtmlWrapper = (html) => {
       const styles = [];
       html.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, (m, css) => {
-        const scoped = css.replace(/\bbody\b/g, '.page-body');
+        let scoped = css.replace(/\bbody\b/g, '.page-body');
+        scoped = scoped
+          .replace(/background:\s*#0f1117/g, 'background:#fff')
+          .replace(/background:\s*#1[0-9a-f]{5}/gi, 'background:#fafafa')
+          .replace(/background:\s*linear-gradient\([^)]*#1a1a2e[^)]*\)/g, 'background:#f0f0f0')
+          .replace(/background:\s*linear-gradient\(145deg,\s*#1a1e2e[^)]*\)/g, 'background:#fafafa')
+          .replace(/background:\s*linear-gradient\(145deg,\s*#1a2e1a[^)]*\)/g, 'background:#f0f8f0')
+          .replace(/color:\s*#e0e0e0/g, 'color:#222')
+          .replace(/color:\s*#8892b0/g, 'color:#555')
+          .replace(/-webkit-text-fill-color:\s*transparent/g, '-webkit-text-fill-color:initial')
+          .replace(/-webkit-background-clip:\s*text/g, '-webkit-background-clip:initial')
+          .replace(/border-bottom:\s*2px solid rgba\(255,255,255,[^)]*\)/g, 'border-bottom:2px solid #ddd')
+          .replace(/border:\s*1px solid rgba\(255,255,255,[^)]*\)/g, 'border:1px solid #ddd')
+          .replace(/box-shadow:\s*0[^;]*/g, 'box-shadow:none');
         styles.push(`<style>${scoped}</style>`);
         return '';
       });
@@ -151,13 +164,11 @@ body { background: #0f1117; color: #e0e0e0; font-family: 'Segoe UI', system-ui, 
   .print-content .print-section { page-break-before: always; padding: 20px 0; }
   .print-content .print-section:first-child { page-break-before: avoid; }
   .print-content h2 { border-bottom: 2px solid #ccc !important; padding-bottom: 8px; margin-bottom: 16px; color: #111 !important; }
-  .print-content * { max-width: 100% !important; overflow: visible !important; height: auto !important; max-height: none !important; width: auto !important; -webkit-text-fill-color: initial !important; -webkit-background-clip: initial !important; background-clip: initial !important; }
+  .print-content * { max-width: 100% !important; overflow: visible !important; height: auto !important; max-height: none !important; width: auto !important; }
   .print-content .print-section, .print-content .page-body { width: 100% !important; }
-  .print-content .page-body { padding: 0 !important; background: #fff !important; }
-  .print-content [style*="color: #e0e0e0"], .print-content [style*="color: #ccc"], .print-content [style*="color: #ddd"], .print-content [style*="color: #eee"], .print-content [style*="color: #fff"], .print-content [style*="color: rgb(224"], .print-content [style*="color: rgb(255"] { color: #222 !important; }
-  .print-content [style*="background: #0f"], .print-content [style*="background: #1"], .print-content [style*="background: #2"], .print-content [style*="background-color: #0f"], .print-content [style*="background-color: #1"], .print-content [style*="background-color: #2"], .print-content [style*="background: rgb(1"], .print-content [style*="background: rgb(2"] { background: #f5f5f5 !important; }
+  .print-content .page-body { padding: 0 !important; }
   h1,h2,h3,h4,h5,h6 { page-break-after: avoid; color: #111 !important; }
-  pre, code { background: #f5f5f5 !important; }
+  pre, code { background: #f5f5f5 !important; color: #333 !important; }
   pre, blockquote, table { page-break-inside: avoid; border-color: #ccc !important; }
   img { max-width: 100% !important; }
   a { color: #1a73e8 !important; }
