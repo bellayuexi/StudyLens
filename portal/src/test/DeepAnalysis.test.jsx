@@ -3,6 +3,11 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import React from 'react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
+vi.mock('../lib/exportHtml.js', () => ({
+  exportSinglePageHtml: vi.fn(),
+  PRINT_RULES: 'mock-print-rules',
+}));
+
 vi.mock('../lib/api.js', () => ({
   getChildren: vi.fn().mockResolvedValue({ children: [] }),
   expandEntry: vi.fn().mockResolvedValue({ children: [] }),
@@ -132,6 +137,43 @@ describe('DeepAnalysis Component', () => {
       await waitFor(() => {
         expect(screen.getByText(/返回主页/)).toBeInTheDocument();
       });
+    });
+  });
+
+  describe('Export', () => {
+    it('shows both export buttons when summary page exists', async () => {
+      api.getLatestTopicPage.mockResolvedValue({
+        page: { html: '<html><body><h1>Overview</h1></body></html>', version: 1 },
+      });
+      renderDeepAnalysis();
+      await waitFor(() => {
+        expect(screen.getByText(/导出当前页面/)).toBeInTheDocument();
+      });
+      expect(screen.getByText(/导出整体/)).toBeInTheDocument();
+    });
+
+    it('shows export full button even without summary page', async () => {
+      renderDeepAnalysis();
+      await waitFor(() => {
+        expect(screen.getByText(/导出整体/)).toBeInTheDocument();
+      });
+    });
+
+    it('calls exportSinglePageHtml when export current page clicked', async () => {
+      const { exportSinglePageHtml } = await import('../lib/exportHtml.js');
+      api.getLatestTopicPage.mockResolvedValue({
+        page: { html: '<html><body><h1>Overview</h1></body></html>', version: 1 },
+      });
+      renderDeepAnalysis();
+      await waitFor(() => {
+        expect(screen.getByText(/导出当前页面/)).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText(/导出当前页面/));
+      expect(exportSinglePageHtml).toHaveBeenCalledWith(
+        '<html><body><h1>Overview</h1></body></html>',
+        '王安石变法 - 综述',
+        '王安石变法_综述.html'
+      );
     });
   });
 });

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import EntryDetail from './EntryDetail.jsx';
 import { getChildren, expandEntry, addChildEntry, deleteEntry, updateEntry, getLatestTopicPage } from '../lib/api.js';
-import { exportSinglePageHtml } from '../lib/exportHtml.js';
+import { exportSinglePageHtml, PRINT_RULES } from '../lib/exportHtml.js';
 
 const CATEGORY_COLORS = {
   '背景': '#4285f4', '内容': '#34a853', '影响': '#fbbc05',
@@ -158,21 +158,15 @@ body { background: #0f1117; color: #e0e0e0; font-family: 'Segoe UI', system-ui, 
 .print-content { display: none; }
 .print-content .page-body { max-width: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
 @media print {
-  body { display: block !important; padding: 20px !important; background: #fff !important; color: #222 !important; }
   .sidebar { display: none !important; }
   .main-content { display: none !important; }
   .print-content { display: block !important; max-width: 100% !important; width: 100% !important; }
   .print-content .print-section { page-break-before: always; padding: 20px 0; }
   .print-content .print-section:first-child { page-break-before: avoid; }
-  .print-content h2 { border-bottom: 2px solid #ccc !important; padding-bottom: 8px; margin-bottom: 16px; color: #111 !important; }
-  .print-content * { max-width: 100% !important; overflow: visible !important; height: auto !important; max-height: none !important; width: auto !important; }
+  .print-content h2 { border-bottom: 2px solid #ccc !important; padding-bottom: 8px; margin-bottom: 16px; }
   .print-content .print-section, .print-content .page-body { width: 100% !important; }
   .print-content .page-body { padding: 0 !important; }
-  h1,h2,h3,h4,h5,h6 { page-break-after: avoid; color: #111 !important; }
-  pre, code { background: #f5f5f5 !important; color: #333 !important; }
-  pre, blockquote, table { page-break-inside: avoid; border-color: #ccc !important; }
-  img { max-width: 100% !important; }
-  a { color: #1a73e8 !important; }
+  ${PRINT_RULES}
 }
 </style>
 </head>
