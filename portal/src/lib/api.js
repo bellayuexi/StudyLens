@@ -1,216 +1,64 @@
 const API = '';
 
-export async function fetchGraph() {
-  const res = await fetch(`${API}/api/graph`);
+async function apiGet(path) {
+  const res = await fetch(`${API}${path}`);
   return res.json();
 }
 
-export async function ingestText(text, subject = '') {
-  const res = await fetch(`${API}/api/ingest`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text, subject, source_type: 'text' }),
+async function apiPost(path, data, { method = 'POST', throwOnError = false } = {}) {
+  const isFormData = data instanceof FormData;
+  const res = await fetch(`${API}${path}`, {
+    method,
+    ...(isFormData ? { body: data } : {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }),
   });
+  if (throwOnError && !res.ok) throw new Error((await res.json()).error || 'Request failed');
   return res.json();
 }
 
-export async function deleteEntry(id) {
-  await fetch(`${API}/api/entries/${id}`, { method: 'DELETE' });
+export const fetchGraph = () => apiGet('/api/graph');
+export const searchEntries = (q) => apiGet(`/api/entries?q=${encodeURIComponent(q)}`);
+export const getTopicPages = (entryId) => apiGet(`/api/entries/${entryId}/topic-pages`);
+export const getLatestTopicPage = (entryId) => apiGet(`/api/entries/${entryId}/topic-page/latest`);
+export const getChildren = (entryId) => apiGet(`/api/entries/${entryId}/children`);
+export const getSettings = () => apiGet('/api/settings');
+export const getLLMConfig = () => apiGet('/api/llm/config');
+
+export async function getTopicPageByVersion(entryId, version) {
+  const data = await apiGet(`/api/entries/${entryId}/topic-page/version/${version}`);
+  return data.page || null;
 }
 
-export async function updateEntry(id, data) {
-  const res = await fetch(`${API}/api/entries/${id}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  return res.json();
-}
+export const deleteEntry = (id) => fetch(`${API}/api/entries/${id}`, { method: 'DELETE' });
+export const deleteTopicPageVersion = (entryId, version) => apiPost(`/api/entries/${entryId}/topic-page/${version}`, null, { method: 'DELETE' });
 
-export async function askQuestion(question, history = []) {
-  const res = await fetch(`${API}/api/qa`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, history }),
-  });
-  return res.json();
-}
-
-export async function saveQACards(question, cards) {
-  const res = await fetch(`${API}/api/qa/save`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, cards }),
-  });
-  return res.json();
-}
+export const ingestText = (text, subject = '') => apiPost('/api/ingest', { text, subject, source_type: 'text' });
+export const updateEntry = (id, data) => apiPost(`/api/entries/${id}`, data, { method: 'PUT' });
+export const askQuestion = (question, history = []) => apiPost('/api/qa', { question, history });
+export const saveQACards = (question, cards) => apiPost('/api/qa/save', { question, cards });
+export const buildQAMindMap = (question, answer, cards = [], relatedEntries = []) => apiPost('/api/qa/mindmap', { question, answer, cards, relatedEntries });
+export const generateSmartQuestions = (entryId) => apiPost(`/api/entries/${entryId}/questions`, {});
+export const askEntryQuestion = (entryId, question, history = []) => apiPost(`/api/entries/${entryId}/ask`, { question, history });
+export const generateTopicPage = (entryId, qaHistory = [], existingHTML = '', requirements = '', mode = '') => apiPost(`/api/entries/${entryId}/topic-page`, { qaHistory, existingHTML, requirements, mode });
+export const saveTopicPage = (entryId, html, qaHistory = [], comments = [], includedQaIds = []) => apiPost(`/api/entries/${entryId}/topic-page/save`, { html, qaHistory, comments, includedQaIds });
+export const updateTopicPageComments = (pageId, comments) => apiPost(`/api/topic-pages/${pageId}/comments`, { comments }, { method: 'PUT' });
+export const updateTopicPageQaHistory = (pageId, qaHistory) => apiPost(`/api/topic-pages/${pageId}/qa-history`, { qaHistory }, { method: 'PUT' });
+export const expandEntry = (entryId) => apiPost(`/api/entries/${entryId}/expand`, {});
+export const addChildEntry = (parentId, data) => apiPost(`/api/entries/${parentId}/children`, data);
+export const saveSettings = (data) => apiPost('/api/settings', data, { method: 'PUT' });
+export const saveLLMConfig = (data) => apiPost('/api/llm/config', data);
+export const testLLMProvider = (providerName) => apiPost('/api/llm/test', { providerName });
+export const restructureGraph = (instruction, subject = '') => apiPost('/api/restructure', { instruction, subject }, { throwOnError: true });
 
 export async function ingestFile(file, subject = '') {
   const form = new FormData();
   form.append('file', file);
   if (subject) form.append('subject', subject);
-  const res = await fetch(`${API}/api/ingest/file`, { method: 'POST', body: form });
-  if (!res.ok) throw new Error((await res.json()).error || 'Upload failed');
-  return res.json();
+  return apiPost('/api/ingest/file', form, { throwOnError: true });
 }
 
 export async function ingestUrl(url, subject = '') {
-  const res = await fetch(`${API}/api/ingest/url`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, subject }),
-  });
-  if (!res.ok) throw new Error((await res.json()).error || 'URL fetch failed');
-  return res.json();
-}
-
-export async function searchEntries(q) {
-  const res = await fetch(`${API}/api/entries?q=${encodeURIComponent(q)}`);
-  return res.json();
-}
-
-export async function restructureGraph(instruction, subject = '') {
-  const res = await fetch(`${API}/api/restructure`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ instruction, subject }),
-  });
-  if (!res.ok) throw new Error((await res.json()).error || 'Restructure failed');
-  return res.json();
-}
-
-export async function buildQAMindMap(question, answer, cards = [], relatedEntries = []) {
-  const res = await fetch(`${API}/api/qa/mindmap`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, answer, cards, relatedEntries }),
-  });
-  return res.json();
-}
-
-export async function generateSmartQuestions(entryId) {
-  const res = await fetch(`${API}/api/entries/${entryId}/questions`, { method: 'POST' });
-  return res.json();
-}
-
-export async function askEntryQuestion(entryId, question, history = []) {
-  const res = await fetch(`${API}/api/entries/${entryId}/ask`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, history }),
-  });
-  return res.json();
-}
-
-export async function generateTopicPage(entryId, qaHistory = [], existingHTML = '', requirements = '', mode = '') {
-  const res = await fetch(`${API}/api/entries/${entryId}/topic-page`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ qaHistory, existingHTML, requirements, mode }),
-  });
-  return res.json();
-}
-
-export async function saveTopicPage(entryId, html, qaHistory = [], comments = [], includedQaIds = []) {
-  const res = await fetch(`${API}/api/entries/${entryId}/topic-page/save`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ html, qaHistory, comments, includedQaIds }),
-  });
-  return res.json();
-}
-
-export async function getTopicPages(entryId) {
-  const res = await fetch(`${API}/api/entries/${entryId}/topic-pages`);
-  return res.json();
-}
-
-export async function getTopicPageByVersion(entryId, version) {
-  const res = await fetch(`${API}/api/entries/${entryId}/topic-page/version/${version}`);
-  const data = await res.json();
-  return data.page || null;
-}
-
-export async function deleteTopicPageVersion(entryId, version) {
-  const res = await fetch(`${API}/api/entries/${entryId}/topic-page/${version}`, { method: 'DELETE' });
-  return res.json();
-}
-
-export async function getLatestTopicPage(entryId) {
-  const res = await fetch(`${API}/api/entries/${entryId}/topic-page/latest`);
-  return res.json();
-}
-
-export async function updateTopicPageComments(pageId, comments) {
-  const res = await fetch(`${API}/api/topic-pages/${pageId}/comments`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ comments }),
-  });
-  return res.json();
-}
-
-export async function updateTopicPageQaHistory(pageId, qaHistory) {
-  const res = await fetch(`${API}/api/topic-pages/${pageId}/qa-history`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ qaHistory }),
-  });
-  return res.json();
-}
-
-export async function getChildren(entryId) {
-  const res = await fetch(`${API}/api/entries/${entryId}/children`);
-  return res.json();
-}
-
-export async function expandEntry(entryId) {
-  const res = await fetch(`${API}/api/entries/${entryId}/expand`, { method: 'POST' });
-  return res.json();
-}
-
-export async function addChildEntry(parentId, data) {
-  const res = await fetch(`${API}/api/entries/${parentId}/children`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  return res.json();
-}
-
-export async function getSettings() {
-  const res = await fetch(`${API}/api/settings`);
-  return res.json();
-}
-
-export async function saveSettings(data) {
-  const res = await fetch(`${API}/api/settings`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  return res.json();
-}
-
-export async function getLLMConfig() {
-  const res = await fetch(`${API}/api/llm/config`);
-  return res.json();
-}
-
-export async function saveLLMConfig(data) {
-  const res = await fetch(`${API}/api/llm/config`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data),
-  });
-  return res.json();
-}
-
-export async function testLLMProvider(providerName) {
-  const res = await fetch(`${API}/api/llm/test`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ providerName }),
-  });
-  return res.json();
+  return apiPost('/api/ingest/url', { url, subject }, { throwOnError: true });
 }
