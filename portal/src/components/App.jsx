@@ -6,15 +6,7 @@ import EntryDetail from './EntryDetail.jsx';
 import CategoryView from './CategoryView.jsx';
 import SettingsPanel from './SettingsPanel.jsx';
 import { fetchGraph } from '../lib/api.js';
-
-const SUBJECT_COLORS = {};
-const PALETTE = ['#4285f4', '#ea4335', '#34a853', '#fbbc05', '#9c27b0', '#ff6d00', '#00bcd4', '#e91e63'];
-let colorIdx = 0;
-function getColor(subject) {
-  if (!subject) return '#999';
-  if (!SUBJECT_COLORS[subject]) SUBJECT_COLORS[subject] = PALETTE[colorIdx++ % PALETTE.length];
-  return SUBJECT_COLORS[subject];
-}
+import { getColor } from '../lib/colors.js';
 
 const VIEWS = [
   { id: 'timeline', label: '📅 时间线' },

@@ -1,13 +1,5 @@
 import React, { useMemo, useState } from 'react';
-
-const SUBJECT_COLORS_MAP = {};
-const PALETTE = ['#4285f4', '#ea4335', '#34a853', '#fbbc05', '#9c27b0', '#ff6d00', '#00bcd4', '#e91e63'];
-let ci = 0;
-function getColor(s) {
-  if (!s) return '#999';
-  if (!SUBJECT_COLORS_MAP[s]) SUBJECT_COLORS_MAP[s] = PALETTE[ci++ % PALETTE.length];
-  return SUBJECT_COLORS_MAP[s];
-}
+import { getColor } from '../lib/colors.js';
 
 const DYNASTY_ORDER = {
   '历史-隋朝': { order: 1, start: 581, end: 618, label: '隋朝' },
