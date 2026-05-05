@@ -53,7 +53,6 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const [collapsedCats, setCollapsedCats] = useState(new Set());
   const [editingQaIdx, setEditingQaIdx] = useState(null);
   const [editingAnswer, setEditingAnswer] = useState('');
-  const [lightTheme, setLightTheme] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const qaRef = useRef(null);
   const questionsCacheRef = useRef({});
@@ -900,55 +899,6 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                   应用批注更新
                 </button>
               )}
-              {topicHTML && !loadingTopic && (
-                <button onClick={() => {
-                  setLightTheme(prev => {
-                    const next = !prev;
-                    try {
-                      const iframe = document.querySelector('iframe[title="知识专题"]');
-                      if (!iframe?.contentDocument) return next;
-                      const doc = iframe.contentDocument;
-                      if (next) {
-                        const parseColor = (s) => {
-                          const m = s.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-                          return m ? [+m[1], +m[2], +m[3]] : null;
-                        };
-                        const invertColor = ([r, g, b]) => [255 - r, 255 - g, 255 - b];
-                        const lum = ([r, g, b]) => 0.299 * r + 0.587 * g + 0.114 * b;
-                        const toHex = ([r, g, b]) => `rgb(${r},${g},${b})`;
-                        const all = doc.querySelectorAll('*');
-                        all.forEach(el => {
-                          const cs = doc.defaultView.getComputedStyle(el);
-                          const bg = parseColor(cs.backgroundColor);
-                          if (bg && lum(bg) < 80) {
-                            const inv = invertColor(bg);
-                            el.dataset.sgOrigBg = el.style.backgroundColor || '';
-                            el.style.setProperty('background-color', toHex(inv), 'important');
-                          }
-                          const fg = parseColor(cs.color);
-                          if (fg && lum(fg) > 180) {
-                            el.dataset.sgOrigColor = el.style.color || '';
-                            el.style.setProperty('color', toHex(invertColor(fg)), 'important');
-                          }
-                        });
-                        doc.documentElement.dataset.sgTheme = 'light';
-                      } else {
-                        const all = doc.querySelectorAll('*');
-                        all.forEach(el => {
-                          if ('sgOrigBg' in el.dataset) { el.style.backgroundColor = el.dataset.sgOrigBg; delete el.dataset.sgOrigBg; }
-                          if ('sgOrigColor' in el.dataset) { el.style.color = el.dataset.sgOrigColor; delete el.dataset.sgOrigColor; }
-                        });
-                        delete doc.documentElement.dataset.sgTheme;
-                      }
-                    } catch {}
-                    return next;
-                  });
-                }}
-                  style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: 'pointer',
-                    background: lightTheme ? '#fff3cd' : '#1c1f2e', color: lightTheme ? '#856404' : '#888' }}>
-                  {lightTheme ? '🌙 深色' : '☀️ 浅色'}
-                </button>
-              )}
               {topicHTML && (
                 <button onClick={() => {
                   exportSinglePageHtml(topicHTML, `${entry.title} - 专题页`, `${entry.title}_专题页_v${topicVersion}.html`);
@@ -1079,7 +1029,7 @@ document.addEventListener('mousedown', function(e) {
                 widthStyle.textContent = 'body, .container, .content, main, article, .wrapper, .page { max-width: 100% !important; width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; } body { padding: 16px 24px !important; box-sizing: border-box !important; } @media print { *, *::before, *::after { background: transparent !important; background-image: none !important; color: #000 !important; text-shadow: none !important; box-shadow: none !important; border-color: #ccc !important; } body { padding: 20px !important; } pre, code { background: #f5f5f5 !important; } pre, blockquote, table { page-break-inside: avoid; border: 1px solid #ccc !important; } img { max-width: 100% !important; } a { text-decoration: underline; } }';
                 doc.head.appendChild(widthStyle);
               }
-            }} style={{ flex: 1, border: editMode ? '2px solid #34a853' : 'none', background: lightTheme ? '#ffffff' : '#0f1117' }} title="知识专题" />
+            }} style={{ flex: 1, border: editMode ? '2px solid #34a853' : 'none', background: '#0f1117' }} title="知识专题" />
           ) : (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#666' }}>
               <div style={{ fontSize: 48 }}>📄</div>
