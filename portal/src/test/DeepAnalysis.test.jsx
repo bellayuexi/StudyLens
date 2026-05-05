@@ -99,11 +99,13 @@ describe('DeepAnalysis Component', () => {
       });
     });
 
-    it('shows update summary button when children exist', async () => {
+    it('shows update summary hint when children exist but no topic page', async () => {
+      api.getLatestTopicPage.mockResolvedValue({ page: null });
       renderDeepAnalysis();
       await waitFor(() => {
-        expect(screen.getByText(/用子节点内容更新综述/)).toBeInTheDocument();
+        expect(screen.getByText(/3 个子节点/)).toBeInTheDocument();
       });
+      expect(screen.getByText(/更新综述/)).toBeInTheDocument();
     });
 
     it('shows empty state prompt when no children', async () => {
