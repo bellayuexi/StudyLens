@@ -73,14 +73,14 @@ export default function TimelineView({ entries, onEntryClick, selectedId, compac
     return (
       <div key={e.id} style={{ position: 'relative', marginBottom: 6, marginLeft: isIndented ? 24 : 0 }}>
         <div style={{
-          position: 'absolute', left: isIndented ? -19 : -19, top: 14, width: isIndented ? 6 : 8, height: isIndented ? 6 : 8,
+          position: 'absolute', left: -19, top: 14, width: isIndented ? 6 : 8, height: isIndented ? 6 : 8,
           borderRadius: '50%', background: getColor(e.subject),
           border: isSelected ? '2px solid #fff' : '2px solid #0f1117',
           opacity: isIndented ? 0.6 : 1,
         }} />
 
         {e.year && (
-          <div style={{ position: 'absolute', left: isIndented ? -76 : -76, top: 12, width: 50, textAlign: 'right',
+          <div style={{ position: 'absolute', left: -76, top: 12, width: 50, textAlign: 'right',
             fontSize: 11, color: '#888', fontWeight: 500 }}>
             {e.year}年
           </div>
