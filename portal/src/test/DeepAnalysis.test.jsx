@@ -23,6 +23,8 @@ vi.mock('../lib/api.js', () => ({
   updateTopicPageQaHistory: vi.fn(),
   generateSmartQuestions: vi.fn().mockResolvedValue({ questions: [] }),
   askEntryQuestion: vi.fn(),
+  getEntryQA: vi.fn().mockResolvedValue([]),
+  saveEntryQA: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
 import DeepAnalysis from '../components/DeepAnalysis.jsx';

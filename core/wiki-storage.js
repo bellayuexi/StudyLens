@@ -9,9 +9,10 @@ const DRILL_EXT = path.join(WIKI_ROOT, 'drill', 'extended');
 const INDEX_DIR = path.join(WIKI_ROOT, 'index');
 const TAGS_DIR = path.join(INDEX_DIR, 'tags');
 const TOPICS_DIR = path.join(WIKI_ROOT, 'topics');
+const QA_DIR = path.join(WIKI_ROOT, 'qa');
 
 function ensureDirs() {
-  for (const d of [RAW_DIR, DRILL_CORE, DRILL_EXT, INDEX_DIR, TAGS_DIR, TOPICS_DIR]) {
+  for (const d of [RAW_DIR, DRILL_CORE, DRILL_EXT, INDEX_DIR, TAGS_DIR, TOPICS_DIR, QA_DIR]) {
     fs.mkdirSync(d, { recursive: true });
   }
 }
@@ -386,4 +387,28 @@ function getChildren(parentId) {
   return getAllEntries().filter(e => e.parent_id === parentId).sort((a, b) => (a.sort_order ?? 999) - (b.sort_order ?? 999));
 }
 
-module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory, getChildren, deleteTopicPageVersion, getTopicPageByVersion, getTopicPageStatusMap };
+// --- Independent QA storage ---
+
+function getEntryQA(entryId) {
+  const file = path.join(QA_DIR, `${entryId}.json`);
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf-8'));
+  } catch {
+    // Migration: seed from latest topic page if available
+    const tp = getLatestTopicPage(entryId);
+    if (tp?.page?.qa_history?.length) {
+      const qa = tp.page.qa_history.filter(h => h.answer);
+      if (qa.length) {
+        saveEntryQA(entryId, qa);
+        return qa;
+      }
+    }
+    return [];
+  }
+}
+
+function saveEntryQA(entryId, qaHistory) {
+  fs.writeFileSync(path.join(QA_DIR, `${entryId}.json`), JSON.stringify(qaHistory, null, 2), 'utf-8');
+}
+
+module.exports = { addRaw, addEntry, addConnection, getAllEntries, getAllConnections, getEntry, searchEntries, deleteEntry, updateEntry, getTagIndex, rebuildTagIndex, WIKI_ROOT, saveTopicPage, getTopicPages, getLatestTopicPage, updateTopicPageComments, updateTopicPageQaHistory, getChildren, deleteTopicPageVersion, getTopicPageByVersion, getTopicPageStatusMap, getEntryQA, saveEntryQA };

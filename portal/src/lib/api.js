@@ -25,6 +25,7 @@ export const getLatestTopicPage = (entryId) => apiGet(`/api/entries/${entryId}/t
 export const getChildren = (entryId) => apiGet(`/api/entries/${entryId}/children`);
 export const getSettings = () => apiGet('/api/settings');
 export const getLLMConfig = () => apiGet('/api/llm/config');
+export const getEntryQA = (entryId) => apiGet(`/api/entries/${entryId}/qa`);
 
 export async function getTopicPageByVersion(entryId, version) {
   const data = await apiGet(`/api/entries/${entryId}/topic-page/version/${version}`);
@@ -41,6 +42,7 @@ export const saveQACards = (question, cards) => apiPost('/api/qa/save', { questi
 export const buildQAMindMap = (question, answer, cards = [], relatedEntries = []) => apiPost('/api/qa/mindmap', { question, answer, cards, relatedEntries });
 export const generateSmartQuestions = (entryId) => apiPost(`/api/entries/${entryId}/questions`, {});
 export const askEntryQuestion = (entryId, question, history = []) => apiPost(`/api/entries/${entryId}/ask`, { question, history });
+export const saveEntryQA = (entryId, qaHistory) => apiPost(`/api/entries/${entryId}/qa`, { qaHistory }, { method: 'PUT' });
 export const generateTopicPage = (entryId, qaHistory = [], existingHTML = '', requirements = '', mode = '') => apiPost(`/api/entries/${entryId}/topic-page`, { qaHistory, existingHTML, requirements, mode }, { throwOnError: true });
 export const saveTopicPage = (entryId, html, qaHistory = [], comments = [], includedQaIds = []) => apiPost(`/api/entries/${entryId}/topic-page/save`, { html, qaHistory, comments, includedQaIds });
 export const updateTopicPageComments = (pageId, comments) => apiPost(`/api/topic-pages/${pageId}/comments`, { comments }, { method: 'PUT' });

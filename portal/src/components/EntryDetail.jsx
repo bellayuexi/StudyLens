@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { deleteEntry, updateEntry, generateSmartQuestions, askEntryQuestion, generateTopicPage, saveTopicPage, getLatestTopicPage, getTopicPages, getTopicPageByVersion, updateTopicPageComments, updateTopicPageQaHistory, deleteTopicPageVersion } from '../lib/api.js';
+import { deleteEntry, updateEntry, generateSmartQuestions, askEntryQuestion, generateTopicPage, saveTopicPage, getLatestTopicPage, getTopicPages, getTopicPageByVersion, updateTopicPageComments, updateTopicPageQaHistory, deleteTopicPageVersion, getEntryQA, saveEntryQA } from '../lib/api.js';
 import { exportSinglePageHtml } from '../lib/exportHtml.js';
 
 const QUESTION_COLORS = { '概念': '#4285f4', '原因': '#ea4335', '影响': '#34a853', '对比': '#fbbc05', '思考': '#9c27b0', '自定义': '#ff6d00' };
@@ -98,10 +98,9 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     setLoadingEntry(false);
   };
 
-  const syncQaToServer = (updated, pageId = topicPageId) => {
-    if (!pageId) return;
-    const qaToSave = updated.filter(h => !h.loading).map(h => ({ question: h.question, answer: h.answer }));
-    updateTopicPageQaHistory(pageId, qaToSave).catch(e => {
+  const syncQaToServer = (updated) => {
+    const qaToSave = updated.filter(h => !h.loading && h.answer).map(h => ({ question: h.question, answer: h.answer, category: h.category || '' }));
+    saveEntryQA(entry.id, qaToSave).catch(e => {
       console.error('QA sync failed:', e);
       showError('QA保存失败');
     });
@@ -178,6 +177,11 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
   const loadSavedTopicPage = async () => {
     const currentId = entry.id;
     try {
+      // Load QA independently from topic page
+      const qa = await getEntryQA(currentId);
+      if (entryIdRef.current !== currentId) return;
+      if (qa.length) setQaHistory(qa);
+
       const data = await getLatestTopicPage(currentId);
       if (entryIdRef.current !== currentId) return;
       if (data.page) {
@@ -187,8 +191,11 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         setTopicVersionCount(data.page.version);
         setComments(data.page.comments || []);
         setIncludedQaIds(data.page.included_qa_ids || []);
-        const qa = (data.page.qa_history || []).filter(h => h.answer);
-        setQaHistory(qa);
+        // If independent QA was empty, fall back to topic page QA
+        if (!qa.length) {
+          const tpQa = (data.page.qa_history || []).filter(h => h.answer);
+          if (tpQa.length) setQaHistory(tpQa);
+        }
         setLastUpdated(data.page.created_at);
         setTopicStatus(`v${data.page.version} 已保存`);
         setTopicDirty(false);
@@ -254,7 +261,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     try {
       const data = await askEntryQuestion(askingEntryId, question, history);
       if (entryIdRef.current !== askingEntryId) {
-        syncQaToServer([...history, { question, answer: data.answer }], askingPageId);
+        syncQaToServer([...history, { question, answer: data.answer }]);
         setAsking(false);
         return;
       }
@@ -262,7 +269,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       setQaHistory(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = newItem;
-        syncQaToServer(updated, askingPageId);
+        syncQaToServer(updated);
         return updated;
       });
       setTopicDirty(true);
@@ -371,7 +378,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
       // Persist incrementally
       if (batchPageId) {
         const allDone = [...baseHistory, ...Object.values(results).map(r => ({ question: r.question, answer: r.answer }))];
-        syncQaToServer(allDone, batchPageId);
+        syncQaToServer(allDone);
       }
     });
 
@@ -1195,6 +1202,7 @@ document.addEventListener('mousedown', function(e) {
                                 setQaHistory(updated);
                                 setTopicDirty(true);
                                 if (topicPageId) updateTopicPageQaHistory(topicPageId, updated);
+                                syncQaToServer(updated);
                               }} title="删除此问答"
                                 style={{ fontSize: 12, cursor: 'pointer', color: '#ea4335', padding: '2px 6px', borderRadius: 4, background: '#1c1f2e' }}>
                                 🗑

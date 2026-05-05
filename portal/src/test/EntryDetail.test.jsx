@@ -17,6 +17,8 @@ vi.mock('../lib/api.js', () => ({
   updateTopicPageComments: vi.fn(),
   updateTopicPageQaHistory: vi.fn(),
   deleteTopicPageVersion: vi.fn().mockResolvedValue({ ok: true }),
+  getEntryQA: vi.fn().mockResolvedValue([]),
+  saveEntryQA: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
 import EntryDetail from '../components/EntryDetail.jsx';

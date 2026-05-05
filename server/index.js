@@ -286,8 +286,7 @@ app.post('/api/entries/:id/questions', async (req, res) => {
   try {
     const entry = storage.getEntry(req.params.id);
     if (!entry) return res.status(404).json({ error: 'entry not found' });
-    const topicPage = storage.getLatestTopicPage(req.params.id);
-    const existingQa = (topicPage && topicPage.qa_history) || [];
+    const existingQa = storage.getEntryQA(req.params.id);
     const questions = await llm.generateSmartQuestions(entry, existingQa);
     res.json({ questions });
   } catch (err) {
@@ -310,10 +309,26 @@ app.post('/api/entries/:id/ask', async (req, res) => {
     }).slice(0, 15);
     const context = [entry, ...related];
     const result = await llm.askQuestion(question, context, history || []);
+    // Auto-save QA to independent storage
+    if (result.answer) {
+      const existing = storage.getEntryQA(req.params.id);
+      existing.push({ question, answer: result.answer, category: result.category || '' });
+      storage.saveEntryQA(req.params.id, existing);
+    }
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Independent QA history for an entry
+app.get('/api/entries/:id/qa', (req, res) => {
+  res.json(storage.getEntryQA(req.params.id));
+});
+
+app.put('/api/entries/:id/qa', (req, res) => {
+  storage.saveEntryQA(req.params.id, req.body.qaHistory || []);
+  res.json({ ok: true });
 });
 
 // Generate HTML topic page for an entry
