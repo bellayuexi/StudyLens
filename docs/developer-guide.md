@@ -6,8 +6,8 @@ StudyGraph 采用 **AI 增强的知识管理** 架构，核心设计原则：
 
 1. **AI 作为辅助而非替代**：AI 生成的内容（问题、回答、专题页）始终支持用户编辑和覆盖
 2. **渐进式学习**：通过"录入 → 探索 → 生成 → 修改"的循环，逐步深化知识理解
-3. **数据本地化**：所有数据（SQLite 数据库、wiki 文件）存储在本地，无需外部数据库
-4. **LLM 供应商无关**：通过 provider 抽象层支持多种 LLM 后端
+3. **数据本地化**：所有数据以 Markdown/JSON 文件存储在本地 wiki/ 目录，无需外部数据库
+4. **LLM 供应商无关**：通过 provider 抽象层支持多种 LLM 后端（OpenAI-compatible、Ollama 等）
 
 ---
 
@@ -15,35 +15,47 @@ StudyGraph 采用 **AI 增强的知识管理** 架构，核心设计原则：
 
 ```
 StudyGraph/
-├── server/index.js          # Express API 服务器（PORT=3001）
+├── server/index.js          # Express API 服务器（PORT=3000）
 ├── core/
 │   ├── llm-provider.js      # LLM 调用层（provider 切换、JSON 提取）
-│   ├── storage.js            # SQLite 数据持久化
-│   ├── wiki-storage.js       # Wiki 文件存储（专题页 HTML）
-│   ├── dual-storage.js       # 双写层（SQLite + Wiki）
-│   └── extractor.js          # 文件内容提取（Word 等）
+│   ├── wiki-storage.js      # Markdown 文件存储（知识点、专题页、索引）
+│   └── extractor.js         # 文件/URL 内容提取（PDF、Word、Excel、网页）
 ├── portal/                   # React 前端（Vite 构建）
-│   └── src/components/
-│       ├── App.jsx           # 路由和主布局
-│       ├── EntryDetail.jsx   # 知识点详情（专题页、问答、版本管理）
-│       ├── DeepAnalysis.jsx  # 深入分析（子知识点拆解）
-│       ├── IngestPanel.jsx   # 知识录入面板
-│       ├── CategoryView.jsx  # 分类浏览
-│       ├── TimelineView.jsx  # 时间线视图
-│       ├── KnowledgeGraph.jsx # 知识图谱可视化
-│       ├── QAPanel.jsx       # 全局问答面板
-│       ├── QAPage.jsx        # 问答详情页
-│       └── RestructurePanel.jsx # 知识重组
-├── wiki/                     # Wiki 数据文件（.gitignore）
-├── data/                     # SQLite 数据库（.gitignore）
+│   └── src/
+│       ├── components/
+│       │   ├── App.jsx           # 路由和主布局
+│       │   ├── EntryDetail.jsx   # 知识点详情（专题页、问答、版本管理）
+│       │   ├── DeepAnalysis.jsx  # 深入分析（子知识点拆解）
+│       │   ├── IngestPanel.jsx   # 知识录入面板（文本/文件/URL，可设最大知识点数）
+│       │   ├── CategoryView.jsx  # 分类浏览
+│       │   ├── TimelineView.jsx  # 时间线视图
+│       │   ├── KnowledgeGraph.jsx # 知识图谱可视化
+│       │   ├── QAPanel.jsx       # 全局问答面板
+│       │   ├── QAPage.jsx        # 问答详情页
+│       │   ├── SettingsPanel.jsx  # 设置面板（LLM 配置、Prompt 配置）
+│       │   └── RestructurePanel.jsx # 知识重组
+│       └── lib/
+│           ├── api.js            # API 调用封装
+│           └── exportHtml.js     # HTML 导出（含打印分页优化）
+├── config/                   # 配置模板
+│   ├── prompts.json          # Prompt 模板（按学科自定义）
+│   └── llm-config.template.json # LLM 配置模板
+├── bin/studygraph.js         # CLI 入口（npm 全局安装用）
+├── wiki/                     # 数据文件（.gitignore）
+│   ├── entries/              # 知识点 Markdown（YAML frontmatter）
+│   ├── topic-pages/          # 专题页 HTML/元数据
+│   ├── index/                # JSON 索引（快速查找）
+│   └── config/               # 运行时 LLM 配置
+├── tests/                    # API 集成测试
+├── e2e/                      # Playwright E2E 测试
 └── docs/                     # 文档
 ```
 
 ### 关键设计决策
 
 - **单进程部署**：Express 同时提供 API 和静态文件（portal/dist/），简化部署
-- **Wiki 文件存储**：专题页 HTML 存储在 wiki/ 目录的 JSON 文件中，而非数据库
-- **双写模式**：通过 dual-storage 同时写入 SQLite 和 wiki，保证数据一致性
+- **Markdown 文件存储**：所有数据以 Markdown + YAML frontmatter 格式存储在 wiki/ 目录，方便版本控制和人工编辑
+- **npm 可发布**：通过 `bin/studygraph.js` 支持全局安装，`npx studygraph` 即可启动
 
 ---
 
@@ -60,7 +72,7 @@ LLM 调用的核心抽象层，负责：
   - 尾逗号修复
   - 字符串内换行符修复
   - 智能引号修复（`repairKeys` 回退）
-- **核心函数**：`analyze`、`askQuestion`、`generateTopicHTML`、`expandEntry`、`generateSmartQuestions`、`buildQAMindMap`、`findConnections`、`restructure`
+- **核心函数**：`analyze`（支持 maxPoints 限制提取数量）、`askQuestion`、`generateTopicHTML`、`expandEntry`、`generateSmartQuestions`、`buildQAMindMap`、`findConnections`、`checkDuplicates`、`restructure`
 
 ### portal/src/components/EntryDetail.jsx
 
@@ -74,13 +86,21 @@ LLM 调用的核心抽象层，负责：
 ### server/index.js
 
 Express 服务器，提供以下 API：
-- `POST /api/analyze` - AI 分析文本提取知识点
-- `GET/POST/PUT/DELETE /api/entries` - 知识点 CRUD
-- `POST /api/entries/:id/ask` - AI 问答
-- `POST /api/entries/:id/smart-questions` - AI 生成智能问题
-- `POST /api/entries/:id/topic-page` - 生成专题页
+- `POST /api/ingest` - AI 分析文本提取知识点（支持 maxPoints 参数限制数量）
+- `POST /api/ingest/file` - 上传文件提取知识点（PDF、Word、Excel、TXT）
+- `POST /api/ingest/url` - 从网页 URL 提取知识点
+- `GET/PUT/DELETE /api/entries/:id` - 知识点 CRUD
+- `GET /api/graph` - 获取知识图谱（节点 + 连接）
+- `POST /api/entries/:id/ask` - 知识点范围内 AI 问答
+- `POST /api/entries/:id/questions` - AI 生成智能问题
+- `POST /api/entries/:id/topic-page` - 生成/更新专题页
+- `POST /api/entries/:id/topic-page/save` - 保存专题页版本
 - `POST /api/entries/:id/expand` - AI 拆解子知识点
-- `GET/POST /api/entries/:id/topic-pages` - 专题页版本管理
+- `GET /api/entries/:id/topic-pages` - 专题页版本列表
+- `POST /api/qa` - 全局 AI 问答
+- `POST /api/restructure` - AI 重组知识结构
+- `GET/PUT /api/settings` - Prompt 配置
+- `GET/POST /api/llm/config` - LLM 供应商配置
 
 ---
 
@@ -141,14 +161,18 @@ npx vitest run
 ```bash
 cd StudyGraph
 npx vitest run tests/
-npx jest core/llm-provider.test.js
+```
+
+### 运行 E2E 测试
+```bash
+cd StudyGraph
+npx playwright test
 ```
 
 ### 测试覆盖范围
-- `core/llm-provider.test.js`：extractJSON 工具函数（11 个测试）
-- `portal/src/test/EntryDetail.test.jsx`：EntryDetail 组件（46 个测试）
-  - 基础渲染、专题页生成、智能问题、答案编辑、版本管理、缓存持久化等
-- `tests/test-topic-page-isolation.js`：专题页数据隔离测试
+- `tests/`：API 集成测试（52 个测试）— 知识点 CRUD、数据隔离、extractJSON 等
+- `portal/src/test/`：前端组件测试（60 个测试）— EntryDetail、IngestPanel 等
+- `e2e/`：Playwright E2E 测试 — 设置面板、知识录入、编辑、导航等端到端场景
 
 ---
 
@@ -161,19 +185,19 @@ npx jest core/llm-provider.test.js
 cd StudyGraph/portal
 npm run build
 
-# 2. 停止旧服务器
-cd StudyGraph
+# 2. 停止旧服务器（找到占用 3000 端口的进程并终止）
 # Windows:
-taskkill /F /PID $(cat server.pid)
-# 或者找到占用 3001 端口的进程并终止：
-netstat -ano | findstr :3001
+netstat -ano | findstr :3000
+taskkill /F /PID <pid>
+# Linux/Mac:
+kill $(lsof -ti:3000)
 
 # 3. 启动服务器
-PORT=3001 node server/index.js &
-echo $! > server.pid
+cd StudyGraph
+node server/index.js &
 
 # 4. 验证
-curl http://localhost:3001/
+curl http://localhost:3000/api/graph
 ```
 
 ### 仅前端更新（无需重启服务器）
@@ -191,13 +215,12 @@ npm run build
 ```bash
 cd StudyGraph
 npm run dev
-# 同时启动 Express 服务器和 Vite 开发服务器（热更新）
+# 同时启动 Express 服务器（端口 3000）和 Vite 开发服务器（端口 3001，热更新）
 ```
 
 ### 注意事项
 
-- 生产环境始终使用 **PORT=3001**
-- 服务器进程 PID 记录在 `server.pid` 文件中
+- 默认端口 **3000**（可通过 `PORT` 环境变量覆盖）
 - 修改 `core/` 或 `server/` 下的文件需要重启服务器
 - 修改 `portal/src/` 下的文件只需重新构建前端（`npm run build`）
-- 数据目录（`wiki/`、`data/`、`uploads/`）不纳入 git 版本控制
+- 数据目录（`wiki/`、`uploads/`）不纳入 git 版本控制

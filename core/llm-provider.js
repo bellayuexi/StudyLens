@@ -241,7 +241,7 @@ async function callLLM(messages, { maxTokens = 4096, providers, task } = {}) {
   throw new Error(`All LLM providers failed:\n${errors.join('\n')}`);
 }
 
-async function analyze(text, subject = '') {
+async function analyze(text, subject = '', maxPoints) {
   const subjectPrompts = loadSubjectPrompts(subject);
   const basePrompt = subjectPrompts.analyzePrompt || `You are a knowledge extraction assistant for a student. Analyze the following study notes and extract structured knowledge entries.
 
@@ -264,8 +264,10 @@ Subject classification rules:
 - For other subjects: use patterns like "数学-代数", "物理-力学", "化学-有机" etc.
 - Each knowledge point must belong to exactly ONE specific category.`;
 
-  const prompt = `${basePrompt}
+  const maxPointsLine = maxPoints ? `\nIMPORTANT: Extract at most ${maxPoints} knowledge points. Prioritize high-level concepts over fine-grained details. If the material contains more than ${maxPoints} points, merge related ones.\n` : '';
 
+  const prompt = `${basePrompt}
+${maxPointsLine}
 ${subject ? `User suggested subject: "${subject}" — use this as a hint but still classify precisely.` : ''}
 
 Input notes:

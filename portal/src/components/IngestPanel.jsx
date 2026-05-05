@@ -16,6 +16,7 @@ export default function IngestPanel({ onIngested, loading, setLoading }) {
   const [url, setUrl] = useState('');
   const [fileName, setFileName] = useState('');
   const fileRef = useRef(null);
+  const [maxPoints, setMaxPoints] = useState('');
   const [result, setResult] = useState(null);
 
   const inputStyle = { width: '100%', padding: '6px 10px', background: '#1c1f2e', border: '1px solid #2a2d35', borderRadius: 6, color: '#e0e0e0', fontSize: 13, boxSizing: 'border-box' };
@@ -28,17 +29,20 @@ export default function IngestPanel({ onIngested, loading, setLoading }) {
       let res;
       if (tab === 'text') {
         if (!text.trim()) return;
-        res = await ingestText(text.trim(), subject.trim());
+        const mp = maxPoints ? parseInt(maxPoints, 10) : undefined;
+        res = await ingestText(text.trim(), subject.trim(), mp);
         setText('');
       } else if (tab === 'file') {
         const file = fileRef.current?.files?.[0];
         if (!file) return;
-        res = await ingestFile(file, subject.trim());
+        const mp = maxPoints ? parseInt(maxPoints, 10) : undefined;
+        res = await ingestFile(file, subject.trim(), mp);
         fileRef.current.value = '';
         setFileName('');
       } else if (tab === 'url') {
         if (!url.trim()) return;
-        res = await ingestUrl(url.trim(), subject.trim());
+        const mp = maxPoints ? parseInt(maxPoints, 10) : undefined;
+        res = await ingestUrl(url.trim(), subject.trim(), mp);
         setUrl('');
       }
       setResult({ ok: true, count: res.created?.length || 0, skipped: res.skipped || [] });
@@ -66,6 +70,9 @@ export default function IngestPanel({ onIngested, loading, setLoading }) {
       </div>
 
       <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="学科 (可选)"
+        style={{ ...inputStyle, marginBottom: 8 }} />
+
+      <input type="number" min="1" max="50" value={maxPoints} onChange={e => setMaxPoints(e.target.value)} placeholder="最多提取知识点数 (可选)"
         style={{ ...inputStyle, marginBottom: 8 }} />
 
       {tab === 'text' && (

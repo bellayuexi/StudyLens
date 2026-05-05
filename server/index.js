@@ -88,11 +88,11 @@ app.get('/api/entries/:id', (req, res) => {
 // Ingest text → LLM analyze → store entries + auto-connect
 app.post('/api/ingest', async (req, res) => {
   try {
-    const { text, subject, source_type = 'text', source_ref = '' } = req.body;
+    const { text, subject, source_type = 'text', source_ref = '', maxPoints } = req.body;
     if (!text) return res.status(400).json({ error: 'text is required' });
 
     storage.addRaw(text, source_type, source_ref);
-    const knowledgePoints = await llm.analyze(text, subject);
+    const knowledgePoints = await llm.analyze(text, subject, maxPoints);
     const { created, skipped } = await processKnowledgePoints(knowledgePoints, subject, source_type, source_ref);
 
     res.json({ created, skipped });
@@ -182,7 +182,8 @@ app.post('/api/ingest/file', upload.single('file'), async (req, res) => {
 
     storage.addRaw(text, ext.replace('.', ''), origName);
     const subject = req.body.subject || '';
-    const knowledgePoints = await llm.analyze(text.slice(0, 10000), subject);
+    const maxPoints = req.body.maxPoints ? parseInt(req.body.maxPoints, 10) : undefined;
+    const knowledgePoints = await llm.analyze(text.slice(0, 10000), subject, maxPoints);
     const { created, skipped } = await processKnowledgePoints(knowledgePoints, subject, ext.replace('.', ''), origName);
     res.json({ created, skipped, extractedLength: text.length });
   } catch (err) {
@@ -194,12 +195,12 @@ app.post('/api/ingest/file', upload.single('file'), async (req, res) => {
 // Ingest from URL
 app.post('/api/ingest/url', async (req, res) => {
   try {
-    const { url, subject } = req.body;
+    const { url, subject, maxPoints } = req.body;
     if (!url) return res.status(400).json({ error: 'url is required' });
 
     const text = await extractor.extractFromUrl(url);
     storage.addRaw(text, 'url', url);
-    const knowledgePoints = await llm.analyze(text.slice(0, 10000), subject || '');
+    const knowledgePoints = await llm.analyze(text.slice(0, 10000), subject || '', maxPoints);
     const { created, skipped } = await processKnowledgePoints(knowledgePoints, subject || '', 'url', url);
     res.json({ created, skipped, extractedLength: text.length });
   } catch (err) {

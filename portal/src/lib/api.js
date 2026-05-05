@@ -34,7 +34,7 @@ export async function getTopicPageByVersion(entryId, version) {
 export const deleteEntry = (id) => fetch(`${API}/api/entries/${id}`, { method: 'DELETE' });
 export const deleteTopicPageVersion = (entryId, version) => apiPost(`/api/entries/${entryId}/topic-page/${version}`, null, { method: 'DELETE' });
 
-export const ingestText = (text, subject = '') => apiPost('/api/ingest', { text, subject, source_type: 'text' });
+export const ingestText = (text, subject = '', maxPoints) => apiPost('/api/ingest', { text, subject, source_type: 'text', ...(maxPoints && { maxPoints }) });
 export const updateEntry = (id, data) => apiPost(`/api/entries/${id}`, data, { method: 'PUT' });
 export const askQuestion = (question, history = []) => apiPost('/api/qa', { question, history });
 export const saveQACards = (question, cards) => apiPost('/api/qa/save', { question, cards });
@@ -52,13 +52,14 @@ export const saveLLMConfig = (data) => apiPost('/api/llm/config', data);
 export const testLLMProvider = (providerName) => apiPost('/api/llm/test', { providerName });
 export const restructureGraph = (instruction, subject = '') => apiPost('/api/restructure', { instruction, subject }, { throwOnError: true });
 
-export async function ingestFile(file, subject = '') {
+export async function ingestFile(file, subject = '', maxPoints) {
   const form = new FormData();
   form.append('file', file);
   if (subject) form.append('subject', subject);
+  if (maxPoints) form.append('maxPoints', String(maxPoints));
   return apiPost('/api/ingest/file', form, { throwOnError: true });
 }
 
-export async function ingestUrl(url, subject = '') {
-  return apiPost('/api/ingest/url', { url, subject }, { throwOnError: true });
+export async function ingestUrl(url, subject = '', maxPoints) {
+  return apiPost('/api/ingest/url', { url, subject, ...(maxPoints && { maxPoints }) }, { throwOnError: true });
 }
