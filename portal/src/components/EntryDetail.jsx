@@ -5,6 +5,10 @@ import { exportSinglePageHtml } from '../lib/exportHtml.js';
 
 const QUESTION_COLORS = { '概念': '#4285f4', '原因': '#ea4335', '影响': '#34a853', '对比': '#fbbc05', '思考': '#9c27b0', '自定义': '#ff6d00' };
 
+const getAnsweredQa = (qaHistory) => qaHistory.filter(h => h.answer && !h.loading);
+const getAnsweredQaIds = (qaHistory) => getAnsweredQa(qaHistory).map((h, i) => h._qid || `qa_${i}`);
+const getUnansweredQuestions = (smartQuestions, qaHistory) => smartQuestions.filter(q => !qaHistory.some(h => h.question === q.question && h.answer && !h.loading));
+
 const styles = {
   input: { width: '100%', padding: '8px 10px', borderRadius: 6, border: '1px solid #2a2d45', background: '#1c1f2e', color: '#ddd', fontSize: 13, boxSizing: 'border-box', fontFamily: 'inherit', outline: 'none' },
   btnPrimary: { padding: '4px 12px', borderRadius: 4, border: 'none', background: '#34a853', color: '#fff', cursor: 'pointer', fontSize: 11 },
@@ -409,7 +413,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         return;
       }
       const html = injectTimestamp(data.html);
-      const qaIds = qaHistory.filter(h => h.answer && !h.loading).map((h, i) => h._qid || `qa_${i}`);
+      const qaIds = getAnsweredQaIds(qaHistory);
       setTopicHTML(html);
       setTab('topic');
       try {
@@ -456,7 +460,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         return;
       }
       const html = injectTimestamp(data.html);
-      const qaIds = qaHistory.filter(h => h.answer && !h.loading).map((h, i) => h._qid || `qa_${i}`);
+      const qaIds = getAnsweredQaIds(qaHistory);
       if (entryIdRef.current !== genEntryId) {
         const c = entryDataCacheRef.current[genEntryId];
         if (c) { c.loadingTopic = false; c.topicHTML = html; c.topicStatus = '已更新（后台完成）'; }
@@ -805,7 +809,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
               <span style={{ fontSize: 10, marginLeft: 4, color: '#34a853' }}>v{topicVersion}</span>
             )}
             {t.id === 'explore' && (() => {
-              const answered = qaHistory.filter(h => h.answer && !h.loading);
+              const answered = getAnsweredQa(qaHistory);
               const newCount = answered.filter((h, i) => !includedQaIds.includes(h._qid || `qa_${i}`)).length;
               return newCount > 0 ? <span style={{ fontSize: 10, marginLeft: 4, color: '#fbbc05' }}>+{newCount}</span> : null;
             })()}
@@ -1033,7 +1037,7 @@ document.addEventListener('mousedown', function(e) {
           ) : (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12, color: '#666' }}>
               <div style={{ fontSize: 48 }}>📄</div>
-              {qaHistory.filter(h => h.answer && !h.loading).length > 0 ? (
+              {getAnsweredQa(qaHistory).length > 0 ? (
                 <>
                   <div style={{ fontSize: 14 }}>尚未生成专题页</div>
                   <input value={topicRequirements} onChange={e => setTopicRequirements(e.target.value)}
@@ -1123,7 +1127,7 @@ document.addEventListener('mousedown', function(e) {
 
           {/* Answered QAs grouped by category */}
           {(() => {
-            const answered = qaHistory.filter(h => h.answer && !h.loading);
+            const answered = getAnsweredQa(qaHistory);
             if (answered.length === 0) return null;
             const groups = {};
             answered.forEach((h, i) => {
@@ -1229,11 +1233,11 @@ document.addEventListener('mousedown', function(e) {
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 {smartQuestions.length > 0 && (
                   <span onClick={() => {
-                    const unanswered = smartQuestions.filter(q => !qaHistory.some(h => h.question === q.question && h.answer && !h.loading));
+                    const unanswered = getUnansweredQuestions(smartQuestions, qaHistory);
                     const allSelected = unanswered.every(q => selectedQs.has(q.id));
                     setSelectedQs(allSelected ? new Set() : new Set(unanswered.map(q => q.id)));
                   }} style={{ fontSize: 11, color: '#4285f4', cursor: 'pointer' }}>
-                    {smartQuestions.filter(q => !qaHistory.some(h => h.question === q.question && h.answer && !h.loading)).every(q => selectedQs.has(q.id)) ? '取消全选' : '全选'}
+                    {getUnansweredQuestions(smartQuestions, qaHistory).every(q => selectedQs.has(q.id)) ? '取消全选' : '全选'}
                   </span>
                 )}
                 {!loadingQ && <span onClick={() => { delete questionsCacheRef.current[entry.id]; loadSmartQuestions(); }} style={{ fontSize: 11, color: '#4285f4', cursor: 'pointer' }}>重新生成问题</span>}
@@ -1250,12 +1254,12 @@ document.addEventListener('mousedown', function(e) {
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 {(() => {
-                  const unanswered = smartQuestions.filter(q => !qaHistory.some(h => h.question === q.question && h.answer && !h.loading));
+                  const unanswered = getUnansweredQuestions(smartQuestions, qaHistory);
                   if (unanswered.length === 0) return (
                     <div style={{ padding: 12, textAlign: 'center', color: '#666', fontSize: 12 }}>
                       所有问题已回答完毕！
                       {topicHTML ? (
-                        qaHistory.filter(h => h.answer && !h.loading).filter((h, i) => !includedQaIds.includes(h._qid || `qa_${i}`)).length > 0 ? (
+                        getAnsweredQa(qaHistory).filter((h, i) => !includedQaIds.includes(h._qid || `qa_${i}`)).length > 0 ? (
                           <button onClick={handleRefreshTopic} disabled={loadingTopic}
                             style={{ marginTop: 8, display: 'block', width: '100%', padding: '8px', borderRadius: 6, border: 'none', fontSize: 13,
                               background: '#9c27b033', color: '#ce93d8', cursor: loadingTopic ? 'wait' : 'pointer' }}>
