@@ -688,12 +688,14 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     try {
       const doc = iframe.contentDocument || iframe.contentWindow.document;
       doc.querySelectorAll('._del_btn').forEach(b => b.remove());
+      const annBtn = doc.getElementById('_ann_btn');
+      if (annBtn) annBtn.remove();
       doc.querySelectorAll('[data-edit-hover]').forEach(el => el.removeAttribute('data-edit-hover'));
       const editStyle = doc.getElementById('_edit_style');
       if (editStyle) editStyle.remove();
       doc.body.contentEditable = 'false';
       const editedHTML = '<!DOCTYPE html>' + doc.documentElement.outerHTML;
-      const cleanHTML = editedHTML.replace(/<script[\s\S]*?<\/script>/gi, '');
+      const cleanHTML = editedHTML.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<div[^>]*id=["']_ann_btn["'][^>]*>[\s\S]*?<\/div>/gi, '');
       if (cleanHTML.replace(/<[^>]*>/g, '').trim().length < 50) {
         showError('编辑后内容过短，未保存');
         return;

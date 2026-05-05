@@ -21,7 +21,8 @@ const SINGLE_PAGE_CSS = `${LAYOUT_CSS} @media print { ${PRINT_RULES} }`;
 export { PRINT_RULES };
 
 export function exportSinglePageHtml(html, title, filename) {
-  const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title><style>${SINGLE_PAGE_CSS}</style></head><body>${html}</body></html>`;
+  const cleaned = html.replace(/<script[\s\S]*?<\/script>/gi, '').replace(/<div[^>]*id=["']_ann_btn["'][^>]*>[\s\S]*?<\/div>/gi, '');
+  const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title><style>${SINGLE_PAGE_CSS}</style></head><body>${cleaned}</body></html>`;
   const blob = new Blob([fullHtml], { type: 'text/html' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
