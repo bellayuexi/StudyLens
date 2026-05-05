@@ -9,10 +9,10 @@ async function apiPost(path, data, { method = 'POST', throwOnError = false } = {
   const isFormData = data instanceof FormData;
   const res = await fetch(`${API}${path}`, {
     method,
-    ...(isFormData ? { body: data } : {
+    ...(isFormData ? { body: data } : data != null ? {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
-    }),
+    } : {}),
   });
   if (throwOnError && !res.ok) throw new Error((await res.json()).error || 'Request failed');
   return res.json();
