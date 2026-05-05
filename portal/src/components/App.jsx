@@ -5,7 +5,7 @@ import IngestPanel from './IngestPanel.jsx';
 import EntryDetail from './EntryDetail.jsx';
 import CategoryView from './CategoryView.jsx';
 import SettingsPanel from './SettingsPanel.jsx';
-import { fetchGraph } from '../lib/api.js';
+import { fetchGraph, getLLMConfig } from '../lib/api.js';
 import { getColor } from '../lib/colors.js';
 
 const VIEWS = [
@@ -31,10 +31,24 @@ export default function App() {
   const [viewMode, setViewMode] = useState(() => sessionStorage.getItem('sg_viewMode') || 'category');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSettings, setShowSettings] = useState(false);
+  const [firstRun, setFirstRun] = useState(false);
   const pendingEntryId = useRef(sessionStorage.getItem('sg_selectedEntryId'));
 
   useEffect(() => {
     window.__sg_entry_cache = sharedCacheRef.current;
+  }, []);
+
+  useEffect(() => {
+    getLLMConfig().then(config => {
+      const providers = config?.providers || {};
+      const hasConfigured = Object.values(providers).some(p =>
+        p.enabled && (p.apiKey || p.baseUrl !== 'http://localhost:23333/api/anthropic')
+      );
+      if (!hasConfigured) {
+        setShowSettings(true);
+        setFirstRun(true);
+      }
+    }).catch(() => {});
   }, []);
 
   const loadGraph = useCallback(async () => {
@@ -215,7 +229,7 @@ export default function App() {
       <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
         {showSettings && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 10 }}>
-            <SettingsPanel onClose={() => setShowSettings(false)} />
+            <SettingsPanel onClose={() => { setShowSettings(false); setFirstRun(false); }} firstRun={firstRun} />
           </div>
         )}
         {selectedEntry ? (

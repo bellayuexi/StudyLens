@@ -22,19 +22,37 @@ npm run setup    # Install dependencies (server + portal)
 npm run dev      # Start server (port 3000) + dev portal (port 3001)
 ```
 
-Open `http://localhost:3000` (production build) or `http://localhost:3001` (dev mode).
+Open `http://localhost:3001` for development (hot-reload, recommended).
+
+Port 3000 serves the production build — run `npm run build` first to generate `portal/dist/`, otherwise it will only serve the API.
 
 ## LLM Configuration
 
-StudyLens requires an LLM backend. Configure via the in-app Settings panel or edit `wiki/config/llm-config.json`. Supported providers:
+StudyLens requires an LLM backend. On first launch the Settings panel opens automatically to guide you through setup. Three options:
 
-| Provider | Config |
-|----------|--------|
-| OpenAI-compatible | `baseUrl`, `apiKey`, `model` |
-| Ollama (local) | `baseUrl` (default `http://localhost:11434`), `model` |
-| Custom endpoint | Any OpenAI-compatible API |
+### Option A: Agent Maestro (recommended for GitHub Copilot users)
 
-A template is available at `config/llm-config.template.json`.
+Zero API key needed — uses your existing Copilot subscription via VS Code.
+
+1. Install the [Agent Maestro](https://marketplace.visualstudio.com/items?itemName=Joouis.agent-maestro) VS Code extension
+2. It starts a local proxy at `http://localhost:23333`
+3. In StudyLens settings, enable `agent-maestro` and test the connection
+
+### Option B: OpenAI-compatible API
+
+Works with OpenAI, Azure OpenAI, DeepSeek, or any compatible endpoint.
+
+1. In StudyLens settings, enable `openai-compatible`
+2. Set `baseUrl` (default: `https://api.openai.com/v1`), `apiKey`, and `model`
+
+### Option C: Ollama (fully local, free)
+
+Run models locally with no API key or internet required.
+
+1. Install [Ollama](https://ollama.com) and pull a model: `ollama pull llama3.2`
+2. In StudyLens settings, enable `ollama` (default URL: `http://localhost:11434`)
+
+Configuration is stored in `wiki/config/llm-config.json`. A template is at `config/llm-config.template.json`.
 
 ## Project Structure
 

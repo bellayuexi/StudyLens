@@ -8,7 +8,7 @@ const PROMPT_TYPES = [
   { key: 'qaPrompt', label: '问答 Prompt' },
 ];
 
-export default function SettingsPanel({ onClose }) {
+export default function SettingsPanel({ onClose, firstRun }) {
   const [settings, setSettings] = useState({ subjects: {}, defaultPrompts: {} });
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -17,7 +17,7 @@ export default function SettingsPanel({ onClose }) {
   const [promptsExpanded, setPromptsExpanded] = useState(false);
   const [defaultsExpanded, setDefaultsExpanded] = useState(false);
   const [llmConfig, setLlmConfig] = useState(null);
-  const [llmExpanded, setLlmExpanded] = useState(false);
+  const [llmExpanded, setLlmExpanded] = useState(!!firstRun);
   const [llmDirty, setLlmDirty] = useState(false);
   const [llmSaving, setLlmSaving] = useState(false);
   const [testResults, setTestResults] = useState({});
@@ -140,6 +140,11 @@ export default function SettingsPanel({ onClose }) {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px 24px' }}>
+        {firstRun && (
+          <div style={{ padding: '12px 16px', marginBottom: 16, borderRadius: 8, background: '#4285f415', border: '1px solid #4285f440', color: '#8ab4f8', fontSize: 13 }}>
+            👋 欢迎使用 StudyLens！请先配置 AI 模型才能使用智能功能。展开下方「LLM 模型配置」，启用并测试至少一个 Provider。
+          </div>
+        )}
         {/* LLM Provider Config — first */}
         {llmConfig && (
           <div style={{ marginBottom: 20, borderRadius: 8, border: '1px solid #2a2d35', background: '#161822' }}>
@@ -164,9 +169,13 @@ export default function SettingsPanel({ onClose }) {
                   </select>
                 </div>
 
-                {Object.entries(llmConfig.providers || {}).map(([name, cfg]) => (
+                {Object.entries(llmConfig.providers || {}).map(([name, cfg]) => {
+                  const desc = name === 'agent-maestro' ? '通过 VS Code Copilot 免费使用（需 Agent Maestro 扩展）'
+                    : name === 'openai-compatible' ? '使用 OpenAI 或兼容 API（需要 API Key）'
+                    : name === 'ollama' ? '本地免费模型（需安装 Ollama）' : '';
+                  return (
                   <div key={name} style={{ marginBottom: 12, padding: 10, borderRadius: 6, border: '1px solid #2a2d45', background: '#1a1d2e' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                       <span style={{ fontSize: 13, fontWeight: 500, color: '#ddd' }}>{name}</span>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                         <label style={{ fontSize: 11, color: '#999', display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -184,6 +193,7 @@ export default function SettingsPanel({ onClose }) {
                         </button>
                       </div>
                     </div>
+                    {desc && <div style={{ fontSize: 11, color: '#666', marginBottom: 8 }}>{desc}</div>}
                     {testResults[name] && !testResults[name].testing && (
                       <div style={{ fontSize: 11, padding: '4px 8px', borderRadius: 4, marginBottom: 6,
                         background: testResults[name].ok ? '#34a85320' : '#ea433520',
@@ -214,7 +224,7 @@ export default function SettingsPanel({ onClose }) {
                       </div>
                     )}
                   </div>
-                ))}
+                  )})}
 
                 <div style={{ marginTop: 12 }}>
                   <label style={{ fontSize: 12, color: '#999', display: 'block', marginBottom: 6 }}>任务路由</label>
