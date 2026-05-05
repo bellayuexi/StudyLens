@@ -176,7 +176,7 @@ test.describe('Entry Field Editing', () => {
     await editInput.fill('修改后标题');
     await editInput.press('Enter');
 
-    await expect(page.getByText('修改后标题')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('修改后标题').first()).toBeVisible({ timeout: 5000 });
   });
 
   test('add tag to entry', async ({ page, request }) => {

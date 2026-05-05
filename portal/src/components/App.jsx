@@ -18,6 +18,7 @@ export default function App() {
   const sharedCacheRef = useRef(window.__sg_entry_cache || {});
   const [allEntries, setAllEntries] = useState([]);
   const [selectedEntry, setSelectedEntry] = useState(null);
+  const selectedEntryRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const [leftWidth, setLeftWidth] = useState(360);
   const [dragging, setDragging] = useState(false);
@@ -41,8 +42,11 @@ export default function App() {
     setAllEntries(entries);
     if (pendingEntryId.current) {
       const match = entries.find(e => e.id === pendingEntryId.current);
-      if (match) setSelectedEntry(match);
+      if (match) { setSelectedEntry(match); selectedEntryRef.current = match.id; }
       pendingEntryId.current = null;
+    } else if (selectedEntryRef.current) {
+      const match = entries.find(e => e.id === selectedEntryRef.current);
+      if (match) setSelectedEntry(match);
     }
   }, []);
 
@@ -75,7 +79,7 @@ export default function App() {
   const subCategories = filterDiscipline
     ? [...new Set(subjects.filter(s => s.startsWith(filterDiscipline + '-')).map(s => s.split('-').slice(1).join('-')))]
     : [];
-  const handleEntryClick = (entry) => setSelectedEntry(entry);
+  const handleEntryClick = (entry) => { setSelectedEntry(entry); selectedEntryRef.current = entry?.id || null; };
 
   const filteredEntries = allEntries.filter(e => {
     if (filterDiscipline) {
@@ -218,9 +222,9 @@ export default function App() {
           <EntryDetail
             entry={selectedEntry}
             allEntries={allEntries}
-            onClose={() => setSelectedEntry(null)}
-            onDeleted={() => { setSelectedEntry(null); loadGraph(); }}
-            onNavigate={(entry) => setSelectedEntry(entry)}
+            onClose={() => { setSelectedEntry(null); selectedEntryRef.current = null; }}
+            onDeleted={() => { setSelectedEntry(null); selectedEntryRef.current = null; loadGraph(); }}
+            onNavigate={(entry) => { setSelectedEntry(entry); selectedEntryRef.current = entry?.id || null; }}
             onUpdated={loadGraph}
             sharedCacheRef={sharedCacheRef}
           />
