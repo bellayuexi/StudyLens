@@ -130,12 +130,14 @@ test.describe('Settings Save/Restore', () => {
   test('settings panel opens and shows default prompts section', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('settings-btn').click();
+    await page.getByText('Prompt 配置').click();
     await expect(page.getByText('默认 Prompt')).toBeVisible();
   });
 
   test('expanding default prompts shows prompt textareas', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('settings-btn').click();
+    await page.getByText('Prompt 配置').click();
     await page.getByText('默认 Prompt').click();
     await expect(page.getByText('知识提取')).toBeVisible();
   });
@@ -143,9 +145,10 @@ test.describe('Settings Save/Restore', () => {
   test('save button enables after editing a default prompt', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('settings-btn').click();
-    const saveBtn = page.getByRole('button', { name: /保存/ });
+    const saveBtn = page.getByRole('button', { name: '保存', exact: true });
     await expect(saveBtn).toBeDisabled();
 
+    await page.getByText('Prompt 配置').click();
     await page.getByText('默认 Prompt').click();
     await expect(page.getByText('知识提取')).toBeVisible();
 
@@ -160,7 +163,7 @@ test.describe('Settings Save/Restore', () => {
   test('back button returns to main page', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('settings-btn').click();
-    await expect(page.getByText('默认 Prompt')).toBeVisible();
+    await expect(page.getByText('Prompt 配置')).toBeVisible();
     await page.getByRole('button', { name: /返回/ }).click();
     await expect(page.getByText('选择一个知识点开始探索')).toBeVisible();
   });

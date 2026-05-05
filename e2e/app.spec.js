@@ -49,13 +49,14 @@ test.describe('Settings Panel', () => {
 
   test('opens and closes without losing page state', async ({ page }) => {
     await openSettings(page);
-    await expect(page.getByText('默认 Prompt')).toBeVisible();
+    await expect(page.getByText('Prompt 配置')).toBeVisible();
     await page.getByRole('button', { name: /返回/ }).click();
     await expect(page.getByText('选择一个知识点开始探索')).toBeVisible();
   });
 
   test('settings shows default prompts section', async ({ page }) => {
     await openSettings(page);
+    await page.getByText('Prompt 配置').click();
     await expect(page.getByText('默认 Prompt')).toBeVisible();
   });
 
