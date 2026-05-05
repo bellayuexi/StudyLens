@@ -94,7 +94,11 @@ export default function DeepAnalysis() {
     const summaryHtml = parentTopicHTML || '<div style="padding:24px;color:#888">暂无综述</div>';
     const stripHtmlWrapper = (html) => {
       const styles = [];
-      html.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, (m) => { styles.push(m); return ''; });
+      html.replace(/<style[^>]*>([\s\S]*?)<\/style>/gi, (m, css) => {
+        const scoped = css.replace(/\bbody\b/g, '.page-body');
+        styles.push(`<style>${scoped}</style>`);
+        return '';
+      });
       return html
         .replace(/<!DOCTYPE[^>]*>/gi, '')
         .replace(/<html[^>]*>/gi, '')
@@ -103,7 +107,7 @@ export default function DeepAnalysis() {
         .replace(/<body[^>]*>/gi, '<div class="page-body">')
         .replace(/<\/body>/gi, '</div>');
     };
-    const widthCSS = '<style>body,body>div,body>section,body>article,body>main,[class*=container],[class*=wrapper],[class*=content]{max-width:100%!important;width:100%!important;margin-left:0!important;margin-right:0!important;padding-left:24px!important;padding-right:24px!important}</style>';
+    const widthCSS = '<style>*{max-width:100%!important;box-sizing:border-box!important}body{width:100%!important;margin:0!important;padding:20px 24px!important}</style>';
     const injectCSS = (html) => {
       if (html.includes('</head>')) return html.replace('</head>', widthCSS + '</head>');
       if (html.includes('</body>')) return html.replace('</body>', widthCSS + '</body>');
@@ -355,7 +359,7 @@ function showPage(id) {
             {parentTopicHTML ? (
               <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                 <iframe srcDoc={parentTopicHTML} style={{ flex: 1, border: 'none', background: '#0f1117' }} title="综述页面"
-                onLoad={e => { try { const d = e.target.contentDocument; const s = d.createElement('style'); s.textContent = 'body, .container, .content, main, article, .wrapper, .page { max-width: 100% !important; width: 100% !important; box-sizing: border-box !important; margin-left: 0 !important; margin-right: 0 !important; } body { padding: 16px 24px !important; }'; d.head.appendChild(s); } catch {} }} />
+                onLoad={e => { try { const d = e.target.contentDocument; const s = d.createElement('style'); s.textContent = '* { max-width: 100% !important; box-sizing: border-box !important; } body { width: 100% !important; margin: 0 !important; padding: 16px 24px !important; }'; d.head.appendChild(s); } catch {} }} />
                 {children.length > 0 && (
                   <div style={{ padding: '8px 16px', borderTop: '1px solid #2a2d35', background: '#161822' }}>
                     <div style={{ fontSize: 11, color: '#888', marginBottom: 4 }}>子主题导航</div>
