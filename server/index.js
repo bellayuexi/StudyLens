@@ -330,6 +330,7 @@ app.post('/api/entries/:id/topic-page', async (req, res) => {
     const html = await llm.generateTopicHTML(entry, related, req.body.qaHistory || [], req.body.existingHTML || '', req.body.requirements || '', req.body.mode || '');
     res.json({ html });
   } catch (err) {
+    console.error('[topic-page] Error:', err.message, '\n', err.stack);
     res.status(500).json({ error: err.message });
   }
 });
