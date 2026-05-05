@@ -416,7 +416,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         const saved = await saveTopicPage(genEntryId, html, qaHistory, comments, qaIds);
         if (entryIdRef.current !== genEntryId) {
           const c = entryDataCacheRef.current[genEntryId];
-          if (c) { c.loadingTopic = false; c.topicPageId = saved.id; c.topicVersion = saved.version; c.topicVersionCount = saved.version; c.topicVersionList = [...(c.topicVersionList || []).filter(v => v !== saved.version), saved.version].sort((a,b)=>a-b); c.lastUpdated = saved.created_at; c.topicStatus = `v${saved.version} 已保存`; c.topicDirty = false; c.topicHTML = html; }
+          if (c) { c.loadingTopic = false; c.topicPageId = saved.id; c.topicVersion = saved.version; c.topicVersionCount = saved.version; c.topicVersionList = [...(c.topicVersionList || []).filter(v => v !== saved.version), saved.version].sort((a,b)=>a-b); c.lastUpdated = saved.created_at; c.topicStatus = `v${saved.version} 已保存`; c.topicDirty = false; c.topicHTML = html; c.includedQaIds = qaIds; }
           return;
         }
         setTopicPageId(saved.id);
@@ -468,7 +468,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
         const saved = await saveTopicPage(genEntryId, html, qaHistory, comments, qaIds);
         if (entryIdRef.current !== genEntryId) {
           const c = entryDataCacheRef.current[genEntryId];
-          if (c) { c.loadingTopic = false; c.topicPageId = saved.id; c.topicVersion = saved.version; c.topicVersionCount = saved.version; c.topicVersionList = [...(c.topicVersionList || []).filter(v => v !== saved.version), saved.version].sort((a,b)=>a-b); c.lastUpdated = saved.created_at; c.topicStatus = `v${saved.version} 已保存`; c.topicDirty = false; c.topicHTML = html; }
+          if (c) { c.loadingTopic = false; c.topicPageId = saved.id; c.topicVersion = saved.version; c.topicVersionCount = saved.version; c.topicVersionList = [...(c.topicVersionList || []).filter(v => v !== saved.version), saved.version].sort((a,b)=>a-b); c.lastUpdated = saved.created_at; c.topicStatus = `v${saved.version} 已保存`; c.topicDirty = false; c.topicHTML = html; c.includedQaIds = qaIds; }
           return;
         }
         setTopicPageId(saved.id);
