@@ -109,7 +109,18 @@ npm run test:portal   # Portal component tests only
 npm run server        # Start API server only (port 3000)
 npm run portal        # Start Vite dev server only (port 3001)
 npm run dev           # Start both concurrently
+npm stop              # Kill whatever is listening on the port (default 3000)
+npm run restart       # Stop then start the server
 npm run setup         # Install all dependencies
+```
+
+### Changing the port
+
+The server port is set by the `PORT` env var (default `3000`). To avoid conflicts:
+
+```bash
+PORT=4000 npm start   # start on 4000
+PORT=4000 npm stop    # stop the server on 4000
 ```
 
 ## License

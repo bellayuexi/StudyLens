@@ -33,6 +33,8 @@
     "portal": "cd portal && npx vite --port 3001",
     "dev": "concurrently \"npm run server\" \"npm run portal\"",
     "start": "node server/index.js",
+    "stop": "node scripts/stop-server.js",
+    "restart": "node scripts/stop-server.js && node server/index.js",
     "setup": "npm install && cd portal && npm install",
     "build": "cd portal && npx vite build",
     "prepublishOnly": "npm run build",
