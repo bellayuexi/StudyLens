@@ -72,6 +72,13 @@ export default function SettingsPanel({ onClose, firstRun }) {
 
   const handleTest = async (name) => {
     setTestResults(prev => ({ ...prev, [name]: { testing: true } }));
+    // The test endpoint reads the saved config from disk, so persist the current
+    // form values first — otherwise testing a freshly-typed key tests the old one.
+    if (llmDirty) {
+      await saveLLMConfig(llmConfig);
+      llmOrigRef.current = JSON.stringify(llmConfig);
+      setLlmDirty(false);
+    }
     const result = await testLLMProvider(name);
     setTestResults(prev => ({ ...prev, [name]: result }));
   };

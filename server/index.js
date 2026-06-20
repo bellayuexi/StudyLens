@@ -530,9 +530,12 @@ app.post('/api/llm/test', async (req, res) => {
       return res.json({ ok, message: ok ? 'Agent Maestro is reachable' : 'Agent Maestro is not reachable' });
     }
 
+    const provider = llm.buildProvider(providerName, providerCfg);
+    if (!provider) return res.status(400).json({ error: `Unsupported provider: ${providerName}` });
+
     const result = await llm.callLLM(
       [{ role: 'user', content: 'Reply with exactly: OK' }],
-      { maxTokens: 16, providers: [{ name: providerName, ...providerCfg }] }
+      { maxTokens: 16, providers: [provider] }
     );
     res.json({ ok: true, message: `Response: ${result.slice(0, 100)}` });
   } catch (err) {

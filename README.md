@@ -63,7 +63,7 @@ Run models locally with no API key or internet required.
 1. Install [Ollama](https://ollama.com) and pull a model: `ollama pull llama3.2`
 2. In StudyLens settings, enable `ollama` (default URL: `http://localhost:11434`)
 
-Configuration is stored in `wiki/config/llm-config.json`. A template is at `config/llm-config.template.json`.
+Configuration is stored in `config/llm-config.json` (gitignored — holds your API keys). A template is at `config/llm-config.template.json`.
 
 ## Project Structure
 
@@ -93,7 +93,6 @@ All data is stored as Markdown files in the `wiki/` directory (gitignored by def
 - `wiki/entries/` — knowledge point Markdown files with YAML frontmatter
 - `wiki/topic-pages/` — generated topic page HTML
 - `wiki/index/` — JSON indexes for fast lookup
-- `wiki/config/` — runtime configuration
 
 ## Testing
 

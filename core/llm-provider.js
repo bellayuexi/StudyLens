@@ -3,7 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const LLM_CONFIG_PATH = path.join(__dirname, '..', 'wiki', 'config', 'llm-config.json');
+const LLM_CONFIG_PATH = path.join(__dirname, '..', 'config', 'llm-config.json');
 const LLM_CONFIG_TEMPLATE = path.join(__dirname, '..', 'config', 'llm-config.template.json');
 
 function loadLLMConfig() {
@@ -670,4 +670,4 @@ Return ONLY valid JSON, no other text.`;
   return extractJSON(result, { isArray: true }) || [];
 }
 
-module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap, generateSmartQuestions, generateTopicHTML, expandEntry, extractJSON, loadLLMConfig, saveLLMConfig, probeAgentMaestro, checkDuplicates };
+module.exports = { callLLM, analyze, findConnections, askQuestion, restructure, buildQAMindMap, generateSmartQuestions, generateTopicHTML, expandEntry, extractJSON, loadLLMConfig, saveLLMConfig, probeAgentMaestro, checkDuplicates, buildProvider };

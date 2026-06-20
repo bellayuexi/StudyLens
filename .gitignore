@@ -11,6 +11,9 @@ server.pid
 logs/
 wiki/
 
+# Personal LLM config (API keys) — keep out of git; template is config/llm-config.template.json
+config/llm-config.json
+
 # Test data directories
 data-test/
 wiki-test/
