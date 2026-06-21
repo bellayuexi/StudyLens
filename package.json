@@ -5,7 +5,11 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/cdlliuy/studygraph.git"
+    "url": "git+https://github.com/bellayuexi/StudyLens.git"
+  },
+  "homepage": "https://github.com/bellayuexi/StudyLens#readme",
+  "bugs": {
+    "url": "https://github.com/bellayuexi/StudyLens/issues"
   },
   "keywords": [
     "study",

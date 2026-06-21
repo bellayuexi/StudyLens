@@ -6,7 +6,7 @@ StudyLens 采用 **AI 增强的知识管理** 架构，核心设计原则：
 
 1. **AI 作为辅助而非替代**：AI 生成的内容（问题、回答、专题页）始终支持用户编辑和覆盖
 2. **渐进式学习**：通过"录入 → 探索 → 生成 → 修改"的循环，逐步深化知识理解
-3. **数据本地化**：所有数据以 Markdown/JSON 文件存储在本地 wiki/ 目录，无需外部数据库
+3. **数据本地化**：所有数据以 Markdown/JSON 文件存储在用户主目录下的 `~/.studylens/` 目录（全局安装时），无需外部数据库
 4. **LLM 供应商无关**：通过 provider 抽象层支持多种 LLM 后端（OpenAI-compatible、Ollama 等）
 
 ---
@@ -26,7 +26,7 @@ StudyLens/
 │       │   ├── App.jsx           # 路由和主布局
 │       │   ├── EntryDetail.jsx   # 知识点详情（专题页、问答、版本管理）
 │       │   ├── DeepAnalysis.jsx  # 深入分析（子知识点拆解）
-│       │   ├── IngestPanel.jsx   # 知识录入面板（文本/文件/URL，可设最大知识点数）
+│       │   ├── IngestPanel.jsx   # 知识录入面板（粘贴笔记 AI 拆解、手动逐条添加，可设最大知识点数）
 │       │   ├── CategoryView.jsx  # 分类浏览
 │       │   ├── TimelineView.jsx  # 时间线视图
 │       │   ├── KnowledgeGraph.jsx # 知识图谱可视化
@@ -40,12 +40,12 @@ StudyLens/
 ├── config/                   # 配置模板
 │   ├── prompts.json          # Prompt 模板（按学科自定义）
 │   └── llm-config.template.json # LLM 配置模板
-├── bin/studygraph.js         # CLI 入口（npm 全局安装用）
-├── wiki/                     # 数据文件（.gitignore）
-│   ├── entries/              # 知识点 Markdown（YAML frontmatter）
-│   ├── topic-pages/          # 专题页 HTML/元数据
-│   ├── index/                # JSON 索引（快速查找）
-│   └── config/               # 运行时 LLM 配置
+├── bin/studylens.js          # CLI 入口（npm 全局安装用，注入 ~/.studylens 数据目录）
+├── ~/.studylens/             # 用户数据目录（全局安装时；开发模式回退项目内 wiki/）
+│   ├── wiki/                 # 知识点 Markdown、专题页、JSON 索引
+│   ├── uploads/              # 上传文件临时目录
+│   ├── logs/                 # 运行日志
+│   └── llm-config.json       # 用户 LLM 配置（含 API Key）
 ├── tests/                    # API 集成测试
 ├── e2e/                      # Playwright E2E 测试
 └── docs/                     # 文档
@@ -54,8 +54,8 @@ StudyLens/
 ### 关键设计决策
 
 - **单进程部署**：Express 同时提供 API 和静态文件（portal/dist/），简化部署
-- **Markdown 文件存储**：所有数据以 Markdown + YAML frontmatter 格式存储在 wiki/ 目录，方便版本控制和人工编辑
-- **npm 可发布**：通过 `bin/studygraph.js` 支持全局安装，`npx studygraph` 即可启动
+- **Markdown 文件存储**：所有数据以 Markdown + YAML frontmatter 格式存储在 `~/.studylens/wiki/` 目录（全局安装时），方便版本控制和人工编辑
+- **npm 可发布**：通过 `bin/studylens.js` 支持全局安装，`npx studylens` 即可启动
 
 ---
 
@@ -87,14 +87,17 @@ LLM 调用的核心抽象层，负责：
 
 Express 服务器，提供以下 API：
 - `POST /api/ingest` - AI 分析文本提取知识点（支持 maxPoints 参数限制数量）
-- `POST /api/ingest/file` - 上传文件提取知识点（PDF、Word、Excel、TXT）
-- `POST /api/ingest/url` - 从网页 URL 提取知识点
+- `POST /api/ingest/file` - 上传文件提取知识点（PDF、Word、Excel、TXT；端点保留，当前未在前端 UI 暴露）
+- `POST /api/ingest/url` - 从网页 URL 提取知识点（端点保留，当前未在前端 UI 暴露）
+- `POST /api/entries` - 手动添加单个知识点（不经过 AI）
+- `POST /api/entries/:id/children` - 手动添加子知识点（深入分析）
 - `GET/PUT/DELETE /api/entries/:id` - 知识点 CRUD
 - `GET /api/graph` - 获取知识图谱（节点 + 连接）
 - `POST /api/entries/:id/ask` - 知识点范围内 AI 问答
 - `POST /api/entries/:id/questions` - AI 生成智能问题
 - `POST /api/entries/:id/topic-page` - 生成/更新专题页
 - `POST /api/entries/:id/topic-page/save` - 保存专题页版本
+- `DELETE /api/entries/:id/topic-page/:version` - 删除指定专题页版本
 - `POST /api/entries/:id/expand` - AI 拆解子知识点
 - `GET /api/entries/:id/topic-pages` - 专题页版本列表
 - `POST /api/qa` - 全局 AI 问答
@@ -147,7 +150,7 @@ Express 服务器，提供以下 API：
 
 ### 运行所有测试
 ```bash
-cd StudyGraph
+cd StudyLens
 npm test
 ```
 
@@ -159,13 +162,13 @@ npx vitest run
 
 ### 运行后端/核心测试
 ```bash
-cd StudyGraph
+cd StudyLens
 npx vitest run tests/
 ```
 
 ### 运行 E2E 测试
 ```bash
-cd StudyGraph
+cd StudyLens
 npx playwright test
 ```
 
@@ -193,7 +196,7 @@ taskkill /F /PID <pid>
 kill $(lsof -ti:3000)
 
 # 3. 启动服务器
-cd StudyGraph
+cd StudyLens
 node server/index.js &
 
 # 4. 验证
@@ -213,7 +216,7 @@ npm run build
 ### 开发模式
 
 ```bash
-cd StudyGraph
+cd StudyLens
 npm run dev
 # 同时启动 Express 服务器（端口 3000）和 Vite 开发服务器（端口 3001，热更新）
 ```
