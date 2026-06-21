@@ -21,6 +21,7 @@ const styles = {
 export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted, onNavigate, onUpdated, sharedCacheRef }) {
   const navigate = useNavigate();
   const [tab, setTab] = useState('topic');
+  const [confirmState, setConfirmState] = useState(null);
   const [smartQuestions, setSmartQuestions] = useState([]);
   const [selectedQs, setSelectedQs] = useState(new Set());
   const [loadingQ, setLoadingQ] = useState(false);
@@ -732,8 +733,57 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
     } catch (e) { showError('保存失败'); } finally { setSaving(false); }
   };
 
-  const handleDelete = async () => {
-    try { await deleteEntry(entry.id); onDeleted(); } catch (e) { showError('删除失败'); }
+  const isChild = !!entry.parent_id;
+
+  const handleDelete = () => {
+    setConfirmState({
+      title: isChild ? '删除此子页面' : '删除整个知识点',
+      message: isChild
+        ? `确定删除子页面「${entry.title}」吗？此操作不可撤销。`
+        : `确定删除「${entry.title}」及其所有专题页版本和问答记录吗？此操作不可撤销。`,
+      confirmLabel: '删除',
+      onConfirm: async () => {
+        try { await deleteEntry(entry.id); onDeleted(); }
+        catch (e) { showError('删除失败'); }
+      },
+    });
+  };
+
+  const handleClearTopicPages = () => {
+    if (!topicVersionList.length) return;
+    setConfirmState({
+      title: '清空所有专题页',
+      message: `确定删除「${entry.title}」的全部 ${topicVersionList.length} 个专题页版本吗？知识点和问答记录会保留。`,
+      confirmLabel: '清空',
+      onConfirm: async () => {
+        try {
+          for (const v of [...topicVersionList]) await deleteTopicPageVersion(entry.id, v);
+          setTopicVersionList([]);
+          setTopicVersionCount(0);
+          setTopicHTML('');
+          setTopicPageId(null);
+          setTopicVersion(0);
+          setViewingVersion(null);
+          setTopicStatus('已清空所有专题页');
+        } catch (e) { showError('清空失败'); }
+      },
+    });
+  };
+
+  const handleClearQa = () => {
+    const answered = getAnsweredQa(qaHistory);
+    if (!answered.length) return;
+    setConfirmState({
+      title: '清空问答记录',
+      message: `确定清空「${entry.title}」的 ${answered.length} 条问答记录吗？知识点和专题页会保留。`,
+      confirmLabel: '清空',
+      onConfirm: async () => {
+        try {
+          setQaHistory([]);
+          syncQaToServer([]);
+        } catch (e) { showError('清空失败'); }
+      },
+    });
   };
 
   const inputStyle = styles.input;
@@ -754,6 +804,25 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
           {errorMsg}
         </div>
       )}
+      {/* Confirm dialog */}
+      {confirmState && (
+        <div onClick={() => setConfirmState(null)}
+          style={{ position: 'absolute', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ width: 360, maxWidth: '90%', background: '#1c1f2e', border: '1px solid #2a2d45', borderRadius: 10, padding: 20, boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}>
+            <div style={{ fontSize: 15, fontWeight: 600, color: '#fff', marginBottom: 10 }}>{confirmState.title}</div>
+            <div style={{ fontSize: 13, color: '#bbb', lineHeight: 1.6, marginBottom: 18 }}>{confirmState.message}</div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setConfirmState(null)}
+                style={{ padding: '6px 16px', borderRadius: 6, border: '1px solid #3a3d4a', background: 'transparent', color: '#aaa', cursor: 'pointer', fontSize: 13 }}>取消</button>
+              <button onClick={async () => { const fn = confirmState.onConfirm; setConfirmState(null); await fn(); }}
+                style={{ padding: '6px 16px', borderRadius: 6, border: 'none', background: '#d32f2f', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}>
+                {confirmState.confirmLabel || '确定'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div style={{ padding: '14px 24px', borderBottom: '1px solid #2a2d35', background: '#161822' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
           {editingField === 'title' ? (
@@ -764,7 +833,7 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
             <h2 onClick={() => startFieldEdit('title')} style={{ margin: 0, fontSize: 20, color: '#fff', flex: 1, cursor: 'pointer' }} title="点击编辑">{entry.title}</h2>
           )}
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }}>
-            <button onClick={handleDelete} style={{ background: '#d32f2f22', border: '1px solid #d32f2f44', color: '#ef5350', borderRadius: 6, cursor: 'pointer', fontSize: 11, padding: '4px 10px' }}>删除</button>
+            <button onClick={handleDelete} style={{ background: '#d32f2f22', border: '1px solid #d32f2f44', color: '#ef5350', borderRadius: 6, cursor: 'pointer', fontSize: 11, padding: '4px 10px' }}>{isChild ? '删除子页面' : '删除'}</button>
             <button onClick={onClose} style={{ background: 'none', border: 'none', color: '#888', cursor: 'pointer', fontSize: 22, padding: '0 4px' }}>×</button>
           </div>
         </div>
@@ -951,6 +1020,14 @@ export default function EntryDetail({ entry, allEntries = [], onClose, onDeleted
                   opacity: loadingTopic ? 0.5 : 1 }}>
                 {loadingTopic ? '更新中...' : topicDirty ? '🔄 用新回答更新' : '🔄 重新生成'}
               </button>
+              {topicVersionList.length > 0 && (
+                <button onClick={handleClearTopicPages} disabled={loadingTopic}
+                  style={{ padding: '3px 10px', borderRadius: 4, border: 'none', fontSize: 11, cursor: loadingTopic ? 'default' : 'pointer',
+                    background: '#d32f2f22', color: '#ef5350' }}
+                  title="删除所有专题页版本，保留知识点">
+                  🗑 清空版本
+                </button>
+              )}
             </div>
           </div>
 
@@ -1251,6 +1328,9 @@ document.addEventListener('mousedown', function(e) {
                   </span>
                 )}
                 {!loadingQ && <span onClick={() => { delete questionsCacheRef.current[entry.id]; loadSmartQuestions(); }} style={{ fontSize: 11, color: '#4285f4', cursor: 'pointer' }}>重新生成问题</span>}
+                {getAnsweredQa(qaHistory).length > 0 && (
+                  <span onClick={handleClearQa} style={{ fontSize: 11, color: '#ef5350', cursor: 'pointer' }} title="清空所有问答记录，保留知识点">🗑 清空问答</span>
+                )}
               </div>
             </div>
 
