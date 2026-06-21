@@ -35,7 +35,7 @@
     "start": "node server/index.js",
     "stop": "node scripts/stop-server.js",
     "restart": "node scripts/stop-server.js && node server/index.js",
-    "setup": "npm install && cd portal && npm install",
+    "postinstall": "cd portal && npm install",
     "build": "cd portal && npx vite build",
     "prepublishOnly": "npm run build",
     "test:api": "npx vitest run tests/",
