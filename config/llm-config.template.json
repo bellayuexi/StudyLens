@@ -1,21 +1,21 @@
 {
   "defaultProvider": "auto",
   "providers": {
-    "agent-maestro": {
-      "enabled": false,
-      "baseUrl": "http://localhost:23333/api/anthropic",
-      "model": "claude-sonnet-4-6"
-    },
     "openai-compatible": {
-      "enabled": false,
-      "baseUrl": "https://api.openai.com/v1",
+      "enabled": true,
+      "baseUrl": "https://open.bigmodel.cn/api/paas/v4",
       "apiKey": "",
-      "model": "gpt-4o"
+      "model": "GLM-4.6"
     },
     "ollama": {
       "enabled": false,
       "baseUrl": "http://localhost:11434",
-      "model": "llama3.2"
+      "model": "deepseek-r1:7b"
+    },
+    "agent-maestro": {
+      "enabled": false,
+      "baseUrl": "http://localhost:23333/api/anthropic",
+      "model": "claude-sonnet-4-6"
     }
   },
   "taskRouting": {

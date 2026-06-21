@@ -1,128 +1,46 @@
 # StudyLens
 
-AI-powered deep study assistant. Paste notes, upload files, or provide URLs — StudyLens extracts knowledge points, organizes them for browsing, and generates topic pages with AI-driven Q&A.
+> 把零散的笔记，变成会生长的个人知识库。
 
-## Features
+StudyLens 是一个 **AI 驱动的深度学习助手**。粘贴一段笔记、上传一份文件，或丢进一个网址 —— 它会自动提取知识点、理清脉络，再帮你层层追问、生成可分享的专题页面。
 
-- **Multi-source ingestion** — text, PDF, DOCX, XLSX, and web URLs
-- **LLM-powered extraction** — automatically identifies knowledge points, tags, and relationships
-- **Knowledge graph** — visual force-directed graph of connected concepts
-- **Topic pages** — AI-generated study pages with version history
-- **Deep analysis** — drill down into any concept with AI-powered sub-topic expansion
-- **Smart Q&A** — ask questions about your knowledge base with context-aware answers
-- **Timeline & category views** — browse knowledge by time or subject
-- **Export** — single-page HTML export with print-optimized CSS
-- **Granularity control** — limit max knowledge points per ingestion for high-level summaries
-- **Multi-provider LLM** — supports OpenAI-compatible APIs, Ollama, and custom endpoints
+学到的东西不再是一堆散落的文字，而是一张能浏览、能下钻、能不断补充的知识网络。
 
-## Install
+## 它能做什么
+
+- **多来源录入** — 文本、PDF、Word、Excel，甚至一个网页链接
+- **自动提取知识点** — AI 识别要点、归类、打标签，并建立彼此的关联
+- **知识图谱** — 用力导向图直观看到概念之间的联系
+- **层层深入** — 对任一概念继续追问，AI 拆解出子主题，逐个击破
+- **专题页面** — 一键生成图文并茂的学习专题，带版本历史，可批注、可导出
+- **智能问答** — 围绕你的知识库提问，得到结合上下文的回答
+- **多视图浏览** — 按学科分类，或沿时间线回顾
+- **完全可控的模型** — 支持智谱、通义千问、DeepSeek、OpenAI 等任意 OpenAI 兼容服务，也支持 Ollama 本地免费运行
+
+## 上手
 
 ```bash
 npm install -g studylens
 studylens
 ```
 
-Open `http://localhost:3000` — on first launch the Settings panel opens automatically to guide you through LLM setup.
+打开 `http://localhost:3000`，首次启动会自动引导你配置大模型。详细步骤见 **[快速开始](docs/getting-started.md)**。
 
-Data is stored in `./studylens-data/` in the current directory. Set `STUDYLENS_DATA_DIR` to change the location.
+## 文档
 
-## Quick Start (Development)
+- 📖 **[快速开始](docs/getting-started.md)** — 安装、配置大模型（含国内模型示例）、跑通第一条知识
+- 📘 **[用户指南](docs/user-guide.md)** — 录入、探索、专题页、深入分析等完整功能
+- 🛠️ **[开发者指南](docs/developer-guide.md)** — 架构、目录结构、本地开发与测试
 
-```bash
-npm run setup    # Install dependencies (server + portal)
-npm run dev      # Start server (port 3000) + dev portal (port 3001)
-```
-
-Open `http://localhost:3001` for development (hot-reload, recommended).
-
-Port 3000 serves the production build — run `npm run build` first to generate `portal/dist/`, otherwise it will only serve the API.
-
-## LLM Configuration
-
-StudyLens requires an LLM backend. On first launch the Settings panel opens automatically to guide you through setup. Three options:
-
-### Option A: Agent Maestro (recommended for GitHub Copilot users)
-
-Zero API key needed — uses your existing Copilot subscription via VS Code.
-
-1. Install the [Agent Maestro](https://marketplace.visualstudio.com/items?itemName=Joouis.agent-maestro) VS Code extension
-2. It starts a local proxy at `http://localhost:23333`
-3. In StudyLens settings, enable `agent-maestro` and test the connection
-
-### Option B: OpenAI-compatible API
-
-Works with OpenAI, Azure OpenAI, DeepSeek, or any compatible endpoint.
-
-1. In StudyLens settings, enable `openai-compatible`
-2. Set `baseUrl` (default: `https://api.openai.com/v1`), `apiKey`, and `model`
-
-### Option C: Ollama (fully local, free)
-
-Run models locally with no API key or internet required.
-
-1. Install [Ollama](https://ollama.com) and pull a model: `ollama pull llama3.2`
-2. In StudyLens settings, enable `ollama` (default URL: `http://localhost:11434`)
-
-Configuration is stored in `config/llm-config.json` (gitignored — holds your API keys). A template is at `config/llm-config.template.json`.
-
-## Project Structure
-
-```
-StudyLens/
-├── server/           # Express API server
-│   └── index.js
-├── core/             # Business logic
-│   ├── extractor.js       # Knowledge extraction prompts
-│   ├── llm-provider.js    # Multi-provider LLM client
-│   └── wiki-storage.js    # Markdown-based file storage
-├── portal/           # React frontend (Vite)
-│   └── src/
-│       ├── components/    # UI components
-│       └── lib/           # Shared utilities
-├── config/           # Configuration templates
-├── e2e/              # Playwright E2E tests
-├── tests/            # API integration tests
-├── scripts/          # Utility scripts
-└── docs/             # User & developer guides
-```
-
-## Data Storage
-
-All data is stored as Markdown files in the `wiki/` directory (gitignored by default):
-
-- `wiki/entries/` — knowledge point Markdown files with YAML frontmatter
-- `wiki/topic-pages/` — generated topic page HTML
-- `wiki/index/` — JSON indexes for fast lookup
-
-## Testing
+## 本地开发
 
 ```bash
-npm test              # Unit tests (API + portal)
-npm run test:e2e      # Playwright E2E tests
-npm run test:api      # API tests only
-npm run test:portal   # Portal component tests only
+npm install      # 安装依赖（postinstall 会自动装好前端）
+npm run dev      # 启动后端（3000）+ 开发版前端（3001）
 ```
 
-## Scripts
+开发时请打开 `http://localhost:3001`（支持热重载）。更多脚本、端口配置与测试说明见 **[开发者指南](docs/developer-guide.md)**。
 
-```bash
-npm run server        # Start API server only (port 3000)
-npm run portal        # Start Vite dev server only (port 3001)
-npm run dev           # Start both concurrently
-npm stop              # Kill whatever is listening on the port (default 3000)
-npm run restart       # Stop then start the server
-npm run setup         # Install all dependencies
-```
-
-### Changing the port
-
-The server port is set by the `PORT` env var (default `3000`). To avoid conflicts:
-
-```bash
-PORT=4000 npm start   # start on 4000
-PORT=4000 npm stop    # stop the server on 4000
-```
-
-## License
+## 许可证
 
 MIT
