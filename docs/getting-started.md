@@ -11,7 +11,7 @@ studylens
 
 启动后打开 `http://localhost:3000`。首次启动时，设置面板会自动弹出，引导你完成下一步的 LLM 配置。
 
-> 数据默认保存在当前目录的 `./studylens-data/` 下，可通过环境变量 `STUDYLENS_DATA_DIR` 更改。
+> 你的知识库、配置和上传文件统一保存在用户主目录下的 `~/.studylens/`（Windows 为 `C:\Users\你的用户名\.studylens\`）。无论从哪个目录运行 `studylens` 命令，数据都在同一个位置。可通过环境变量 `STUDYLENS_DATA_DIR` 更改。
 
 ## 2. 配置大模型（LLM）
 

@@ -3,7 +3,9 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 
-const LLM_CONFIG_PATH = path.join(__dirname, '..', 'config', 'llm-config.json');
+const LLM_CONFIG_PATH = process.env.STUDYLENS_CONFIG_DIR
+  ? path.join(process.env.STUDYLENS_CONFIG_DIR, 'llm-config.json')
+  : path.join(__dirname, '..', 'config', 'llm-config.json');
 const LLM_CONFIG_TEMPLATE = path.join(__dirname, '..', 'config', 'llm-config.template.json');
 
 function loadLLMConfig() {
@@ -483,8 +485,10 @@ ${questionGuidance}
   return parsed;
 }
 
-const TOPIC_LOG_DIR = require('path').join(__dirname, '..', 'logs', 'topic-gen');
-require('fs').mkdirSync(TOPIC_LOG_DIR, { recursive: true });
+const TOPIC_LOG_DIR = process.env.STUDYLENS_LOG_DIR
+  ? path.join(process.env.STUDYLENS_LOG_DIR, 'topic-gen')
+  : path.join(__dirname, '..', 'logs', 'topic-gen');
+fs.mkdirSync(TOPIC_LOG_DIR, { recursive: true });
 
 function logTopicGen(label, data) {
   const ts = new Date().toISOString().replace(/[:.]/g, '-');
