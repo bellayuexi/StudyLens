@@ -49,6 +49,7 @@ export const updateTopicPageComments = (pageId, comments) => apiPost(`/api/topic
 export const updateTopicPageQaHistory = (pageId, qaHistory) => apiPost(`/api/topic-pages/${pageId}/qa-history`, { qaHistory }, { method: 'PUT' });
 export const expandEntry = (entryId) => apiPost(`/api/entries/${entryId}/expand`, {});
 export const addChildEntry = (parentId, data) => apiPost(`/api/entries/${parentId}/children`, data);
+export const addManualEntry = (data) => apiPost('/api/entries', data, { throwOnError: true });
 export const saveSettings = (data) => apiPost('/api/settings', data, { method: 'PUT' });
 export const saveLLMConfig = (data) => apiPost('/api/llm/config', data);
 export const testLLMProvider = (providerName) => apiPost('/api/llm/test', { providerName });

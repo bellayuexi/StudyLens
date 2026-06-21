@@ -459,6 +459,24 @@ app.post('/api/entries/:id/expand', async (req, res) => {
   }
 });
 
+// Add a single entry manually (no AI, no dedup)
+app.post('/api/entries', (req, res) => {
+  try {
+    const { title, content = '', subject = '', tags = [] } = req.body;
+    if (!title || !title.trim()) return res.status(400).json({ error: 'title required' });
+    const entry = storage.addEntry({
+      title: title.trim(),
+      content,
+      subject: subject.trim(),
+      tags,
+      source_type: 'manual',
+    });
+    res.json(entry);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Add a single child entry manually
 app.post('/api/entries/:id/children', (req, res) => {
   try {
