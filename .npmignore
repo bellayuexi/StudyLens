@@ -16,6 +16,9 @@ scripts/
 playwright.config.js
 vitest.config.js
 
+# Personal LLM config (API keys) — never publish; only the template ships
+config/llm-config.json
+
 # Data
 wiki/
 wiki-test/
