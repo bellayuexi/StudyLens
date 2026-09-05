@@ -1,11 +1,5 @@
 # 快速开始
 
-## Demo
-
-[![StudyLens 功能演示](studylens-字幕-倍速15s.gif)](studylens-字幕-倍速15s.mp4)
-
-> 点击动图可播放 MP4 版本。
-
 跟着这三步，几分钟就能让 StudyLens 跑起来。
 
 ## 1. 安装并启动
