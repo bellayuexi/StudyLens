@@ -4,11 +4,9 @@
 
 StudyLens 是一个 **AI 驱动的深度学习助手**。粘贴一段笔记，它会自动提取知识点、理清脉络，再帮你层层追问、生成可分享的专题页面。
 
-点击视频、开始体验：
+查看 15 秒功能演示：
 
-<video src="docs/studylens-字幕-倍速15s.mp4" width="100%" controls playsinline></video>
-
-[视频无法播放？查看 GIF 版演示](docs/studylens-字幕-倍速15s.gif)
+<img src="docs/studylens-字幕-倍速15s.gif" alt="StudyLens 15 秒功能演示" width="100%">
 
 学到的东西不再是一堆散落的文字，而是一座能浏览、能下钻、能不断补充的知识库。
 
