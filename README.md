@@ -8,10 +8,6 @@ StudyLens 是一个 **AI 驱动的深度学习助手**。粘贴一段笔记，�
 
 https://github.com/user-attachments/assets/045af9a7-0aa4-43f6-8757-ea6c5ab60dbc
 
-如果视频无法播放，可查看 GIF 版：
-
-<img src="docs/studylens-字幕-倍速15s.gif" alt="StudyLens 15 秒功能演示" width="100%">
-
 学到的东西不再是一堆散落的文字，而是一座能浏览、能下钻、能不断补充的知识库。
 
 ## 上手
