@@ -6,7 +6,7 @@ StudyLens 是一个 **AI 驱动的深度学习助手**。粘贴一段笔记，�
 
 查看 15 秒功能演示：
 
-<video src="docs/studylens-demo-15s-v2.mp4" width="100%" controls playsinline></video>
+https://github.com/user-attachments/assets/045af9a7-0aa4-43f6-8757-ea6c5ab60dbc
 
 如果视频无法播放，可查看 GIF 版：
 
