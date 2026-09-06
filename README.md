@@ -3,14 +3,15 @@
 > 把零散的笔记，变成会生长的个人知识库。
 
 StudyLens 是一个 **AI 驱动的深度学习助手**。粘贴一段笔记，它会自动提取知识点、理清脉络，再帮你层层追问、生成可分享的专题页面。
+学到的东西不再是一堆散落的文字，而是一座能浏览、能下钻、能不断补充的知识库。
 
-查看 15 秒功能演示：
-
-https://github.com/user-attachments/assets/045af9a7-0aa4-43f6-8757-ea6c5ab60dbc
-
+15s功能演示: *初次加载需等待，完成后自动播放*
 <img src="docs/studylens-字幕-倍速15s.gif" alt="StudyLens 15 秒功能演示" width="100%">
 
-学到的东西不再是一堆散落的文字，而是一座能浏览、能下钻、能不断补充的知识库。
+展示一下StudyLens帮我生成的一部分学习资料: [studyLens学习资料展示](https://studylens-showcase.pages.dev)
+
+你也可以用StudyLens生成一份专属于你的学习资料，快来下载、安装并使用吧。
+
 
 ## 上手
 
